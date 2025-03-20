@@ -1,0 +1,36 @@
+{
+    "name": "zahzah/laravel-support",
+    "description": "Package yang membantu anda dalam mengelola struktur coding lebih nyaman",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "Zahzah\\LaravelSupport\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "authors": [
+        {
+            "name": "hamzah",
+            "email": "hamzahnuralfalah@gmail.com"
+        }
+    ],
+    "require": {
+        "zahzah/laravel-has-props": "1.x",
+        "stancl/jobpipeline": "^1.6.2",
+        "stichoza/google-translate-php": "^5.2",
+        "spatie/laravel-data": "^4.13",
+        "zahzah/laravel-stub": "1.x",
+        "symfony/filesystem": "^7.2"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Zahzah\\LaravelSupport\\LaravelSupportServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": false
+}
