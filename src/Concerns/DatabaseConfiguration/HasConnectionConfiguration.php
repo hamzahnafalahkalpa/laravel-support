@@ -1,8 +1,9 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\DatabaseConfiguration;
+namespace Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration;
 
-trait HasConnectionConfiguration{
+trait HasConnectionConfiguration
+{
 
     protected array $__connection_config;
 
@@ -11,7 +12,8 @@ trait HasConnectionConfiguration{
      *
      * @return array The models configuration associated with the current instance.
      */
-    protected function getAppConnectionConfig(): array{
+    protected function getAppConnectionConfig(): array
+    {
         return $this->__connection_config ??= config('database.connections');
     }
 
@@ -28,9 +30,10 @@ trait HasConnectionConfiguration{
      */
 
 
-    protected function setAppConnections(array $connections = []): self{
+    protected function setAppConnections(array $connections = []): self
+    {
         config([
-            'database.connections' => $this->__connection_config = $this->mergeArray($connections,$this->getAppConnectionConfig())
+            'database.connections' => $this->__connection_config = $this->mergeArray($connections, $this->getAppConnectionConfig())
         ]);
         return $this;
     }

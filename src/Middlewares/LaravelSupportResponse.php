@@ -1,14 +1,14 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Middlewares;
+namespace Hanafalah\LaravelSupport\Middlewares;
 
 use Closure;
-use Zahzah\LaravelSupport\{
+use Hanafalah\LaravelSupport\{
     Concerns\Support\HasResponse,
 };
-use Zahzah\LaravelSupport\Facades\Response;
+use Hanafalah\LaravelSupport\Facades\Response;
 
-class LaravelSupportResponse 
+class LaravelSupportResponse
 {
     use HasResponse;
 
@@ -20,7 +20,7 @@ class LaravelSupportResponse
      * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
     public function handle($request, Closure $next)
-    { 
-        return Response::respondHandle($request,$next);
+    {
+        return Response::respondHandle($request, $next);
     }
 }

@@ -1,17 +1,19 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\DatabaseConfiguration;
+namespace Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration;
 
-use Zahzah\LaravelSupport\Concerns as Concerns;
+use Hanafalah\LaravelSupport\Concerns as Concerns;
 
-trait HasDatabaseConfiguration{
+trait HasDatabaseConfiguration
+{
     use Concerns\Support\HasArray;
     use Concerns\DatabaseConfiguration\HasModelConfiguration;
     use Concerns\DatabaseConfiguration\HasConnectionConfiguration;
 
-    protected $__database_config;    
+    protected $__database_config;
 
-    protected function setAppDatabase(): self{
+    protected function setAppDatabase(): self
+    {
         $this->__database_config = config('database');
         return $this;
     }

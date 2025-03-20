@@ -1,10 +1,11 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
-use Zahzah\LaravelSupport\Exceptions;
+use Hanafalah\LaravelSupport\Exceptions;
 
-trait HasRepository{
+trait HasRepository
+{
     use HasJson, HasLocalDir;
     use HasClassModifier;
 
@@ -15,17 +16,19 @@ trait HasRepository{
 
     protected $__loader;
 
-    public static function new(){
+    public static function new()
+    {
         return new static();
     }
 
     /**
      * Set the file repository implementation.
      *
-     * @param  \Zahzah\LaravelSupport\Contracts\FileRepositoryInterface  $repository
+     * @param  \Hanafalah\LaravelSupport\Contracts\FileRepositoryInterface  $repository
      * @return $this
      */
-    public function setRepository($repository): self{
+    public function setRepository($repository): self
+    {
         $this->__file_repository = app($repository);
         return $this;
     }
@@ -33,11 +36,12 @@ trait HasRepository{
     /**
      * Get the file repository instance.
      *
-     * @return \Zahzah\LaravelSupport\Contracts\FileRepositoryInterface
+     * @return \Hanafalah\LaravelSupport\Contracts\FileRepositoryInterface
      */
-    public function repo(){
+    public function repo()
+    {
         return $this->__file_repository;
-    }    
+    }
 
     /**
      * Checks if the schema class is set and throws an exception if it is not.
@@ -45,7 +49,8 @@ trait HasRepository{
      * @throws SchemaClassNotSetException if the schema class is not set
      * @return bool true if the schema class is set, false otherwise
      */
-    public function isSetSchemaThrow(): bool{
+    public function isSetSchemaThrow(): bool
+    {
         $isset = $this->isSetSchema();
         if (!$isset) throw new Exceptions\SchemaClassNotSet('Schema class not set !');
         return $isset;
@@ -57,7 +62,8 @@ trait HasRepository{
      * @param string $value The string to check.
      * @return bool True if the string is not empty, false otherwise.
      */
-    public function isNotEmptyString(string $value): bool{
+    public function isNotEmptyString(string $value): bool
+    {
         return $value !== '';
     }
 
@@ -66,7 +72,8 @@ trait HasRepository{
      *
      * @return bool Returns true if the schema class is set, false otherwise.
      */
-    public function isSetSchema(): bool{
+    public function isSetSchema(): bool
+    {
         // if (\method_exists($this,'booting')){
         //     $this->booting();
         // }
@@ -79,8 +86,9 @@ trait HasRepository{
      * @param string $method The name of the method to check.
      * @return bool Returns true if the method exists, false otherwise.
      */
-    private function isMethodExists(string $method,$class=null): bool{
-        return \method_exists($class ?? self::$__class,$method);
+    private function isMethodExists(string $method, $class = null): bool
+    {
+        return \method_exists($class ?? self::$__class, $method);
     }
 
     /**
@@ -89,8 +97,9 @@ trait HasRepository{
      * @param string $path The path of the directory to create.
      * @return bool True if the directory has been created successfully, false otherwise.
      */
-    protected function makeDir(string $path): bool{
-        if (!$this->isDir($path)){
+    protected function makeDir(string $path): bool
+    {
+        if (!$this->isDir($path)) {
             return \mkdir($path, 0777, true);
         }
         return true;
@@ -102,7 +111,8 @@ trait HasRepository{
      * @param string $path The path to check.
      * @return bool True if the path is a directory, false otherwise.
      */
-    protected function isDir(string $path): bool{
+    protected function isDir(string $path): bool
+    {
         return is_dir($path);
     }
 
@@ -112,7 +122,8 @@ trait HasRepository{
      * @param string $path The path to check.
      * @return bool True if the path is a file, false otherwise.
      */
-    protected function isFile(string $path): bool{
+    protected function isFile(string $path): bool
+    {
         return \is_file($path);
     }
 
@@ -122,7 +133,8 @@ trait HasRepository{
      * @param string $path The path to check.
      * @return bool True if the path exists, false otherwise.
      */
-    protected function isFileExists(string $path): bool{
+    protected function isFileExists(string $path): bool
+    {
         return \file_exists($path);
     }
 
@@ -132,16 +144,18 @@ trait HasRepository{
      * @param datatype $value description
      * @return Some_Return_Value
      */
-    public function toObject($value){
-      return is_object($value) ? $value : (object) $value;
-    } 
+    public function toObject($value)
+    {
+        return is_object($value) ? $value : (object) $value;
+    }
 
     /**
      * Retrieves the path to the asset directory.
      *
      * @return string The path to the asset directory.
      */
-    protected function getAssetPath(string $path = ''): string{
-        return $this->dir().$this->__asset_path.$path;
+    protected function getAssetPath(string $path = ''): string
+    {
+        return $this->dir() . $this->__asset_path . $path;
     }
 }

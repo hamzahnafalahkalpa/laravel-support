@@ -1,19 +1,21 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 use Illuminate\Http\Request;
 
-trait RequestEscaping{
-    protected $__class_request;
+trait RequestEscaping
+{
+  protected $__class_request;
 
-    public function requestScope(callable $callable,$request=null){
-        $this->__request = (isset($request)) ? $request->all() : request()->all();
-        $value = $callable($this);
-        $this->newRequest($this->__request);
-        $this->setRuquest($this->__request,false);
-        return $value;
-    }
+  public function requestScope(callable $callable, $request = null)
+  {
+    $this->__request = (isset($request)) ? $request->all() : request()->all();
+    $value = $callable($this);
+    $this->newRequest($this->__request);
+    $this->setRuquest($this->__request, false);
+    return $value;
+  }
 
   /**
    * Creates a new request by adding the provided parameters to the current request.
@@ -21,9 +23,10 @@ trait RequestEscaping{
    * @param array $add The parameters to add to the current request.
    * @return self
    */
-  public function newRequest($add=[],$classRequest = null) : Request{
-    if (request()->has('page')){
-      $add = $this->mergeArray($add,[
+  public function newRequest($add = [], $classRequest = null): Request
+  {
+    if (request()->has('page')) {
+      $add = $this->mergeArray($add, [
         'page' => request()->get('page')
       ]);
     }
@@ -39,7 +42,8 @@ trait RequestEscaping{
    * @param bool $new Whether to create a new request or merge with the existing one.
    * @return self The current instance after setting the request.
    */
-  private function setRuquest($add=[],$new=true): self{
+  private function setRuquest($add = [], $new = true): self
+  {
     if (!$new) $this->__class_request = Request::class;
     $this->requestReplace($this->makeRequest($add));
     return $this;
@@ -51,10 +55,11 @@ trait RequestEscaping{
    * @param array $args The parameters to add to the current ->rurequest.
    * @return array The merged request parameters.
    */
-  private function makeRequest($args){    
-    $request = new $this->__class_request($this->filterArray($args, fn ($value) => $value !== null));
+  private function makeRequest($args)
+  {
+    $request = new $this->__class_request($this->filterArray($args, fn($value) => $value !== null));
     if ($this->__class_request !== Request::class) {
-        $request->validate($request->rules(), $request->all());
+      $request->validate($request->rules(), $request->all());
     }
     $this->__class_request = $request;
     return $request->all();
@@ -66,8 +71,9 @@ trait RequestEscaping{
    * @param array $args The parameters to replace the current request with.
    * @return self The current instance after replacing the request.
    */
-  private function requestReplace(): self{
-    if(isset($this->__class_request)) request()->replace($this->__class_request->all());
+  private function requestReplace(): self
+  {
+    if (isset($this->__class_request)) request()->replace($this->__class_request->all());
     return $this;
   }
 }

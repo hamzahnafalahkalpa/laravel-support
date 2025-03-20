@@ -1,15 +1,16 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\PackageManagement;
+namespace Hanafalah\LaravelSupport\Concerns\PackageManagement;
 
 use Exception;
 use Illuminate\Database\Eloquent\Model;
-use Zahzah\LaravelSupport\Exceptions\ModelCouldNotBeIdentifiedByid;
-use Zahzah\LaravelSupport\Events;
+use Hanafalah\LaravelSupport\Exceptions\ModelCouldNotBeIdentifiedByid;
+use Hanafalah\LaravelSupport\Events;
 
 use Illuminate\Support\Str;
 
-trait HasInitialize{
+trait HasInitialize
+{
     private Model|null $__initialize_model;
 
     private string $__ending_event, $__ended_event;
@@ -20,7 +21,8 @@ trait HasInitialize{
      *
      * @return array
      */
-    public function events(){
+    public function events()
+    {
         return [
             Events\InitializingEvent::class => [],
             Events\EventInitialized::class  => [],
@@ -36,8 +38,9 @@ trait HasInitialize{
      *
      * @return void
      */
-    protected function initialize(mixed $model): void{
-        if (method_exists($this,'initModel')) $this->initModel();        
+    protected function initialize(mixed $model): void
+    {
+        if (method_exists($this, 'initModel')) $this->initModel();
         if (!isset($this->__entity)) throw new Exception('The entity variable has not been set.');
         if (!is_object($model)) {
             $model = $this->refind($model_id = $model);
@@ -62,7 +65,8 @@ trait HasInitialize{
      *
      * @return void
      */
-    public function end(): void{
+    public function end(): void
+    {
         event(new Events\EndingEvent($this));
         if (!$this->initialized) return;
         event(new Events\EventEnded($this));
@@ -71,12 +75,12 @@ trait HasInitialize{
         $this->__initialize_model = null;
     }
 
-    public function getInitializeModel(? string $model = null): ? Model{
-        if (isset($model)){
+    public function getInitializeModel(?string $model = null): ?Model
+    {
+        if (isset($model)) {
             $model_name = Str::snake(class_basename($model));
             $this->{$model_name} = $model;
         }
         return $this->__initialize_model = &$this->{$model_name};
     }
-    
 }

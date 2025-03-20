@@ -1,19 +1,18 @@
-<?php 
+<?php
 
-namespace Zahzah\LaravelSupport\Facades;
+namespace Hanafalah\LaravelSupport\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use Zahzah\LaravelSupport\Contracts\Response as ContractsResponse;
+use Hanafalah\LaravelSupport\Contracts\Response as ContractsResponse;
 
 /**
  * @method static void exceptionRespond(Exceptions $exceptions)
  */
-class Response extends Facade{
+class Response extends Facade
+{
 
    protected static function getFacadeAccessor()
    {
       return ContractsResponse::class;
    }
 }
-
-

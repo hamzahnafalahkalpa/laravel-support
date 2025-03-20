@@ -1,17 +1,19 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 use Illuminate\Database\Eloquent\{
-    Casts\Json, Model
+    Casts\Json,
+    Model
 };
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
-use Zahzah\ApiHelper\Facades\ApiAccess;
-use Zahzah\LaravelPermission\Resources\Permission\ViewPermission;
-use Zahzah\LaravelSupport\Facades\Response;
+use Hanafalah\ApiHelper\Facades\ApiAccess;
+use Hanafalah\LaravelPermission\Resources\Permission\ViewPermission;
+use Hanafalah\LaravelSupport\Facades\Response;
 
-trait HasResponse {
+trait HasResponse
+{
     use HasArray;
 
     protected int $__response_code;
@@ -19,17 +21,20 @@ trait HasResponse {
     protected mixed $__response_result;
     protected array $response;
 
-    public function sendResponse(mixed $result,? int $code = 200,mixed $message = 'Success.') : \Illuminate\Http\JsonResponse{
-        $this->responseFormat($result,$code,$message);
+    public function sendResponse(mixed $result, ?int $code = 200, mixed $message = 'Success.'): \Illuminate\Http\JsonResponse
+    {
+        $this->responseFormat($result, $code, $message);
         return response()->json($this->resultResponse(), $code);
     }
 
-    public function responseFormat(mixed $result,? int $code = 200,mixed $message = 'Success.') : self{
+    public function responseFormat(mixed $result, ?int $code = 200, mixed $message = 'Success.'): self
+    {
         $this->setResponseCode($code)->setResponseMessages($message)->setResponseResult($result);
         return $this;
     }
 
-    public function resultResponse(): array{
+    public function resultResponse(): array
+    {
         $success = $this->__response_code < 400;
 
         $this->__response = [
@@ -47,28 +52,29 @@ trait HasResponse {
         return $this->__response;
     }
 
-    private function renderAclResponse(){
+    private function renderAclResponse()
+    {
         $route      = request()->route();
         $route_name = $route ? $route->getName() : null;
-        if (auth()->check()){
+        if (auth()->check()) {
             $user = $this->prepareUser();
 
             $permission = app(config('database.models.Permission'));
-            if (isset($route_name) && \is_subclass_of($permission,Model::class)) {
-                $permission = $permission->where("alias",$route_name)->first();
-                if (!isset($permission) && Response::getAclPermission() !== null){
+            if (isset($route_name) && \is_subclass_of($permission, Model::class)) {
+                $permission = $permission->where("alias", $route_name)->first();
+                if (!isset($permission) && Response::getAclPermission() !== null) {
                     $permission = Response::getAclPermission();
                 }
 
                 if (isset($permission)) {
-                    $permission->load(['childs' => fn($q)=>$q->showInAcl()]);
+                    $permission->load(['childs' => fn($q) => $q->showInAcl()]);
                     $role = $user->userReference->role;
-                    if (isset($role)){
-                        $permissions = $this->getNextPermission($role,$permission);
-                        if (isset($permissions) && count($permissions) > 0){
-                            $ids = array_column($permission->childs->toArray(),'id');
+                    if (isset($role)) {
+                        $permissions = $this->getNextPermission($role, $permission);
+                        if (isset($permissions) && count($permissions) > 0) {
+                            $ids = array_column($permission->childs->toArray(), 'id');
                             foreach ($permissions as $role_permission) {
-                                $key = array_search($role_permission->getKey(),$ids);
+                                $key = array_search($role_permission->getKey(), $ids);
                                 if ($key !== false) $permission->childs[$key]->access = true;
                             }
                         }
@@ -79,21 +85,23 @@ trait HasResponse {
         }
     }
 
-    private function getNextPermission($role,$permission){
+    private function getNextPermission($role, $permission)
+    {
         $role->load([
-            'permissions' => function($query) use ($permission){
+            'permissions' => function ($query) use ($permission) {
                 $query->showInAcl()->parentId($permission->getKey());
             }
         ]);
         return $role->permissions;
     }
 
-    private function prepareUser(){
+    private function prepareUser()
+    {
         $user           = $this->UserModel()->find(ApiAccess::getUser()->getKey());
         $user_reference = &$user->userReference;
         $role_id        = $user_reference->role_id;
-        $role           = $user_reference->roles()->where('role_id',$role_id)->first();
-        $user_reference->setRelation('role',$role);
+        $role           = $user_reference->roles()->where('role_id', $role_id)->first();
+        $user_reference->setRelation('role', $role);
         return $user;
     }
 
@@ -103,27 +111,30 @@ trait HasResponse {
      * @param string|null $resource The resource class to be used for transformation. Defaults to the class's resource property.
      * @param callable|null $callback An optional callback function to modify the model before transformation.
      */
-    public function transforming(?string $resource=null,mixed $callback = null, array $options = []): array|Model{
+    public function transforming(?string $resource = null, mixed $callback = null, array $options = []): array|Model
+    {
         if (isset($callback)) $model = (is_callable($callback)) ? $callback() : (object) $callback;
 
         $this->resource($resource ??= $this->__resource);
-        if ($this->withResource()){
+        if ($this->withResource()) {
             $this->setModel($model);
-            return $this->retransform($model,function($model){
+            return $this->retransform($model, function ($model) {
                 return new $this->__resource($model);
-            },$options);
+            }, $options);
         }
         return $model;
     }
 
-    public function withResource(): bool{
+    public function withResource(): bool
+    {
         return isset($this->__resource);
     }
 
-    public function isSearch(): bool{
+    public function isSearch(): bool
+    {
         $keys  = $this->keys(request()->all());
         $keys  = preg_grep('/^search_/', $keys);
-        $valid = count($keys) == 0 || \call_user_func(function() use ($keys) {
+        $valid = count($keys) == 0 || \call_user_func(function () use ($keys) {
             $valid = true;
             foreach ($keys as $key) {
                 if (isset(request()->{$key})) {
@@ -136,7 +147,8 @@ trait HasResponse {
         return $valid || isset(request()->page);
     }
 
-    public function resource(? string $resource=null): self{
+    public function resource(?string $resource = null): self
+    {
         $this->__resource = $resource;
         return $this;
     }
@@ -152,50 +164,57 @@ trait HasResponse {
      * @param callable $callback The callback to use for transformation.
      * @return mixed The transformed value.
      */
-    public function retransform(mixed $collections,callable $callback, array $options = []): mixed{
+    public function retransform(mixed $collections, callable $callback, array $options = []): mixed
+    {
         switch (true) {
             case $collections instanceof LengthAwarePaginator:
             case $collections instanceof Collection:
-                $collections->transform(function ($collection) use ($callback){
+                $collections->transform(function ($collection) use ($callback) {
                     return $callback($collection);
                 });
-            break;
+                break;
             case \is_object($collections):
-            case $collections instanceof Model: 
+            case $collections instanceof Model:
                 $collections = $callback($collections);
-            break;
+                break;
         }
         $collections = $collections->toJson();
         $results = Json::decode($collections);
-        if (isset($options) && count($options) > 0){
+        if (isset($options) && count($options) > 0) {
             $results['rows_per_page'] = $options['rows_per_page'] ?? [];
         }
         return $results;
     }
 
-    public function getResponseCode(): ? int{
+    public function getResponseCode(): ?int
+    {
         return $this->__response_code ?? null;
     }
 
-    public function getResponseMessages(): mixed{
+    public function getResponseMessages(): mixed
+    {
         return $this->__response_messages;
     }
 
-    public function getResponseResult(): mixed{
+    public function getResponseResult(): mixed
+    {
         return $this->__response_result;
     }
 
-    public function setResponseCode(int $code){
+    public function setResponseCode(int $code)
+    {
         $this->__response_code = $code;
         return $this;
     }
 
-    public function setResponseResult(mixed $result){
+    public function setResponseResult(mixed $result)
+    {
         $this->__response_result = $result;
         return $this;
     }
 
-    public function setResponseMessages(mixed $message){
+    public function setResponseMessages(mixed $message)
+    {
         $message = $this->mustArray($message);
         $this->__response_messages = $message;
         return $this;

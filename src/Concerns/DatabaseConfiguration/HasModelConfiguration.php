@@ -1,14 +1,15 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\DatabaseConfiguration;
+namespace Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Zahzah\LaravelSupport\Concerns\Support\HasCall;
+use Hanafalah\LaravelSupport\Concerns\Support\HasCall;
 use Illuminate\Support\Str;
 
-trait HasModelConfiguration{
+trait HasModelConfiguration
+{
     use HasCall;
 
     public static $__model;
@@ -26,17 +27,18 @@ trait HasModelConfiguration{
      *
      * @return mixed|null
      */
-    public function __callModel(){
+    public function __callModel()
+    {
         $method = $this->getCallMethod();
-        $isInstance = Str::endsWith($method,'ModelInstance');
-        $isMorph    = Str::endsWith($method,'ModelMorph');
+        $isInstance = Str::endsWith($method, 'ModelInstance');
+        $isMorph    = Str::endsWith($method, 'ModelMorph');
         if (($method !== 'Model' && Str::endsWith($method, 'Model')) || $isInstance || $isMorph) {
             $firstMethod = Str::of($method)->beforeLast('Model');
-            $modelName   = config('database.models.'.$firstMethod);
+            $modelName   = config('database.models.' . $firstMethod);
             if (isset($modelName)) {
-                if ($isInstance){
+                if ($isInstance) {
                     return $modelName;
-                }else{
+                } else {
                     self::$__model = new $modelName();
                     return ($isMorph) ? self::$__model->getMorphClass() : self::$__model;
                 }
@@ -49,7 +51,8 @@ trait HasModelConfiguration{
      *
      * @return array The models configuration associated with the current instance.
      */
-    protected function getAppModelConfig(): array{
+    protected function getAppModelConfig(): array
+    {
         if (count(static::$__models_config) == 0) static::$__models_config = config('database.models') ?? [];
         return static::$__models_config;
     }
@@ -66,9 +69,10 @@ trait HasModelConfiguration{
      * @return static The current instance.
      */
 
-    protected function setAppModels(array $models = []): self{
+    protected function setAppModels(array $models = []): self
+    {
         config([
-            'database.models' => static::$__models_config = $this->mergeArray($this->getAppModelConfig(),$models)
+            'database.models' => static::$__models_config = $this->mergeArray($this->getAppModelConfig(), $models)
         ]);
         return $this;
     }
@@ -86,13 +90,14 @@ trait HasModelConfiguration{
      *
      * @return Model|null The model instance or the model from the configuration.
      */
-    public function getModel(bool $new = false,string $model_name = null):? Model{
+    public function getModel(bool $new = false, string $model_name = null): ?Model
+    {
         if (count(static::$__models_config) == 0) $this->getAppModelConfig();
-        return (isset($model_name)) 
-            ? static::$__models_config[$model_name] 
+        return (isset($model_name))
+            ? static::$__models_config[$model_name]
             : self::$__model;
     }
-    
+
     /**
      * Sets the model name associated with the current instance.
      *
@@ -100,12 +105,13 @@ trait HasModelConfiguration{
      *
      * @return static The current instance.
      */
-    protected function setModel(mixed $model=null): self{
+    protected function setModel(mixed $model = null): self
+    {
         if (isset($model)) {
             $condition = $model instanceof Model ||
-                         $model instanceof LengthAwarePaginator ||
-                         $model instanceof Collection;
-            static::$__model = ($condition) ? $model : $this->{$model.'Model'}();
+                $model instanceof LengthAwarePaginator ||
+                $model instanceof Collection;
+            static::$__model = ($condition) ? $model : $this->{$model . 'Model'}();
         }
         return $this;
     }
@@ -115,7 +121,8 @@ trait HasModelConfiguration{
      *
      * @return bool
      */
-    protected function isRecentlyCreated($model = null): bool{
+    protected function isRecentlyCreated($model = null): bool
+    {
         $model = $model ?? self::$__model;
         return isset($model) ? $model->wasRecentlyCreated : false;
     }

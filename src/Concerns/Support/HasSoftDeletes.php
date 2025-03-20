@@ -1,14 +1,16 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Zahzah\LaravelSupport\Facades\LaravelSupport;
+use Hanafalah\LaravelSupport\Facades\LaravelSupport;
 
-trait HasSoftDeletes{
+trait HasSoftDeletes
+{
     use SoftDeletes;
 
-    protected function hasSoftDeletes(){
+    protected function hasSoftDeletes()
+    {
         return true;
     }
 
@@ -20,7 +22,8 @@ trait HasSoftDeletes{
      *
      * @return void
      */
-    public static function softDeleting($query,$soft_delete_model){
+    public static function softDeleting($query, $soft_delete_model)
+    {
         $attributes  = $query->getOriginal();
         foreach ($attributes as $key => $attribute) {
             $soft_delete_model->{$key} = $attribute;

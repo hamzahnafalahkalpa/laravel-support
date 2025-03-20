@@ -1,11 +1,13 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
-trait RequestManipulation{
+trait RequestManipulation
+{
     use RequestEscaping;
 
-    public function assocRequest(...$args){
+    public function assocRequest(...$args)
+    {
         $new = [];
         foreach ($args as $key => $arg) {
             if (\is_numeric($key)) {
@@ -14,7 +16,7 @@ trait RequestManipulation{
                     $data = [$key => request($key) ?? null];
                     request()->request->remove($key);
                 }
-            }else{
+            } else {
                 $data = [$key => $arg ?? null];
             }
             $new = $this->mergeArray($new, $data ?? []);
@@ -22,9 +24,10 @@ trait RequestManipulation{
         return $new;
     }
 
-    public function moveTo(string $field,array $new_fields): self{
+    public function moveTo(string $field, array $new_fields): self
+    {
         request()->merge([
-          $field => $this->assocRequest(...$new_fields)
+            $field => $this->assocRequest(...$new_fields)
         ]);
         return $this;
     }

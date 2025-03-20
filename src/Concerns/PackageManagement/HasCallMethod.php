@@ -1,12 +1,13 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\PackageManagement;
+namespace Hanafalah\LaravelSupport\Concerns\PackageManagement;
 
-use Zahzah\LaravelSupport\Concerns\Support\HasCall;
+use Hanafalah\LaravelSupport\Concerns\Support\HasCall;
 
 use Illuminate\Support\Str;
 
-trait HasCallMethod{
+trait HasCallMethod
+{
     use HasCall;
 
     /**
@@ -17,7 +18,8 @@ trait HasCallMethod{
      *
      * @return mixed|null
      */
-    public function __callMethod(){
+    public function __callMethod()
+    {
         $method = $this->getCallMethod();
         if (Str::startsWith($method, 'call') && Str::endsWith($method, 'Method')) {
             $key = Str::between($method, 'call', 'Method');

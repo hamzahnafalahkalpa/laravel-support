@@ -1,19 +1,22 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Supports;
+namespace Hanafalah\LaravelSupport\Supports;
 
-use Zahzah\LaravelSupport\Concerns\{
-    Support, DatabaseConfiguration
+use Hanafalah\LaravelSupport\Concerns\{
+    Support,
+    DatabaseConfiguration
 };
 
-class BaseObserver {
+class BaseObserver
+{
     use Support\HasRequest,
         Support\HasArray,
         Support\HasJson,
         Support\HasCallStatic,
         DatabaseConfiguration\HasModelConfiguration;
 
-    public function callCustomMethod(): array{
-        return ['Model'];        
+    public function callCustomMethod(): array
+    {
+        return ['Model'];
     }
 }

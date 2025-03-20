@@ -3,15 +3,16 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Zahzah\LaravelSupport\Models\ReportSummary\ReportSummary;
+use Hanafalah\LaravelSupport\Models\ReportSummary\ReportSummary;
 
 return new class extends Migration
 {
-   use Zahzah\LaravelSupport\Concerns\NowYouSeeMe;
+    use Hanafalah\LaravelSupport\Concerns\NowYouSeeMe;
 
     private $__table;
 
-    public function __construct(){
+    public function __construct()
+    {
         $this->__table = app(config('database.models.ReportSummary', ReportSummary::class));
     }
 
@@ -23,22 +24,24 @@ return new class extends Migration
     public function up(): void
     {
         $table_name = $this->__table->getTable();
-        if (!$this->isTableExists()){
+        if (!$this->isTableExists()) {
             Schema::create($table_name, function (Blueprint $table) {
                 $table->ulid('id')->primary();
-                $table->string('morph',100)->nullable(false);
-                $table->string('flag',100)->nullable(false);
-                $table->enum('date_type',[
+                $table->string('morph', 100)->nullable(false);
+                $table->string('flag', 100)->nullable(false);
+                $table->enum('date_type', [
                     ReportSummary::DAILY_REPORT,
                     ReportSummary::MONTHLY_REPORT,
                     ReportSummary::YEARLY_REPORT
                 ]);
-                $table->string('date',20)->nullable(false);
+                $table->string('date', 20)->nullable(false);
                 $table->json('props')->nullable();
 
                 $table->index([
-                    'morph','flag','tenant_id'
-                ],'report_sum');
+                    'morph',
+                    'flag',
+                    'tenant_id'
+                ], 'report_sum');
             });
         }
     }

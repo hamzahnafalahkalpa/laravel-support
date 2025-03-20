@@ -3,8 +3,8 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Zahzah\LaravelSupport\Concerns\NowYouSeeMe;
-use Zahzah\LaravelSupport\Models\Unicode\Unicode;
+use Hanafalah\LaravelSupport\Concerns\NowYouSeeMe;
+use Hanafalah\LaravelSupport\Models\Unicode\Unicode;
 
 return new class extends Migration
 {
@@ -12,7 +12,8 @@ return new class extends Migration
 
     private $__table;
 
-    public function __construct(){
+    public function __construct()
+    {
         $this->__table = app(config('database.models.Unicode', Unicode::class));
     }
 
@@ -24,12 +25,12 @@ return new class extends Migration
     public function up()
     {
         $table_name = $this->__table->getTable();
-        if (!$this->isTableExists()){
+        if (!$this->isTableExists()) {
             Schema::create($table_name, function (Blueprint $table) {
                 $table->id();
-                $table->string('unicode_type',50)->nullable(false);
+                $table->string('unicode_type', 50)->nullable(false);
                 $table->unsignedInteger('flag')->nullable(false);
-                $table->string('name',100)->nullable(false);
+                $table->string('name', 100)->nullable(false);
             });
         }
     }

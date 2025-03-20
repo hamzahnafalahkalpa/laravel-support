@@ -3,8 +3,8 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Zahzah\LaravelSupport\Concerns\NowYouSeeMe;
-use Zahzah\LaravelSupport\Models\PayloadMonitoring\PayloadMonitoring;
+use Hanafalah\LaravelSupport\Concerns\NowYouSeeMe;
+use Hanafalah\LaravelSupport\Models\PayloadMonitoring\PayloadMonitoring;
 
 return new class extends Migration
 {
@@ -12,7 +12,8 @@ return new class extends Migration
 
     private $__table;
 
-    public function __construct(){
+    public function __construct()
+    {
         $this->__table = app(config('database.models.PayloadMonitoring', PayloadMonitoring::class));
     }
 
@@ -24,7 +25,7 @@ return new class extends Migration
     public function up()
     {
         $table_name = $this->__table->getTable();
-        if (!$this->isTableExists()){
+        if (!$this->isTableExists()) {
             Schema::create($table_name, function (Blueprint $table) {
                 $table->id();
                 $table->text('url')->nullable();

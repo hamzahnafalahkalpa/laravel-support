@@ -1,7 +1,5 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Contracts;
+namespace Hanafalah\LaravelSupport\Contracts;
 
-interface ReportSummary extends DataManagement
-{
-}
+interface ReportSummary extends DataManagement {}

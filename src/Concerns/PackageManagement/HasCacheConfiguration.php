@@ -1,13 +1,14 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\PackageManagement;
+namespace Hanafalah\LaravelSupport\Concerns\PackageManagement;
 
 /**
  * This trait is used to handle cache configuration on package management
  * it provide basic cache management for package management
  * so you can cache your configuration and just get it from cache if you need it
  */
-trait HasCacheConfiguration{
+trait HasCacheConfiguration
+{
     protected array $__cache = [];
 
     /**
@@ -16,7 +17,8 @@ trait HasCacheConfiguration{
      * @param  string  $key
      * @return array
      */
-    protected function getCache(string $key): array{
+    protected function getCache(string $key): array
+    {
         return $this->__cache[$key];
     }
 
@@ -28,7 +30,8 @@ trait HasCacheConfiguration{
      *
      * @return self
      */
-    protected function setCache(string $key, array $value): self{
+    protected function setCache(string $key, array $value): self
+    {
         $this->__cache[$key] = $value;
         return $this;
     }
@@ -41,7 +44,8 @@ trait HasCacheConfiguration{
      *
      * @return self
      */
-    protected function setCacheName(string $key,string $name): self{
+    protected function setCacheName(string $key, string $name): self
+    {
         $this->__cache[$key]['name'] = $name;
         return $this;
     }
@@ -54,12 +58,13 @@ trait HasCacheConfiguration{
      *
      * @return self Returns the instance for method chaining.
      */
-    protected function setCacheTags(string $key,string|array $tags): self{
+    protected function setCacheTags(string $key, string|array $tags): self
+    {
         $tags = $this->mustArray($tags);
         $this->__cache[$key]['tags'] = $tags;
         return $this;
     }
-    
+
     /**
      * Sets the cache duration for a given cache key.
      *
@@ -67,11 +72,12 @@ trait HasCacheConfiguration{
      * @param string|int $duration The duration to set for the cache. Use 'forever' to cache indefinitely.
      * @return self Returns the instance for method chaining.
      */
-    protected function setCacheDuration(string $key,string|int $duration): self{
-        if ($duration == 'forever'){
+    protected function setCacheDuration(string $key, string|int $duration): self
+    {
+        if ($duration == 'forever') {
             unset($this->__cache[$key]['duration']);
             $this->__cache[$key]['forever'] = true;
-        }else{
+        } else {
             unset($this->__cache[$key]['forever']);
             $this->__cache[$key]['duration'] = $duration;
         }

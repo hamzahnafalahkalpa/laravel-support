@@ -1,11 +1,12 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 use Illuminate\Support\Str;
-use Zahzah\LaravelSupport\Supports\PackageManagement;
+use Hanafalah\LaravelSupport\Supports\PackageManagement;
 
-trait HasCall{
+trait HasCall
+{
     private $__call_method, $__call_arguments;
     protected $__custom_method_lists = [];
     /**
@@ -16,10 +17,11 @@ trait HasCall{
      *
      * @return mixed
      */
-    public function __call($method,$arguments = []){                       
+    public function __call($method, $arguments = [])
+    {
         return $this->setCallMethod($method)
-             ->setCallArguments($arguments)
-             ->callMethod();
+            ->setCallArguments($arguments)
+            ->callMethod();
     }
 
     /**
@@ -29,7 +31,8 @@ trait HasCall{
      *
      * @return self
      */
-    private function setCallMethod(string $method): self{
+    private function setCallMethod(string $method): self
+    {
         $this->__call_method = $method;
         return $this;
     }
@@ -41,7 +44,8 @@ trait HasCall{
      *
      * @return self
      */
-    private function setCallArguments($arguments): self{
+    private function setCallArguments($arguments): self
+    {
         $this->__call_arguments = $arguments;
         return $this;
     }
@@ -54,7 +58,8 @@ trait HasCall{
      *
      * @return mixed|null
      */
-    private function callMethod(){        
+    private function callMethod()
+    {
         $fn = [
             'callGetStaticResultMethod',
             'callSetStaticResultMethod',
@@ -65,10 +70,10 @@ trait HasCall{
             'callThisMethod'
         ];
         try {
-            foreach ($fn as $func) {            
-                $result = $this->{$func}();            
+            foreach ($fn as $func) {
+                $result = $this->{$func}();
                 if (isset($result)) {
-                    return $result;            
+                    return $result;
                 }
             }
         } catch (\Throwable $th) {
@@ -82,11 +87,12 @@ trait HasCall{
      *
      * @return mixed|null
      */
-    private function callGetStaticResultMethod(){
-        if (Str::startsWith($this->__call_method, 'getStatic') && Str::endsWith($this->__call_method, 'Result')) {            
+    private function callGetStaticResultMethod()
+    {
+        if (Str::startsWith($this->__call_method, 'getStatic') && Str::endsWith($this->__call_method, 'Result')) {
             $property = Str::replaceFirst('getStatic', '', $this->__call_method);
-            $property = str_replace('Result','',$property);
-            $var      = static::${'__'.Str::snake($property)};
+            $property = str_replace('Result', '', $property);
+            $var      = static::${'__' . Str::snake($property)};
             if (isset($var)) return $var;
         }
     }
@@ -97,11 +103,12 @@ trait HasCall{
      *
      * @return mixed|null
      */
-    private function callGetResultMethod(){
+    private function callGetResultMethod()
+    {
         if (Str::startsWith($this->__call_method, 'get') && Str::endsWith($this->__call_method, 'Result')) {
             $property = Str::replaceFirst('get', '', $this->__call_method);
-            $property = str_replace('Result','',$property);
-            $var      = $this->{'__'.Str::snake($property)};
+            $property = str_replace('Result', '', $property);
+            $var      = $this->{'__' . Str::snake($property)};
             if (isset($var)) return $var;
         }
     }
@@ -112,12 +119,13 @@ trait HasCall{
      *
      * @return mixed|null
      */
-    private function callSetStaticResultMethod(){
+    private function callSetStaticResultMethod()
+    {
         if (Str::startsWith($this->__call_method, 'setStatic') && Str::endsWith($this->__call_method, 'Result')) {
             $property = Str::replaceFirst('setStatic', '', $this->__call_method);
-            $property = str_replace('Result','',$property);
-            if (isset(static::${'__'.Str::snake($property)})){
-                return static::${'__'.Str::snake($property)} = $this->__call_arguments[0];
+            $property = str_replace('Result', '', $property);
+            if (isset(static::${'__' . Str::snake($property)})) {
+                return static::${'__' . Str::snake($property)} = $this->__call_arguments[0];
             }
         }
     }
@@ -128,47 +136,52 @@ trait HasCall{
      *
      * @return mixed|null
      */
-    private function callSetResultMethod(){
+    private function callSetResultMethod()
+    {
         if (Str::startsWith($this->__call_method, 'set') && Str::endsWith($this->__call_method, 'Result')) {
             $property = Str::replaceFirst('set', '', $this->__call_method);
-            $property = str_replace('Result','',$property);
-            if (isset($this->{'__'.Str::snake($property)})){
-                return $this->{'__'.Str::snake($property)} = $this->__call_arguments[0] ?? null;
+            $property = str_replace('Result', '', $property);
+            if (isset($this->{'__' . Str::snake($property)})) {
+                return $this->{'__' . Str::snake($property)} = $this->__call_arguments[0] ?? null;
             }
         }
     }
 
-    protected function setCustomMethodList(array $methods = []): self{
+    protected function setCustomMethodList(array $methods = []): self
+    {
         $this->__custom_method_lists = $methods;
         return $this;
     }
 
-    protected function renderCallCustomMethod(){
-        if (\method_exists($this,'callCustomMethod')){
+    protected function renderCallCustomMethod()
+    {
+        if (\method_exists($this, 'callCustomMethod')) {
             $var = $this->bootCustomMethod($this->callCustomMethod());
             if (isset($var)) return $var;
         }
     }
 
-    protected function bootCustomMethod(mixed $methods = []){
+    protected function bootCustomMethod(mixed $methods = [])
+    {
         $methods = $this->mustArray($methods);
         foreach ($methods as $method) {
-            $method = '__call'.$method;
+            $method = '__call' . $method;
             if (!method_exists($this, $method)) {
-                throw new \Exception('Method '.$method.' does not exist in '.$this);
+                throw new \Exception('Method ' . $method . ' does not exist in ' . $this);
             }
             $var = $this->{$method}();
             if (isset($var)) return $var;
         }
     }
 
-    private function callParentMethod(){
+    private function callParentMethod()
+    {
         try {
-            if (is_string(get_parent_class($this)) && method_exists(parent::class, '__call')) {         
-                return parent::__call($this->__call_method, $this->__call_arguments);                
+            if (is_string(get_parent_class($this)) && method_exists(parent::class, '__call')) {
+                return parent::__call($this->__call_method, $this->__call_arguments);
             }
         } catch (\Throwable $th) {
-            if ($th->getMessage() != 'Cannot use "parent" when current class scope has no parent'){
+            if ($th->getMessage() != 'Cannot use "parent" when current class scope has no parent') {
                 throw $th;
             }
         }
@@ -179,17 +192,20 @@ trait HasCall{
      *
      * @return mixed|null
      */
-    private function callThisMethod(){        
+    private function callThisMethod()
+    {
         if (method_exists($this, $this->__call_method)) {
             return $this->{$this->__call_method}(...$this->__call_arguments);
         }
     }
 
-    protected function getCallMethod(){
+    protected function getCallMethod()
+    {
         return $this->__call_method;
     }
 
-    protected function getCallArguments(){
+    protected function getCallArguments()
+    {
         return $this->__call_arguments;
     }
 }

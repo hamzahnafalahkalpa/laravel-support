@@ -1,9 +1,10 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 use Illuminate\Support\Traits\Conditionable;
 
-trait HasConditional{
+trait HasConditional
+{
     use Conditionable;
 }

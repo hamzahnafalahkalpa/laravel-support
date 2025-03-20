@@ -1,11 +1,11 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Resources;
+namespace Hanafalah\LaravelSupport\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use Zahzah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
-use Zahzah\LaravelSupport\Concerns\Resources\HasDateNormalize;
-use Zahzah\LaravelSupport\Concerns\Support\HasArray;
+use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
+use Hanafalah\LaravelSupport\Concerns\Resources\HasDateNormalize;
+use Hanafalah\LaravelSupport\Concerns\Support\HasArray;
 
 class ApiResource extends JsonResource
 {
@@ -28,20 +28,23 @@ class ApiResource extends JsonResource
         return parent::toArray($request);
     }
 
-    public function callCustomMethod(){
+    public function callCustomMethod()
+    {
         return ['Model'];
     }
 
-    public function resolveNow($resource){
+    public function resolveNow($resource)
+    {
         // return $resource->resolve();
-        return json_decode(json_encode($resource),true);
+        return json_decode(json_encode($resource), true);
     }
 
-    public function getPropsData(){
+    public function getPropsData()
+    {
         $fillable   = $this->getFillable();
         $attributes = $this->getAttributes();
-        if ($this->usesTimestamps()) $fillable = $this->mergeArray($fillable,['created_at','updated_at']);
-        $fillable = $this->mergeArray($fillable,['deleted_at']);
+        if ($this->usesTimestamps()) $fillable = $this->mergeArray($fillable, ['created_at', 'updated_at']);
+        $fillable = $this->mergeArray($fillable, ['deleted_at']);
         $diff = array_diff_key($attributes, array_flip($fillable));
         return  $diff == [] ? null : $diff;
     }

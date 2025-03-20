@@ -1,10 +1,14 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Models\Encoding;
+namespace Hanafalah\LaravelSupport\Models\Encoding;
 
-use Zahzah\LaravelSupport\Models\BaseModel;
+use Hanafalah\LaravelSupport\Models\BaseModel;
 
-class Encoding extends BaseModel {
-    protected $list = ['id','name','flag'];
-    public function modelHasEncoding(){return $this->hasOneModel('ModelHasEncoding');}
+class Encoding extends BaseModel
+{
+    protected $list = ['id', 'name', 'flag'];
+    public function modelHasEncoding()
+    {
+        return $this->hasOneModel('ModelHasEncoding');
+    }
 }

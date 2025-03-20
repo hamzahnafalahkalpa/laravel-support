@@ -1,12 +1,14 @@
 <?php
 
-namespace Zahzah\MicroTenant\Concerns\Schema;
+namespace Hanafalah\MicroTenant\Concerns\Schema;
 
-trait HasSchema{
+trait HasSchema
+{
     protected $__schema_model;
 
-    protected function getSchema(): self{
-        $this->__schema_model = app($this->getModel(true,'Schema'));
+    protected function getSchema(): self
+    {
+        $this->__schema_model = app($this->getModel(true, 'Schema'));
         return $this;
     }
 }

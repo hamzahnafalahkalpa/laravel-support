@@ -1,17 +1,22 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
-trait HasActivity{
-    public function activity(){return $this->morphOneModel('Activity','reference');}
+trait HasActivity
+{
+    public function activity()
+    {
+        return $this->morphOneModel('Activity', 'reference');
+    }
 
-    public function pushActivity(string $flag,mixed $activity_status){
+    public function pushActivity(string $flag, mixed $activity_status)
+    {
         $activity = $this->activity()->firstOrCreate([
             'activity_flag'  => $flag,
             'reference_type' => $this->getMorphClass(),
             'reference_id'   => $this->getKey()
         ]);
-        
+
         $activity_statuses = $this->mustArray($activity_status);
         foreach ($activity_statuses as $activity_status) {
             $activity->activityStatus()->firstOrCreate([
@@ -21,7 +26,8 @@ trait HasActivity{
         }
     }
 
-    public function sortActivity(){
+    public function sortActivity()
+    {
         $prop_activity = $this->prop_activity ?? null;
         if (isset($prop_activity)) {
             $flattened = [];

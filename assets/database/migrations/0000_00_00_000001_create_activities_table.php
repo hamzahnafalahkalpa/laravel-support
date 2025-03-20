@@ -1,10 +1,10 @@
 <?php
 
-use Zahzah\LaravelSupport\Models\Activity\Activity;
+use Hanafalah\LaravelSupport\Models\Activity\Activity;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Zahzah\LaravelSupport\Concerns\NowYouSeeMe;
+use Hanafalah\LaravelSupport\Concerns\NowYouSeeMe;
 
 return new class extends Migration
 {
@@ -12,7 +12,8 @@ return new class extends Migration
 
     private $__table;
 
-    public function __construct(){
+    public function __construct()
+    {
         $this->__table = app(config('database.models.Activity', Activity::class));
     }
 
@@ -24,7 +25,7 @@ return new class extends Migration
     public function up()
     {
         $table_name = Activity::getTableName();
-        if (!$this->isTableExists()){
+        if (!$this->isTableExists()) {
             Schema::create($table_name, function (Blueprint $table) {
                 $table->ulid('id')->primary();
                 $table->string('activity_flag', 50);
@@ -36,8 +37,8 @@ return new class extends Migration
                 $table->json('props')->nullable();
                 $table->timestamps();
 
-                $table->index(['reference_type','reference_id']);
-                $table->index(['activity_flag','reference_type','reference_id']);
+                $table->index(['reference_type', 'reference_id']);
+                $table->index(['activity_flag', 'reference_type', 'reference_id']);
             });
         }
     }

@@ -1,10 +1,11 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 
-trait HasHttpCode{
-    
+trait HasHttpCode
+{
+
     /**
      * list of http code and its description
      *
@@ -61,14 +62,15 @@ trait HasHttpCode{
         505 => 'HTTP Version Not Supported',
     ];
 
-    
+
     /**
      * Get http code
      * 
      * @param int $code
      * @return string
      */
-    public static function getHttpCode(int $code): string{
+    public static function getHttpCode(int $code): string
+    {
         return self::$__http_code_list[$code] ?? '';
     }
 
@@ -77,7 +79,8 @@ trait HasHttpCode{
      * 
      * @return array
      */
-    public static function getHttpCodeList(): array{
+    public static function getHttpCodeList(): array
+    {
         return self::$__http_code_list;
     }
 }

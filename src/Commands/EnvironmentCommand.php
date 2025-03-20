@@ -1,22 +1,24 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Commands;
+namespace Hanafalah\LaravelSupport\Commands;
 
-use Zahzah\LaravelSupport\Concerns\ServiceProvider\HasMigrationConfiguration;
-use Zahzah\LaravelSupport\Concerns\Support\HasMicrotenant;
+use Hanafalah\LaravelSupport\Concerns\ServiceProvider\HasMigrationConfiguration;
+use Hanafalah\LaravelSupport\Concerns\Support\HasMicrotenant;
 
 class EnvironmentCommand extends BaseCommand
 {
     use HasMigrationConfiguration;
-    use HasMicrotenant; 
+    use HasMicrotenant;
 
-    protected function init(): self{
+    protected function init(): self
+    {
         //INITIALIZE SECTION
         $this->initConfig()->setLocalConfig('laravel-support');
         return $this;
     }
 
-    protected function dir(): string{
-        return __DIR__.'/../';
+    protected function dir(): string
+    {
+        return __DIR__ . '/../';
     }
 }

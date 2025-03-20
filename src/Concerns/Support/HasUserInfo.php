@@ -1,8 +1,9 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
-trait HasUserInfo{
+trait HasUserInfo
+{
 
     protected static array $user_info = [];
 
@@ -11,7 +12,8 @@ trait HasUserInfo{
      *
      * @return array
      */
-    public function getUserInfo(){
+    public function getUserInfo()
+    {
         return static::$user_info;
     }
 
@@ -22,7 +24,8 @@ trait HasUserInfo{
      * 
      * @return self
      */
-    public function mergeUserInfo(mixed $value): self{
+    public function mergeUserInfo(mixed $value): self
+    {
         $value = $this->mustArray($value);
         static::$user_info = $this->mergeArray(static::$user_info, $value);
         return $this;
@@ -35,7 +38,8 @@ trait HasUserInfo{
      * 
      * @return self
      */
-    public function setUserInfo(mixed $value): self{
+    public function setUserInfo(mixed $value): self
+    {
         $value = $this->mustArray($value);
         static::$user_info = array_merge($value);
         return $this;
@@ -49,7 +53,8 @@ trait HasUserInfo{
      * 
      * @return self
      */
-    public function setUserAttribute($key, $value): self{
+    public function setUserAttribute($key, $value): self
+    {
         static::$user_info[$key] = $value;
         return $this;
     }

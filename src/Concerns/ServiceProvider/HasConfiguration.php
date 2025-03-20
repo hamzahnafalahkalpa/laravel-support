@@ -1,17 +1,18 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\ServiceProvider;
+namespace Hanafalah\LaravelSupport\Concerns\ServiceProvider;
 
-use Zahzah\LaravelSupport\Concerns;
+use Hanafalah\LaravelSupport\Concerns;
 use Illuminate\Support\Str;
 
 /**
- * @mixin \Zahzah\LaravelSupport\BaseServiceProvider
+ * @mixin \Hanafalah\LaravelSupport\BaseServiceProvider
  */
-trait HasConfiguration{
+trait HasConfiguration
+{
     use Concerns\Support\HasLocalDir;
     use Concerns\Support\HasCall;
-    
+
     /**
      * @var string
      */
@@ -58,15 +59,16 @@ trait HasConfiguration{
      * 
      * @return mixed|null
      */
-    public function __callConfiguration(){
+    public function __callConfiguration()
+    {
         $method = $this->getCallMethod();
         if (!Str::startsWith($method, 'Config') && Str::endsWith($method, 'Config')) {
             $property = Str::snake($method);
-            $configs  = $this->{'__'.$property};
-            if (isset($configs)){
-                $roots = explode('.',$this->__call_arguments[0]);
+            $configs  = $this->{'__' . $property};
+            if (isset($configs)) {
+                $roots = explode('.', $this->__call_arguments[0]);
                 foreach ($roots as $root) $configs = isset($configs[$root]) ? $configs[$root] : [];
-                $var = $this->{'__'.Str::snake($property)};
+                $var = $this->{'__' . Str::snake($property)};
                 if (isset($var)) return $var;
             }
         }
@@ -75,7 +77,8 @@ trait HasConfiguration{
     /**
      * @return $this
      */
-    protected function initConfig(): self {
+    protected function initConfig(): self
+    {
         $this->__config = config();
         return $this;
     }
@@ -84,8 +87,9 @@ trait HasConfiguration{
      * @param string|null $root
      * @return array
      */
-    protected function config(?string $root = null): array {
-        if (isset($root)) config($root);  
+    protected function config(?string $root = null): array
+    {
+        if (isset($root)) config($root);
         $this->initConfig();
         return $this->__config;
     }
@@ -95,7 +99,8 @@ trait HasConfiguration{
      * @param array $config
      * @return $this
      */
-    protected function setConfig(string $root, array &$config): self {
+    protected function setConfig(string $root, array &$config): self
+    {
         $config = $this->__config[$root] ?? [];
         return $this;
     }
@@ -106,30 +111,32 @@ trait HasConfiguration{
      * @param string|null $base_path
      * @return $this
      */
-    public function mergeConfigWith(string $alias, ?string $path = null, ?string $base_path = null): self {
+    public function mergeConfigWith(string $alias, ?string $path = null, ?string $base_path = null): self
+    {
         $base_path ??= $this->getConfigFullPath($path);
         $local_config = include $base_path;
-        $this->injectLocalConfig($alias,$local_config);
+        $this->injectLocalConfig($alias, $local_config);
         $this->mergeConfigFrom($base_path, $alias);
         $this->initConfig();
 
         $general_contracts = config('app.contracts', []);
-        $local_contracts   = config($alias.'.contracts',[]);
+        $local_contracts   = config($alias . '.contracts', []);
         config(['app.contracts' => $this->mergeArray($general_contracts, $local_contracts)]);
         return $this;
     }
 
-    protected function injectLocalConfig(string $key,mixed $value,array $config_root = []){
+    protected function injectLocalConfig(string $key, mixed $value, array $config_root = [])
+    {
         $config_root[] = $key;
-        if ($this->isArray($value)){
+        if ($this->isArray($value)) {
             foreach ($value as $k => $v) {
-                $this->injectLocalConfig($k,$v,$config_root);
+                $this->injectLocalConfig($k, $v, $config_root);
             }
-        }else{
+        } else {
             $config_root = implode('.', $config_root);
             $config_value = config()->get($config_root);
-            if (!isset($config_value)){
-                config()->set($config_root,$value);
+            if (!isset($config_value)) {
+                config()->set($config_root, $value);
             }
         }
     }
@@ -137,7 +144,8 @@ trait HasConfiguration{
     /**
      * @return string
      */
-    protected function getConfigBasePath(): string {
+    protected function getConfigBasePath(): string
+    {
         return $this->__config_base_path;
     }
 
@@ -145,21 +153,24 @@ trait HasConfiguration{
      * @param string|null $path
      * @return string
      */
-    protected function getConfigFullPath(?string $path = null): string {
-        return $this->dir().$this->getConfigBasePath().'/'.($path ??= $this->__config_file_name).'.php';
+    protected function getConfigFullPath(?string $path = null): string
+    {
+        return $this->dir() . $this->getConfigBasePath() . '/' . ($path ??= $this->__config_file_name) . '.php';
     }
 
     /**
      * @param string $config_name
      * @return $this
      */
-    protected function setLocalConfig(string $config_name): self {
+    protected function setLocalConfig(string $config_name): self
+    {
         $this->setLocalConfigName($config_name)
-             ->setConfig($config_name, $this->__local_config);
+            ->setConfig($config_name, $this->__local_config);
         return $this;
     }
 
-    protected function setLocalConfigName(string $config_name): self {
+    protected function setLocalConfigName(string $config_name): self
+    {
         $this->__local_config_name = $config_name;
         return $this;
     }
@@ -168,7 +179,8 @@ trait HasConfiguration{
      * @param array $config
      * @return $this
      */
-    protected function setCrossConfig(array $config): self {
+    protected function setCrossConfig(array $config): self
+    {
         self::$__cross_config = $config;
         return $this;
     }

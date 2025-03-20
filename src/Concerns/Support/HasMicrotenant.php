@@ -1,8 +1,9 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
-trait HasMicrotenant{
+trait HasMicrotenant
+{
     protected $__is_multitenancy = false;
 
     /**
@@ -10,9 +11,10 @@ trait HasMicrotenant{
      *
      * @return bool
      */
-    protected function isMultitenancy(): bool{
-        $loader = require base_path('vendor/autoload.php');        
-        if (isset($loader->getPrefixesPsr4()['Zahzah\\MicroTenant\\'])){
+    protected function isMultitenancy(): bool
+    {
+        $loader = require base_path('vendor/autoload.php');
+        if (isset($loader->getPrefixesPsr4()['Hanafalah\\MicroTenant\\'])) {
             $this->__is_multitenancy = true;
         }
         return $this->__is_multitenancy;

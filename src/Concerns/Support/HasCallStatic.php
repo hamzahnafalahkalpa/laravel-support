@@ -1,6 +1,6 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 trait HasCallStatic
 {
@@ -16,7 +16,8 @@ trait HasCallStatic
      * @param  array  $arguments
      * @return mixed
      */
-    public static function __callStatic($method, $arguments=[]){        
+    public static function __callStatic($method, $arguments = [])
+    {
         self::$__instance = new static();
         // If the method starts with "use", it will attempt to use the class in the same namespace as the current class.
         if (strpos($method, 'use') === 0) {
@@ -42,7 +43,8 @@ trait HasCallStatic
      * @param  string  $class
      * @return mixed
      */
-    public function use($class, ...$arguments){
+    public function use($class, ...$arguments)
+    {
         if (!class_exists($class)) {
             throw new \InvalidArgumentException(sprintf('Class [%s] does not exist.', $class));
         }
@@ -50,5 +52,3 @@ trait HasCallStatic
         return $this->getClass();
     }
 }
-
-

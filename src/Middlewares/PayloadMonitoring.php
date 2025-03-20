@@ -1,9 +1,9 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Middlewares;
+namespace Hanafalah\LaravelSupport\Middlewares;
 
 use Illuminate\Http\Request;
-use Zahzah\LaravelSupport\Middlewares\Middleware;
+use Hanafalah\LaravelSupport\Middlewares\Middleware;
 
 class PayloadMonitoring extends Middleware
 {
@@ -25,14 +25,14 @@ class PayloadMonitoring extends Middleware
         if ($this->__config['enabled']) {
             $url = $request->getRequestUri();
             $url = '/' . ltrim($url, '/');
-            $payloadMonitoring = $this->{$this->__entity.'Model'}()::create([
+            $payloadMonitoring = $this->{$this->__entity . 'Model'}()::create([
                 'url'      => $url,
                 'start_at' => now(),
             ]);
             $response = $next($request);
             //UPDATE PAYLOAD MONITORING
             $endAt = now();
-            $timeDifference = $endAt->diffInMilliseconds($payloadMonitoring->start_at)/1000;
+            $timeDifference = $endAt->diffInMilliseconds($payloadMonitoring->start_at) / 1000;
             $payloadMonitoring->update([
                 'end_at'           => $endAt,
                 'time_difference'  => $timeDifference,
@@ -56,6 +56,6 @@ class PayloadMonitoring extends Middleware
                 return $category;
             }
         }
-        return 'Very bad'; 
+        return 'Very bad';
     }
 }

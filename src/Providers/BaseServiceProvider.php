@@ -1,6 +1,6 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Providers;
+namespace Hanafalah\LaravelSupport\Providers;
 
 use Exception;
 use Illuminate\Contracts\Container\Container;
@@ -12,37 +12,38 @@ use Illuminate\Support\{
 };
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
-use Zahzah\LaravelSupport\Concerns\{
+use Hanafalah\LaravelSupport\Concerns\{
     DatabaseConfiguration as Database,
     ServiceProvider as Service,
     Support
 };
 
-use Zahzah\LaravelSupport\Concerns\PackageManagement\HasEvent;
+use Hanafalah\LaravelSupport\Concerns\PackageManagement\HasEvent;
 
 use Illuminate\Support\Str;
-use Zahzah\LaravelSupport\Enums\Provider\ProviderRegisterMethod;
-use Zahzah\MicroTenant\Models\Tenant\Tenant;
+use Hanafalah\LaravelSupport\Enums\Provider\ProviderRegisterMethod;
+use Hanafalah\MicroTenant\Models\Tenant\Tenant;
 
-abstract class BaseServiceProvider extends ServiceProvider{
+abstract class BaseServiceProvider extends ServiceProvider
+{
     use Support\HasCall;
     use Database\HasDatabaseConfiguration;
     use Service\HasRouteConfiguration;
     use Service\HasConfiguration;
     use Service\HasMigrationConfiguration;
     use Service\HasProviderConfiguration;
-    use Support\HasRepository; 
-    use Support\HasMicrotenant;   
+    use Support\HasRepository;
+    use Support\HasMicrotenant;
     use Support\HasArray;
     use HasEvent;
-    
+
     protected string $__lower_package_name,
-                    $__main_class,
-                    $__class_basename,
-                    $__command_service_provider,
-                    $__route_service_service_provider,
-                    $__migration_path = '',
-                    $__target_migration_path = '';
+        $__main_class,
+        $__class_basename,
+        $__command_service_provider,
+        $__route_service_service_provider,
+        $__migration_path = '',
+        $__target_migration_path = '';
     protected array $__finished_register = [];
 
     public array $__events = [];
@@ -54,35 +55,38 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return void
      */
-    public function __construct(Container $app) {
+    public function __construct(Container $app)
+    {
         parent::__construct($app);
         $this->__config  = $app['config'];
-        $class_base_name = \class_name_builder(Str::replace('ServiceProvider','',$this::class));
+        $class_base_name = \class_name_builder(Str::replace('ServiceProvider', '', $this::class));
         $this->setClassBaseName($class_base_name);
         $this->setLowerPackageName(\class_name_builder($class_base_name));
     }
 
-    public function events(): array{
+    public function events(): array
+    {
         return $this->__events;
     }
 
-    protected function bootedRegisters(Model $model,string $config_name,? string $migration_path = null): self{
+    protected function bootedRegisters(Model $model, string $config_name, ?string $migration_path = null): self
+    {
         if (isset($migration_path)) {
-            if (isset($this->__config[$config_name]['libs']) && isset($this->__config[$config_name]['libs']['migration'])){
-                $migration_path = $this->dir().'/../'.$this->__config[$config_name]['libs']['migration'];
+            if (isset($this->__config[$config_name]['libs']) && isset($this->__config[$config_name]['libs']['migration'])) {
+                $migration_path = $this->dir() . '/../' . $this->__config[$config_name]['libs']['migration'];
                 $this->overrideDatabasePath($migration_path);
-            }else{
+            } else {
                 new Exception('Migration path not found');
             }
         }
-        
-        $this->registerProvider(function() use ($model, $config_name){
+
+        $this->registerProvider(function () use ($model, $config_name) {
             $packages = $model->packages;
-            if (isset($packages)){
+            if (isset($packages)) {
                 foreach ($packages as $key => $package) {
                     $provider = $this->replacement($package['provider']);
                     $this->app->register($provider);
-                    $provider_basename = Str::replace('ServiceProvider','',class_basename($provider));
+                    $provider_basename = Str::replace('ServiceProvider', '', class_basename($provider));
                     config(["$config_name.packages.$provider_basename.provider" => $provider]);
                 }
             }
@@ -97,7 +101,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    public function overrideDatabasePath(string $migration_path): self{
+    public function overrideDatabasePath(string $migration_path): self
+    {
         App::useDatabasePath($migration_path);
         return $this;
     }
@@ -112,29 +117,31 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function registerOverideConfig(string $config_name,? string $additional_config_path = null): self{
-        $this->registerConfig(function() use ($config_name,$additional_config_path){
-            if (isset($additional_config_path)){
-                $configs = array_diff(scandir($additional_config_path), ['.', '..','config.php']);
+    protected function registerOverideConfig(string $config_name, ?string $additional_config_path = null): self
+    {
+        $this->registerConfig(function () use ($config_name, $additional_config_path) {
+            if (isset($additional_config_path)) {
+                $configs = array_diff(scandir($additional_config_path), ['.', '..', 'config.php']);
                 foreach ($configs as $config) {
-                    $path = $additional_config_path.'/'.$config;
+                    $path = $additional_config_path . '/' . $config;
                     if (is_file($path)) {
                         $content = include $path;
-                        $this->overrideConfig(Str::replace('.php','',$config),$content);
+                        $this->overrideConfig(Str::replace('.php', '', $config), $content);
                     }
                 }
             }
 
             $packages  = config()->get("$config_name.packages");
-            if (isset($packages)){
+            if (isset($packages)) {
                 foreach ($packages as $key => $package) {
-                    $key = Str::snake($key,'-');
-                    $this->overrideConfig($key,$package['config'] ?? config($key));
+                    $key = Str::snake($key, '-');
+                    $this->overrideConfig($key, $package['config'] ?? config($key));
                 }
             }
             $laravel_encodings = config()->get('laravel-support.encodings') ?? [];
-            config()->set('laravel-support.encodings',$this->mergeArray(
-                $laravel_encodings,config()->get("$config_name.encodings") ?? []
+            config()->set('laravel-support.encodings', $this->mergeArray(
+                $laravel_encodings,
+                config()->get("$config_name.encodings") ?? []
             ));
         });
         return $this;
@@ -151,16 +158,17 @@ abstract class BaseServiceProvider extends ServiceProvider{
      * @param mixed $value The config value to be set, which can be nested.
      * @param array $config_root The root path of the config key, allows for nested structure.
      */
-    protected function overrideConfig(string $key,mixed $value,array $config_root = []){
+    protected function overrideConfig(string $key, mixed $value, array $config_root = [])
+    {
         $config_root[] = $key;
-        if ($this->isArray($value)){
+        if ($this->isArray($value)) {
             foreach ($value as $k => $v) {
-                $this->overrideConfig($k,$v,$config_root);
+                $this->overrideConfig($k, $v, $config_root);
             }
-        }else{
+        } else {
             $config_root = implode('.', $config_root);
-            config()->set($config_root,$value);
-            config()->set('app.contracts.'.$key,$value);
+            config()->set($config_root, $value);
+            config()->set('app.contracts.' . $key, $value);
         }
     }
 
@@ -175,7 +183,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function setClassBaseName(string $name): self{
+    protected function setClassBaseName(string $name): self
+    {
         $this->__class_basename = class_basename($name);
         return $this;
     }
@@ -190,7 +199,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function setLowerPackageName(string $name): self{
+    protected function setLowerPackageName(string $name): self
+    {
         $this->__lower_package_name = Str::kebab($name);
         return $this;
     }
@@ -211,17 +221,18 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function registerMainClass(mixed $main_class): self{
+    protected function registerMainClass(mixed $main_class): self
+    {
         $this->__main_class         = $main_class;
         $this->__finished_register  = [];
         $this->setClassBaseName($main_class)
-              ->setLowerPackageName($this->__class_basename);
+            ->setLowerPackageName($this->__class_basename);
 
-        if (\method_exists('events', $main_class)){
+        if (\method_exists('events', $main_class)) {
             //GET EVENTS DATA
             $main_class = app($main_class);
             $events = $main_class->events();
-            $this->__events = $this->mergeArray($this->__events,$events);
+            $this->__events = $this->mergeArray($this->__events, $events);
         }
 
         $this->bootEvents();
@@ -240,7 +251,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function registerCommandService(mixed $command): self{
+    protected function registerCommandService(mixed $command): self
+    {
         $this->app->register($command);
         return $this;
     }
@@ -256,7 +268,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function registerRouteService(mixed $route_service): self{
+    protected function registerRouteService(mixed $route_service): self
+    {
         $this->app->register($route_service);
         return $this;
     }
@@ -275,8 +288,9 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function registerMigration(? callable $callback = null): self{
-        if (isset($callback)){
+    protected function registerMigration(?callable $callback = null): self
+    {
+        if (isset($callback)) {
             $value = $callback();
             $this->__migration_path        = $value['path'] ?? '';
             $this->__target_migration_path = $value['target'] ?? '';
@@ -295,7 +309,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function registerRoute(? callable $callback = null): self{
+    protected function registerRoute(?callable $callback = null): self
+    {
         $this->mergeRoutes();
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::ROUTE->value);
@@ -319,28 +334,29 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function registers(string|array $args, string|array $excepts = []): self{                
+    protected function registers(string|array $args, string|array $excepts = []): self
+    {
         $args       = $this->mustArray($args);
         $excepts    = $this->mustArray($excepts);
-        $validation = !$this->inArray(ProviderRegisterMethod::CONFIG,$this->__finished_register) && !$this->inArray('Config',$excepts);
+        $validation = !$this->inArray(ProviderRegisterMethod::CONFIG, $this->__finished_register) && !$this->inArray('Config', $excepts);
         if ($validation) $this->registerConfig();
-        $hasAll   = false;        
+        $hasAll   = false;
         foreach ($args as $key => $list) {
-            if ($list !== '*'){
+            if ($list !== '*') {
                 $key = $this->registerName(($isNumber = is_numeric($key)) ? $list : $key);
-                if ($this->inArray($key,$this->__finished_register)) continue;
-                $this->{'register'.$key}(!$isNumber ? $list : null);
-            }else{
+                if ($this->inArray($key, $this->__finished_register)) continue;
+                $this->{'register' . $key}(!$isNumber ? $list : null);
+            } else {
                 $hasAll = true;
             }
         }
 
-        if ($hasAll){
+        if ($hasAll) {
             $args = $this->mapArray(fn($case) => $case->value, ProviderRegisterMethod::cases());
-            $args = $this->diff($args,$this->__finished_register[\class_basename($this)],$excepts);
+            $args = $this->diff($args, $this->__finished_register[\class_basename($this)], $excepts);
             foreach ($args as $arg) {
-                if (method_exists($this,'register'.$arg)){
-                    $this->{'register'.$arg}();
+                if (method_exists($this, 'register' . $arg)) {
+                    $this->{'register' . $arg}();
                 }
             }
         }
@@ -358,7 +374,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return string The name of the service in a valid case.
      */
-    private function registerName(string $name): string{
+    private function registerName(string $name): string
+    {
         return ucfirst(\strtolower($name));
     }
 
@@ -378,9 +395,10 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function binds(array $binds){
+    protected function binds(array $binds)
+    {
         foreach ($binds as $key => $bind) {
-            $this->app->bind($key,function($app) use ($bind){
+            $this->app->bind($key, function ($app) use ($bind) {
                 if (is_callable($bind)) {
                     return $bind($app);
                 }
@@ -401,8 +419,9 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function appBooting(? callable $callback): self{
-        $this->app->booting(function($app) use ($callback){
+    protected function appBooting(?callable $callback): self
+    {
+        $this->app->booting(function ($app) use ($callback) {
             $callback($app);
         });
         return $this;
@@ -419,8 +438,9 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function appBooted(? callable $callback): self{
-        $this->app->booted(function($app) use ($callback){
+    protected function appBooted(?callable $callback): self
+    {
+        $this->app->booted(function ($app) use ($callback) {
             $callback($app);
         });
         return $this;
@@ -434,8 +454,9 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return array
      */
-    public function callCustomMethod(){
-        return ['Model','Configuration'];
+    public function callCustomMethod()
+    {
+        return ['Model', 'Configuration'];
     }
 
     abstract protected function dir(): string;
@@ -446,10 +467,11 @@ abstract class BaseServiceProvider extends ServiceProvider{
      * @param string $lowerClassName
      * @return array
      */
-    protected function getPublishableViewPaths($lowerClassName): array{
+    protected function getPublishableViewPaths($lowerClassName): array
+    {
         $paths = [];
-        foreach (Config::get('view.paths') as $path) 
-        if (is_dir($path.'/'.$lowerClassName)) $paths[] = $path.'/'.$lowerClassName;
+        foreach (Config::get('view.paths') as $path)
+            if (is_dir($path . '/' . $lowerClassName)) $paths[] = $path . '/' . $lowerClassName;
         return $paths;
     }
 
@@ -459,7 +481,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      * @param array $morphs The array of morphs to set.
      * @return self The current instance of the class.
      */
-    protected function morphMap($morphs=[]): self{
+    protected function morphMap($morphs = []): self
+    {
         Relation::morphMap($morphs);
         return $this;
     }
@@ -473,7 +496,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      * @param callable|null $callback The callback function to call.
      * @return self The current instance of the class.
      */
-    private function callMeBack(? callable $callback = null): self{
+    private function callMeBack(?callable $callback = null): self
+    {
         if (isset($callback)) $callback();
         return $this;
     }
@@ -487,9 +511,10 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @param string $register The name of the service to be marked as registered.
      */
-    private function setFinishedRegister(string $register){
+    private function setFinishedRegister(string $register)
+    {
         $class_base_name = \class_basename($this);
-        if (!isset($this->__finished_register[$class_base_name])){
+        if (!isset($this->__finished_register[$class_base_name])) {
             $this->__finished_register[$class_base_name] = [];
         }
         $this->__finished_register[$class_base_name][] = $register;
@@ -504,13 +529,14 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self
      */
-    protected function paramSetup(): self{
+    protected function paramSetup(): self
+    {
         //MERGIN ARRAY FROM URL PARAMS
         if (request()->route()) {
             $parameters = request()->route()->parameters();
             request()->merge($parameters);
         }
-        if (isset(request()->per_page)){
+        if (isset(request()->per_page)) {
             request()->merge([
                 'perPage' => request()->per_page
             ]);
@@ -522,24 +548,26 @@ abstract class BaseServiceProvider extends ServiceProvider{
      * Registers the CommandServiceProvider with the application.
      *
      * @return $this The current instance of the class.
-    */
-    protected function registerProvider(? callable $callback = null): self{
+     */
+    protected function registerProvider(?callable $callback = null): self
+    {
         $this->callMeBack($callback);
-        $this->setFinishedRegister(ProviderRegisterMethod::PROVIDER->value);        
+        $this->setFinishedRegister(ProviderRegisterMethod::PROVIDER->value);
         return $this;
     }
 
-     /**
+    /**
      * Registers the morph map for the models.
      *
      * @return $this The current instance of the class.
      */
-    protected function registerModel(? callable $callback = null): self{        
+    protected function registerModel(?callable $callback = null): self
+    {
         if ($this->isExistsDatabaseModel()) {
             $this->morphMap($this->__config[$this->__lower_package_name]['database']['models']);
             $this->callMeBack($callback);
             $morphMaps = config('database.models');
-            config(['database.models' => $this->mergeArray($morphMaps ?? [],$this->__config[$this->__lower_package_name]['database']['models'])]);
+            config(['database.models' => $this->mergeArray($morphMaps ?? [], $this->__config[$this->__lower_package_name]['database']['models'])]);
         }
         $this->setFinishedRegister(ProviderRegisterMethod::MODEL->value);
         return $this;
@@ -550,7 +578,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @param Model $model The model instance to check and register providers for.
      */
-    public function deferredProviders(Model $model){
+    public function deferredProviders(Model $model)
+    {
         $this->app->register($this->replacement($model->app['provider']));
         $this->app->register($this->replacement($model->group['provider']));
     }
@@ -561,7 +590,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      * @param string $value The string to process.
      * @return string The processed string with reduced backslashes.
      */
-    private function replacement(string $value){
+    private function replacement(string $value)
+    {
         return preg_replace('/\\\\+/', '\\', $value);
     }
 
@@ -574,17 +604,18 @@ abstract class BaseServiceProvider extends ServiceProvider{
      * @param callable|null $callback The callback to be executed.
      * @return self The current instance of the class.
      */
-    public function registerConfig(? callable $callback = null): self{
-        if (isset($this->__lower_package_name)){
+    public function registerConfig(?callable $callback = null): self
+    {
+        if (isset($this->__lower_package_name)) {
             $this->mergeConfigWith($this->__lower_package_name)
-                 ->setLocalConfig($this->__lower_package_name);
+                ->setLocalConfig($this->__lower_package_name);
         }
         if ($this->__lower_package_name == 'module-class-room')
-        if (isset($this->__config[$this->__lower_package_name]['contracts'])){
-            $general_contracts = config('app.contracts',[]);
-            $contracts = $this->__config[$this->__lower_package_name]['contracts'];
-            config(['app.contracts' => $this->mergeArray($general_contracts,$contracts)]);
-        }
+            if (isset($this->__config[$this->__lower_package_name]['contracts'])) {
+                $general_contracts = config('app.contracts', []);
+                $contracts = $this->__config[$this->__lower_package_name]['contracts'];
+                config(['app.contracts' => $this->mergeArray($general_contracts, $contracts)]);
+            }
 
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::CONFIG->value);
@@ -600,9 +631,10 @@ abstract class BaseServiceProvider extends ServiceProvider{
      * @param callable|null $callback The callback to be executed.
      * @return self The current instance of the class.
      */
-    protected function registerDatabase(? callable $callback = null): self{
+    protected function registerDatabase(?callable $callback = null): self
+    {
         if ($this->isExistsDatabaseModel()) {
-            $this->setAppModels($this->__config[$this->__lower_package_name]['database']['models']);            
+            $this->setAppModels($this->__config[$this->__lower_package_name]['database']['models']);
         }
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::DATABASE->value);
@@ -614,7 +646,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return bool True if database models exist, false otherwise.
      */
-    private function isExistsDatabaseModel(): bool{
+    private function isExistsDatabaseModel(): bool
+    {
         $config = $this->__config[$this->__lower_package_name];
         return isset($config['database']) && isset($config['database']['models']);
     }
@@ -624,17 +657,18 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self The current instance of the class.
      */
-    public function registerNamespace(? callable $callback = null): self{ 
+    public function registerNamespace(?callable $callback = null): self
+    {
 
         $this->publishes([
-            $this->getConfigFullPath() => config_path($this->__lower_package_name.'.php'),
+            $this->getConfigFullPath() => config_path($this->__lower_package_name . '.php'),
         ], 'config');
 
         $this->publishes([
-            $this->getAssetPath('stubs') => base_path('Stubs/'.$this->__class_basename.'Stubs'),
-        ], 'stubs');   
-        
-        $this->publishes($this->scanForPublishMigration($this->__migration_path,$this->__target_migration_path), 'migrations');
+            $this->getAssetPath('stubs') => base_path('Stubs/' . $this->__class_basename . 'Stubs'),
+        ], 'stubs');
+
+        $this->publishes($this->scanForPublishMigration($this->__migration_path, $this->__target_migration_path), 'migrations');
 
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::NAMESPACE->value);
@@ -646,7 +680,8 @@ abstract class BaseServiceProvider extends ServiceProvider{
      *
      * @return self The current instance of the class.
      */
-    protected function registerServices(? callable $callback = null): self{
+    protected function registerServices(?callable $callback = null): self
+    {
         $this->app->singleton($this->__main_class);
         $this->callMeBack($callback);
         return $this;

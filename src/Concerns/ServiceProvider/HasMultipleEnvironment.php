@@ -1,11 +1,12 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\ServiceProvider;
+namespace Hanafalah\LaravelSupport\Concerns\ServiceProvider;
 
 use Illuminate\Support\Facades\App;
 
-trait HasMultipleEnvironment{
-    
+trait HasMultipleEnvironment
+{
+
     /**
      * Registers the environment file to be used by Laravel.
      *
@@ -15,9 +16,10 @@ trait HasMultipleEnvironment{
      *
      * @return $this The current instance of the class.
      */
-    public function registerEnvironment(): self{
+    public function registerEnvironment(): self
+    {
         $app  = config('app.env');
-        $path = base_path('.env.'.$app);
+        $path = base_path('.env.' . $app);
         if (!file_exists($path)) $path = base_path('.env');
         App::useEnvironmentPath($path);
         return $this;

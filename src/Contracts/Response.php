@@ -1,8 +1,5 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Contracts;
+namespace Hanafalah\LaravelSupport\Contracts;
 
-interface Response extends DataManagement
-{
-
-}
+interface Response extends DataManagement {}

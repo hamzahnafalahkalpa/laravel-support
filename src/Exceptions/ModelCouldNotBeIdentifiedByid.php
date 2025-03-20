@@ -1,7 +1,5 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Exceptions;
+namespace Hanafalah\LaravelSupport\Exceptions;
 
-class ModelCouldNotBeIdentifiedByid extends \Exception
-{
-}
+class ModelCouldNotBeIdentifiedByid extends \Exception {}

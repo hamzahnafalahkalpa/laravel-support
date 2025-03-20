@@ -1,7 +1,5 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Supports;
+namespace Hanafalah\LaravelSupport\Supports;
 
-class FileActivator{
-    
-}
+class FileActivator {}

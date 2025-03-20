@@ -1,8 +1,9 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\ServiceProvider;
+namespace Hanafalah\LaravelSupport\Concerns\ServiceProvider;
 
-trait HasProviderConfiguration{
+trait HasProviderConfiguration
+{
     /**
      * Registers the providers from the given array in the application.
      *
@@ -12,7 +13,8 @@ trait HasProviderConfiguration{
      *
      * @return $this
      */
-    protected function validProviders($providers){
+    protected function validProviders($providers)
+    {
         foreach ($providers as $path => $provider) {
             if (file_exists($path)) $this->app->register($provider);
         }

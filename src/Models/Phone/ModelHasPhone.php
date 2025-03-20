@@ -1,19 +1,20 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Models\Phone;
+namespace Hanafalah\LaravelSupport\Models\Phone;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Zahzah\LaravelHasProps\Concerns\HasProps;
-use Zahzah\LaravelSupport\Models\BaseModel;
+use Hanafalah\LaravelHasProps\Concerns\HasProps;
+use Hanafalah\LaravelSupport\Models\BaseModel;
 
-class ModelHasPhone extends BaseModel{
+class ModelHasPhone extends BaseModel
+{
     use HasUlids, SoftDeletes, HasProps;
 
     public $incrementing   = false;
     protected $keyType     = "string";
     protected $primaryKey  = "id";
-    protected $list        = ['id','model_id','model_type','phone','verified_at','props'];
+    protected $list        = ['id', 'model_id', 'model_type', 'phone', 'verified_at', 'props'];
     protected $show        = [];
 
     protected $casts = [
@@ -88,5 +89,8 @@ class ModelHasPhone extends BaseModel{
     ];
 
     //EIGER SECTION
-    public function model(){return $this->morphTo();}
+    public function model()
+    {
+        return $this->morphTo();
+    }
 }

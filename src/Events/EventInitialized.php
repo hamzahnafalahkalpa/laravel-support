@@ -1,9 +1,7 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Events;
+namespace Hanafalah\LaravelSupport\Events;
 
-use Zahzah\LaravelSupport\Events\Contracts\LaravelSupportEvent;
+use Hanafalah\LaravelSupport\Events\Contracts\LaravelSupportEvent;
 
-class EventInitialized {
-    
-}
+class EventInitialized {}

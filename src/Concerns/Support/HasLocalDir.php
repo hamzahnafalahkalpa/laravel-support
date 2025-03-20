@@ -1,14 +1,16 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
-trait HasLocalDir{
+trait HasLocalDir
+{
     /**
      * Retrieves the path of the local directory.
      *
      * @return string
      */
-    protected function dir(): string{
-        return __DIR__.'/../../';
+    protected function dir(): string
+    {
+        return __DIR__ . '/../../';
     }
 }

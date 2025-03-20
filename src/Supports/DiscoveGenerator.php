@@ -1,6 +1,6 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Supports;
+namespace Hanafalah\LaravelSupport\Supports;
 
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -25,8 +25,8 @@ class DiscoverGenerator
         $usedMorphs = [];
 
         return $models
-            ->mapWithKeys(fn (ReflectionClass $reflection) => $this->resolveMorphFromClass($reflection))
-            ->reject(fn (string $morph) => class_exists($morph))
+            ->mapWithKeys(fn(ReflectionClass $reflection) => $this->resolveMorphFromClass($reflection))
+            ->reject(fn(string $morph) => class_exists($morph))
             ->mapWithKeys(function (string $morph, string $modelClass) use (&$usedMorphs) {
                 // if (array_key_exists($morph, $usedMorphs)) {
                 //     throw DuplicateMorphClassFound::create($modelClass, $usedMorphs[$morph]);
@@ -44,11 +44,11 @@ class DiscoverGenerator
         $model = $reflection->newInstanceWithoutConstructor();
 
         // try {
-            if (self::$resolveCallback) {
-                $morph = call_user_func(self::$resolveCallback, $model);
-            }
+        if (self::$resolveCallback) {
+            $morph = call_user_func(self::$resolveCallback, $model);
+        }
 
-            // $morph ??= $model->getMorphClass();
+        // $morph ??= $model->getMorphClass();
         // } catch (Exception $exception) {
         //     throw MorphClassCouldNotBeResolved::exceptionThrown($reflection->getName(), $exception);
         // }

@@ -1,8 +1,9 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Enums\Provider;
+namespace Hanafalah\LaravelSupport\Enums\Provider;
 
-enum ProviderRegisterMethod: string{
+enum ProviderRegisterMethod: string
+{
     case MODEL            =  'Model';
     case MIGRATION        =  'Migration';
     case PROVIDER         =  'Provider';

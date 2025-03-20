@@ -1,35 +1,38 @@
 <?php
 
-namespace Zahzah\LaravelSupport;
+namespace Hanafalah\LaravelSupport;
 
 use Closure;
 use Exception;
 use Illuminate\Container\Container;
-use Zahzah\LaravelSupport\Concerns;
+use Hanafalah\LaravelSupport\Concerns;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Support\Facades\Request;
-use Zahzah\ApiHelper\Exceptions\UnauthorizedAccess;
-use Zahzah\LaravelSupport\Contracts\Response as ContractsResponse;
-use Zahzah\LaravelSupport\Supports\PackageManagement;
+use Hanafalah\ApiHelper\Exceptions\UnauthorizedAccess;
+use Hanafalah\LaravelSupport\Contracts\Response as ContractsResponse;
+use Hanafalah\LaravelSupport\Supports\PackageManagement;
 
 class Response extends PackageManagement implements ContractsResponse
 {
     use Concerns\Support\HasResponse;
     use Concerns\Support\ErrorHandling;
     use Concerns\Support\HasUserInfo;
-    
+
     private $__response;
     protected static $__setup_permission = null;
 
-    public function response(mixed $result = null,? int $code = null,? string $message = null){
-        return $this->sendResponse($result,$code ?? $this->getResponseCode() ?? 200,$message ?? $this->getResponseMessages() ?? 'Success.');
+    public function response(mixed $result = null, ?int $code = null, ?string $message = null)
+    {
+        return $this->sendResponse($result, $code ?? $this->getResponseCode() ?? 200, $message ?? $this->getResponseMessages() ?? 'Success.');
     }
 
-    public function setAclPermission(string $alias){
+    public function setAclPermission(string $alias)
+    {
         static::$__setup_permission = $this->PermissionModel()->where('alias', $alias)->firstOrFail();
     }
 
-    public function getAclPermission(){
+    public function getAclPermission()
+    {
         return static::$__setup_permission;
     }
 
@@ -40,9 +43,10 @@ class Response extends PackageManagement implements ContractsResponse
      * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
      * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
-    public function respondHandle($request,Closure $next){
+    public function respondHandle($request, Closure $next)
+    {
         $response = $next($request);
-        if ($response->getStatusCode() < 400){
+        if ($response->getStatusCode() < 400) {
             if (Request::wantsJson() && !is_array($response)) {
                 return $this->response($response->original);
             }
@@ -51,7 +55,8 @@ class Response extends PackageManagement implements ContractsResponse
     }
 
 
-    public function exceptionRespond(Exceptions $exceptions): void{
+    public function exceptionRespond(Exceptions $exceptions): void
+    {
         if (Request::wantsJson()) {
             $exceptions->render(function (Exception $e) {
                 $this->catch($e);
@@ -61,19 +66,19 @@ class Response extends PackageManagement implements ContractsResponse
                     case $e instanceof \Illuminate\Validation\ValidationException:
                     case $e instanceof \Illuminate\Database\QueryException:
                         $code = 422;
-                    break;
+                        break;
                     case $e instanceof \Illuminate\Auth\AuthenticationException:
                         $code = 401;
-                    break;
+                        break;
                     case $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException:
                         $code = 404;
-                    break;
+                        break;
                     case $e instanceof \Firebase\JWT\ExpiredException:
                     case $e instanceof UnauthorizedAccess:
                         $code = 401;
-                    break;
+                        break;
                 }
-                return $this->sendResponse(null,$code ?? 403,$err);
+                return $this->sendResponse(null, $code ?? 403, $err);
             });
         }
     }

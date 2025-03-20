@@ -1,8 +1,9 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Enums\Events;
+namespace Hanafalah\LaravelSupport\Enums\Events;
 
-enum EventList: string{
+enum EventList: string
+{
     case SAVING   = 'saving';
     case SAVED    = 'saved';
     case CREATING = 'creating';

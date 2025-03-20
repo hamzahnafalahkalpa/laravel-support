@@ -1,9 +1,11 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
+
 use Composer\Autoload\ClassLoader;
 
-trait HasClassModifier{
+trait HasClassModifier
+{
     public static $__class, $__classes = [];
     /**
      * Set the class for the SetupManagement instance.
@@ -11,7 +13,8 @@ trait HasClassModifier{
      * @param string $className The class name to set.
      * @return self Returns the SetupManagement instance.
      */
-    protected function setClass(string|object $className): self{
+    protected function setClass(string|object $className): self
+    {
         $class = (!is_string($className)) ? $className : app($className);
         static::$__classes[$class::class] = $class;
         static::$__class = &static::$__classes[$class::class];
@@ -28,11 +31,13 @@ trait HasClassModifier{
      * @param  string  $method  The method to check.
      * @return bool  True if the method exists, false otherwise.
      */
-    protected function hasMethod($class,$method){
-        return \method_exists($class,$method);
+    protected function hasMethod($class, $method)
+    {
+        return \method_exists($class, $method);
     }
-    
-    protected function isCallable($callable){
+
+    protected function isCallable($callable)
+    {
         return \is_callable($callable);
     }
 
@@ -41,7 +46,8 @@ trait HasClassModifier{
      *
      * @return mixed The class associated with the current instance.
      */
-    public function getClass(): mixed{
+    public function getClass(): mixed
+    {
         return self::$__class;
     }
 
@@ -50,7 +56,8 @@ trait HasClassModifier{
      *
      * @return array The classes associated with the current instance.
      */
-    public function getClasses(): array{
+    public function getClasses(): array
+    {
         return self::$__classes;
     }
 
@@ -61,7 +68,8 @@ trait HasClassModifier{
      *
      * @return string The base name of the given class.
      */
-    protected function getClassBaseName($class): string{
+    protected function getClassBaseName($class): string
+    {
         return class_basename(\is_string($class) ? app($class) : $class);
     }
 
@@ -72,12 +80,14 @@ trait HasClassModifier{
      * @param string $constant The name of the constant to retrieve.
      * @return mixed The value of the constant.
      */
-    public function constant($model,$constant): mixed{
-        return constant(\get_class($model).'::'.\strtoupper($constant));
+    public function constant($model, $constant): mixed
+    {
+        return constant(\get_class($model) . '::' . \strtoupper($constant));
     }
 
-    
-    protected function loader($new = false): ClassLoader{
-        return $this->__loader = (!$new) ? require \base_path().'/vendor/autoload.php' : new ClassLoader;
+
+    protected function loader($new = false): ClassLoader
+    {
+        return $this->__loader = (!$new) ? require \base_path() . '/vendor/autoload.php' : new ClassLoader;
     }
 }

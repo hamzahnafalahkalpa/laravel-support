@@ -1,15 +1,16 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Controllers;
+namespace Hanafalah\LaravelSupport\Controllers;
 
-class ApiBaseController extends BaseController{
+class ApiBaseController extends BaseController
+{
     /**
      * Construct the class, this class is being used as a parent of another API controller class
      *
      * @return void
      */
-    public function __construct(){
+    public function __construct()
+    {
         parent::__construct();
     }
-
 }

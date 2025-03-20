@@ -1,13 +1,14 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Models\ReportSummary;
+namespace Hanafalah\LaravelSupport\Models\ReportSummary;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Zahzah\LaravelHasProps\Concerns\HasProps;
-use Zahzah\LaravelSupport\Models\BaseModel;
-use Zahzah\LaravelSupport\Resources\ReportSummary\ViewReportSummary;
+use Hanafalah\LaravelHasProps\Concerns\HasProps;
+use Hanafalah\LaravelSupport\Models\BaseModel;
+use Hanafalah\LaravelSupport\Resources\ReportSummary\ViewReportSummary;
 
-class ReportSummary extends BaseModel{
+class ReportSummary extends BaseModel
+{
     use HasUlids, HasProps;
 
     const TRANSACTION_REPORT   = 'TRANSACTION';
@@ -19,7 +20,13 @@ class ReportSummary extends BaseModel{
     protected $keyType    = "string";
     protected $primaryKey = "id";
     protected $list = [
-        'id', 'morph', 'flag', 'date_type', 'date', 'tenant_id', 'props'
+        'id',
+        'morph',
+        'flag',
+        'date_type',
+        'date',
+        'tenant_id',
+        'props'
     ];
 
     protected $casts = [
@@ -28,7 +35,8 @@ class ReportSummary extends BaseModel{
         'date'       => 'immutable_date'
     ];
 
-    public function toViewApi(){
+    public function toViewApi()
+    {
         return new ViewReportSummary($this);
     }
 }

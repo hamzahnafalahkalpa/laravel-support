@@ -1,10 +1,11 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Commands;
+namespace Hanafalah\LaravelSupport\Commands;
 
-use Zahzah\LaravelSupport\Concerns\ServiceProvider\HasMigrationConfiguration;
+use Hanafalah\LaravelSupport\Concerns\ServiceProvider\HasMigrationConfiguration;
 
-class InstallMakeCommand extends EnvironmentCommand{
+class InstallMakeCommand extends EnvironmentCommand
+{
     /**
      * The name and signature of the console command.
      *
@@ -25,7 +26,7 @@ class InstallMakeCommand extends EnvironmentCommand{
      */
     public function handle()
     {
-        $provider = 'Zahzah\LaravelSupport\LaravelSupportServiceProvider';
+        $provider = 'Hanafalah\LaravelSupport\LaravelSupportServiceProvider';
 
         $this->comment('Installing Support...');
         $this->callSilent('vendor:publish', [
@@ -65,6 +66,6 @@ class InstallMakeCommand extends EnvironmentCommand{
         }
 
 
-        $this->comment('zahzah/laravel-support installed successfully.');
+        $this->comment('hanafalah/laravel-support installed successfully.');
     }
 }

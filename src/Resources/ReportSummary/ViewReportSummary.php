@@ -1,11 +1,12 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Resources\ReportSummary;
+namespace Hanafalah\LaravelSupport\Resources\ReportSummary;
 
 use Illuminate\Http\Request;
-use Zahzah\LaravelSupport\Resources\ApiResource;
+use Hanafalah\LaravelSupport\Resources\ApiResource;
 
-class ViewReportSummary extends ApiResource{
+class ViewReportSummary extends ApiResource
+{
     public function toArray(Request $request): array
     {
         $arr = [
@@ -14,7 +15,7 @@ class ViewReportSummary extends ApiResource{
         ];
 
         $props = $this->getPropsData() ?? [];
-        foreach ($props['columns'] as $key => $value){
+        foreach ($props['columns'] as $key => $value) {
             $arr['columns'][$key] = $value;
         }
         return $arr;

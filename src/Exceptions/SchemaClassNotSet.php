@@ -1,9 +1,7 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Exceptions;
+namespace Hanafalah\LaravelSupport\Exceptions;
 
 use Exception;
 
-class SchemaClassNotSet extends Exception
-{
-}
+class SchemaClassNotSet extends Exception {}

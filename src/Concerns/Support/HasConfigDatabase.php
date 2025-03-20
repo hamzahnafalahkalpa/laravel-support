@@ -1,42 +1,48 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Concerns\Support;
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-trait HasConfigDatabase{
+trait HasConfigDatabase
+{
     use HasCall;
 
     private static $__config_base_path = 'database.models';
     public static $config_timezone, $config_client_timezone, $timezones;
 
-    public function initializeHasConfigDatabase(){
+    public function initializeHasConfigDatabase()
+    {
         static::$config_timezone = config('app.timezone');
         static::$config_client_timezone = config('app.client_timezone', config('app.timezone'));
-        static::$timezones = config('app.timezones',[]);
+        static::$timezones = config('app.timezones', []);
         $this->mergeCasts($this->casts ?? []);
 
-        if (isset($this->list) || isset($this->show)){
-            $this->mergeFillable($this->mergeArray($this->list ?? [],$this->show ?? []));
+        if (isset($this->list) || isset($this->show)) {
+            $this->mergeFillable($this->mergeArray($this->list ?? [], $this->show ?? []));
         }
     }
 
-    public function getShow(){
+    public function getShow()
+    {
         return $this->show;
     }
 
-    public function getList(){
+    public function getList()
+    {
         return $this->list;
     }
 
-    public function toShowApi() {
+    public function toShowApi()
+    {
         return $this->getAttributes();
     }
 
-    public function toViewApi() {
+    public function toViewApi()
+    {
         return $this->getAttributes();
     }
 
@@ -45,39 +51,42 @@ trait HasConfigDatabase{
      *
      * @return string
      */
-    public function getConfigBaseModel(): string{
+    public function getConfigBaseModel(): string
+    {
         return self::$__config_base_path;
     }
 
-    public static function setConfigBaseModel(string $path): mixed{
+    public static function setConfigBaseModel(string $path): mixed
+    {
         self::$__config_base_path = $path;
         return __CLASS__;
     }
 
-    public function scopeWithParameters($builder, string $operator = 'and',mixed $parameters = null) {
-        $parameters ??= $this->filterArray(request()->all(), function($key) {
+    public function scopeWithParameters($builder, string $operator = 'and', mixed $parameters = null)
+    {
+        $parameters ??= $this->filterArray(request()->all(), function ($key) {
             return Str::startsWith($key, 'search_');
         }, ARRAY_FILTER_USE_KEY);
 
         if (count($parameters) == 0) return $builder;
 
-        return $builder->where(function($query) use ($parameters,$operator){
+        return $builder->where(function ($query) use ($parameters, $operator) {
 
             foreach ($parameters as $key => $parameter) {
                 if ($parameter == '') continue;
-                $field = Str::after($key,'search_');
+                $field = Str::after($key, 'search_');
                 $casts = $this->getCasts();
-                $query_field = (method_exists($this,'getPropsQuery'))
+                $query_field = (method_exists($this, 'getPropsQuery'))
                     ? $this->getPropsQuery()[$field] ?? $field
                     : $field;
 
-                if (isset($casts[$field])){
+                if (isset($casts[$field])) {
                     switch ($casts[$field]) {
                         case 'string':
                         case 'text':
-                            if (!in_array($query_field,$this->getFillable())){
-                                $query_field = str_replace('props->','', $query_field);
-                                $query_field = str_replace('->','.', $query_field);
+                            if (!in_array($query_field, $this->getFillable())) {
+                                $query_field = str_replace('props->', '', $query_field);
+                                $query_field = str_replace('->', '.', $query_field);
                                 $query_field = DB::raw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(props, "$.' . $query_field . '")))');
                             }
                             $parameter   = Str::lower($parameter);
@@ -86,61 +95,61 @@ trait HasConfigDatabase{
                                     ->orWhereLike($query_field, "$parameter%")
                                     ->orWhereLike($query_field, "%$parameter")
                                     ->orWhere($query_field, $parameter);
-                            },$operator);
-                        break;
+                            }, $operator);
+                            break;
                         case 'array':
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $query->whereJsonContains($query_field, $parameter);
-                            },$operator);
-                        break;
+                            }, $operator);
+                            break;
                         case 'datetime':
                         case 'date':
-                            if (!is_array($parameter)){
-                                if (Str::contains($parameter,' - ')){
-                                    $parameter = explode(' - ',$parameter);
+                            if (!is_array($parameter)) {
+                                if (Str::contains($parameter, ' - ')) {
+                                    $parameter = explode(' - ', $parameter);
                                 }
                             }
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $parameter = $this->timezoneCalculation($parameter);
 
                                 foreach ($parameter as $param) {
-                                    if (!is_array($param)){
+                                    if (!is_array($param)) {
                                         $query->where($query_field, $param);
-                                    }else{
+                                    } else {
                                         if (!is_string($param[0]))
-                                        $param[0] = $param[0];
+                                            $param[0] = $param[0];
                                         if (!is_string($param[1]))
-                                        $param[1] = $param[1];
+                                            $param[1] = $param[1];
                                         $query->whereBetween($query_field, $param);
                                     }
                                 }
-                            },$operator);
-                        break;
+                            }, $operator);
+                            break;
                         case 'immutable_date':
-                            if (!is_array($parameter)){
-                                if (Str::contains($parameter,' - ')){
-                                    $parameter = explode(' - ',$parameter);
+                            if (!is_array($parameter)) {
+                                if (Str::contains($parameter, ' - ')) {
+                                    $parameter = explode(' - ', $parameter);
                                 }
                             }
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $parameters = $this->mustArray($parameter);
-                                if ($this->dateChecking($parameters)){
+                                if ($this->dateChecking($parameters)) {
                                     if (count($parameters) == 1) $parameters[1] = $parameters[0];
-                                    $query->whereBetween($query_field,$parameters);
-                                }else{
-                                    $query->where($query_field,$parameters);
+                                    $query->whereBetween($query_field, $parameters);
+                                } else {
+                                    $query->where($query_field, $parameters);
                                 }
-                            },$operator);
-                        break;
+                            }, $operator);
+                            break;
                         case 'immutable_datetime':
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 if (is_array($parameter)) {
                                     $query->whereBetween($query_field, $parameter);
-                                }else{
+                                } else {
                                     $query->where($query_field, $parameter);
                                 }
-                            },$operator);
-                        break;
+                            }, $operator);
+                            break;
                         case 'integer':
                         case 'float':
                         case 'double':
@@ -148,24 +157,25 @@ trait HasConfigDatabase{
                         default:
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $query->where($query_field, $parameter);
-                            },$operator);
-                        break;
+                            }, $operator);
+                            break;
                     }
-                }else{
-                    if (in_array($query_field,$this->getFillable())) {
+                } else {
+                    if (in_array($query_field, $this->getFillable())) {
                         $query->whereNested(function ($query) use ($query_field, $parameter) {
                             $query->where($query_field, $parameter);
-                        },$operator);
+                        }, $operator);
                     }
                 }
             }
         });
     }
 
-    private function dateChecking(array $params){
+    private function dateChecking(array $params)
+    {
         $is_date = true;
         foreach ($params as $param) {
-            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $param) && !preg_match('/^\d{4}-\d{2}$/', $param) && !preg_match('/^\d{4}$/', $param)){ 
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $param) && !preg_match('/^\d{4}-\d{2}$/', $param) && !preg_match('/^\d{4}$/', $param)) {
                 $is_date = false;
                 break;
             }
@@ -174,10 +184,11 @@ trait HasConfigDatabase{
         return $is_date;
     }
 
-    public function timezoneCalculation($parameter){
+    public function timezoneCalculation($parameter)
+    {
         if (isset(static::$config_client_timezone) && static::$config_timezone != static::$config_client_timezone) {
             $results   = [];
-            if (in_array(static::$config_client_timezone,static::$timezones)) {
+            if (in_array(static::$config_client_timezone, static::$timezones)) {
                 $parameter = $this->mustArray($parameter);
                 foreach ($parameter as $param) {
                     //CHECK IF $parameter IS DATE OR DATETIME
@@ -191,17 +202,17 @@ trait HasConfigDatabase{
                     } elseif (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $param)) {
                         $date = Carbon::createFromFormat('Y-m-d H:i', $param, static::$config_client_timezone);
                         $results[] = $date->setTimezone(static::$config_timezone)->format('Y-m-d H:i');
-                    } else{
+                    } else {
                         $results[] = $param;
                     }
                 }
-                if (count($results) == 2){
+                if (count($results) == 2) {
                     $results = [[$results[0][0], $results[1][1]]];
                 }
             }
             return $results;
         }
-        return [[$parameter,$parameter]];
+        return [[$parameter, $parameter]];
     }
 
     /**
@@ -211,7 +222,8 @@ trait HasConfigDatabase{
      * @param array $exceptions The exceptions array. Default is an empty array.
      * @throws None
      */
-    public function scopeWithoutScopesExcepts($builder,$exceptions=[]) {
+    public function scopeWithoutScopesExcepts($builder, $exceptions = [])
+    {
         /** GET MODEL */
         $model = $builder->getModel();
 
@@ -225,26 +237,27 @@ trait HasConfigDatabase{
             if ($scope instanceof Scope) {
                 foreach ($exceptions as $exc) {
                     foreach (config('database.scopes.paths') as $scope_path) {
-                        if ($scope_path.$exc == $key){
+                        if ($scope_path . $exc == $key) {
                             $delete = false;
                             break;
                         }
                     }
                     if (!$delete) break;
                 }
-            }else{
-                if (in_array($key,$exceptions)) $delete = false;
+            } else {
+                if (in_array($key, $exceptions)) $delete = false;
             }
             if ($delete) $scopes[] = $key;
         }
-        if(count($scopes) > 0) $builder->withoutGlobalScopes($scopes);
+        if (count($scopes) > 0) $builder->withoutGlobalScopes($scopes);
         $builder->scopeLists = $exceptions;
         return $builder;
     }
 
 
-    public function morphToModel($related,$name,$type=null,$id=null,$localKey=null){
-        return $this->morphTo($this->{$related.'ModelInstance'}(),$name,$type,$id,$localKey);
+    public function morphToModel($related, $name, $type = null, $id = null, $localKey = null)
+    {
+        return $this->morphTo($this->{$related . 'ModelInstance'}(), $name, $type, $id, $localKey);
     }
 
     /**
@@ -259,10 +272,11 @@ trait HasConfigDatabase{
      * @param  string|null  $localKey
      * @return \Illuminate\Database\Eloquent\Relations\MorphOne<TRelatedModel, $this>
      */
-    public function morphOneModel($related,$name,$type=null,$id=null,$localKey=null){
-        $instance = $this->{$related.'ModelInstance'}();
+    public function morphOneModel($related, $name, $type = null, $id = null, $localKey = null)
+    {
+        $instance = $this->{$related . 'ModelInstance'}();
         $model    = app($instance);
-        return $this->morphOne($instance,$name,$type,$id,$localKey);
+        return $this->morphOne($instance, $name, $type, $id, $localKey);
     }
 
     /**
@@ -277,10 +291,11 @@ trait HasConfigDatabase{
      * @param  string|null  $localKey
      * @return \Illuminate\Database\Eloquent\Relations\MorphMany<TRelatedModel, $this>
      */
-    public function morphManyModel($related,$name,$type=null,$id=null,$localKey=null){
-        $instance = $this->{$related.'ModelInstance'}();
+    public function morphManyModel($related, $name, $type = null, $id = null, $localKey = null)
+    {
+        $instance = $this->{$related . 'ModelInstance'}();
         $model    = app($instance);
-        return $this->morphMany($instance,$name,$type,$id,$localKey);
+        return $this->morphMany($instance, $name, $type, $id, $localKey);
     }
 
     /**
@@ -294,10 +309,11 @@ trait HasConfigDatabase{
      * @param  string|null  $relation
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<TRelatedModel, $this>
      */
-    public function belongsToModel($related, $foreignKey = null, $ownerKey = null, $relation = null){
-        $instance = $this->{$related.'ModelInstance'}();
+    public function belongsToModel($related, $foreignKey = null, $ownerKey = null, $relation = null)
+    {
+        $instance = $this->{$related . 'ModelInstance'}();
         $model    = app($instance);
-        return $this->belongsTo($instance,$foreignKey ?? $model->getForeignKey(),$ownerKey,$relation);
+        return $this->belongsTo($instance, $foreignKey ?? $model->getForeignKey(), $ownerKey, $relation);
     }
 
     /**
@@ -311,12 +327,13 @@ trait HasConfigDatabase{
      * @param string|null $relatedKey
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<TRelatedModel, $this>
      */
-    public function belongsToManyModel($related, $table = null, $foreignKey = null, $relatedKey = null){
-        $instance = $this->{$related.'ModelInstance'}();
+    public function belongsToManyModel($related, $table = null, $foreignKey = null, $relatedKey = null)
+    {
+        $instance = $this->{$related . 'ModelInstance'}();
         $model = app($instance);
 
         // Check if $table is a string class, and if so, use the table name from the model instance
-        if (is_string($table) && ($model_alias = config('database.models.'.$table)) !== null) {
+        if (is_string($table) && ($model_alias = config('database.models.' . $table)) !== null) {
             $model_alias = app($model_alias);
             $table = $model_alias->getTable();
         }
@@ -329,8 +346,9 @@ trait HasConfigDatabase{
         );
     }
 
-    protected function getBelongsToManyTable($related){
-        return Str::snake(class_basename($this)) . '_' . Str::snake(class_basename(app($this->{$related.'ModelInstance'}())));
+    protected function getBelongsToManyTable($related)
+    {
+        return Str::snake(class_basename($this)) . '_' . Str::snake(class_basename(app($this->{$related . 'ModelInstance'}())));
     }
 
     /**
@@ -343,23 +361,26 @@ trait HasConfigDatabase{
      * @param  string|null  $localKey
      * @return \Illuminate\Database\Eloquent\Relations\HasOne<TRelatedModel, $this>
      */
-    public function hasOneModel($related,$foreignKey=null,$localKey=null){
-        return $this->hasOne($this->{$related.'ModelInstance'}(),$foreignKey ?? $this->getForeignKey(),$localKey);
+    public function hasOneModel($related, $foreignKey = null, $localKey = null)
+    {
+        return $this->hasOne($this->{$related . 'ModelInstance'}(), $foreignKey ?? $this->getForeignKey(), $localKey);
     }
 
-    public function hasManyThroughModel($related,$through,$firstKey=null,$secondKey=null,$localKey=null,$secondLocalKey=null){
-        $instance = $this->{$related.'ModelInstance'}();
+    public function hasManyThroughModel($related, $through, $firstKey = null, $secondKey = null, $localKey = null, $secondLocalKey = null)
+    {
+        $instance = $this->{$related . 'ModelInstance'}();
         $model    = app($instance);
-        $through  = $this->{$through.'ModelInstance'}();
-        return $this->hasManyThrough($instance,$through,$firstKey ?? $model->getForeignKey(),$secondKey ?? $this->getForeignKey(),$localKey,$secondLocalKey);
+        $through  = $this->{$through . 'ModelInstance'}();
+        return $this->hasManyThrough($instance, $through, $firstKey ?? $model->getForeignKey(), $secondKey ?? $this->getForeignKey(), $localKey, $secondLocalKey);
     }
 
 
-    public function hasOneThroughModel($related,$through,$firstKey=null,$secondKey=null,$localKey=null,$secondLocalKey=null){
-        $instance = $this->{$related.'ModelInstance'}();
+    public function hasOneThroughModel($related, $through, $firstKey = null, $secondKey = null, $localKey = null, $secondLocalKey = null)
+    {
+        $instance = $this->{$related . 'ModelInstance'}();
         $model    = app($instance);
-        $through  = $this->{$through.'ModelInstance'}();
-        return $this->hasOneThrough($instance,$through,$firstKey ?? $model->getForeignKey(),$secondKey ?? $this->getForeignKey(),$localKey,$secondLocalKey);
+        $through  = $this->{$through . 'ModelInstance'}();
+        return $this->hasOneThrough($instance, $through, $firstKey ?? $model->getForeignKey(), $secondKey ?? $this->getForeignKey(), $localKey, $secondLocalKey);
     }
 
     /**
@@ -372,8 +393,9 @@ trait HasConfigDatabase{
      * @param  string|null  $localKey
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<TRelatedModel, $this>
      */
-    public function hasManyModel($related,$foreignKey=null,$localKey=null){
-        return $this->hasMany($this->{$related.'ModelInstance'}(),$foreignKey ?? $this->getForeignKey(),$localKey);
+    public function hasManyModel($related, $foreignKey = null, $localKey = null)
+    {
+        return $this->hasMany($this->{$related . 'ModelInstance'}(), $foreignKey ?? $this->getForeignKey(), $localKey);
     }
 
     // /**
@@ -396,7 +418,8 @@ trait HasConfigDatabase{
     //     );
     // }
 
-    public function callCustomMethod(): array{
+    public function callCustomMethod(): array
+    {
         return ['Model'];
     }
 }

@@ -1,25 +1,27 @@
 <?php
 
-namespace Zahzah\LaravelSupport\Providers;
+namespace Hanafalah\LaravelSupport\Providers;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 
-use Zahzah\LaravelSupport\Concerns\{
+use Hanafalah\LaravelSupport\Concerns\{
     DatabaseConfiguration as Database,
     ServiceProvider as SupportServiceProvider,
     Support
 };
 
-abstract class BaseRouteServiceProvider extends ServiceProvider{
+abstract class BaseRouteServiceProvider extends ServiceProvider
+{
     use Database\HasDatabaseConfiguration;
     use SupportServiceProvider\HasRouteConfiguration;
     use SupportServiceProvider\HasConfiguration;
-    use Support\HasRepository; 
-    
+    use Support\HasRepository;
+
     abstract protected function dir(): string;
 
-    public function __construct(Container $app) {
+    public function __construct(Container $app)
+    {
         parent::__construct($app);
         $this->__config = $app['config'];
     }

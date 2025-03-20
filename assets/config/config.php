@@ -2,25 +2,27 @@
 
 use Illuminate\Support\ServiceProvider;
 
-use Zahzah\LaravelSupport\{
-    Models, Commands, Contracts
+use Hanafalah\LaravelSupport\{
+    Models,
+    Commands,
+    Contracts
 };
 
 return [
     'stub'    => [
         /*
         |--------------------------------------------------------------------------
-        | Overide zahzah/laravel-stub
+        | Overide hanafalah/laravel-stub
         |--------------------------------------------------------------------------
         |
-        | We override the config from "zahzah/laravel-stub"
+        | We override the config from "hanafalah/laravel-stub"
         | to customize the stubs for our needs.
         |
         */
         'open_separator'  => '{{',
         'close_separator' => '}}',
         'path'            => stub_path(),
-    ],    
+    ],
     'translate' => [
         'from'  => null, //default null to autodetect,
         'to'    => 'en'
@@ -34,7 +36,7 @@ return [
         ]
     ],
     'cache' => [
-        'enabled' => env('USING_CACHE',false)
+        'enabled' => env('USING_CACHE', false)
     ],
     'contracts'     => [
         'response'         => Contracts\Response::class,
@@ -46,10 +48,10 @@ return [
                 'App/Scopes'
             ]
         ],
-        'models'  => [       
+        'models'  => [
             'Activity'          => Models\Activity\Activity::class,
             'ActivityStatus'    => Models\Activity\ActivityStatus::class,
-            'LogHistory'        => Models\LogHistory\LogHistory::class,     
+            'LogHistory'        => Models\LogHistory\LogHistory::class,
             'ModelHasRelation'  => Models\Relation\ModelHasRelation::class,
             'PayloadMonitoring' => Models\PayloadMonitoring\PayloadMonitoring::class,
             'ModelHasPhone'     => Models\Phone\ModelHasPhone::class,
