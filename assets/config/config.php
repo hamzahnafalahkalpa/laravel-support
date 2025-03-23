@@ -9,6 +9,10 @@ use Hanafalah\LaravelSupport\{
 };
 
 return [
+    'libs'    => [
+        'model' => 'Models',
+        'contract' => 'Contracts'
+    ],
     'stub'    => [
         /*
         |--------------------------------------------------------------------------
@@ -38,9 +42,12 @@ return [
     'cache' => [
         'enabled' => env('USING_CACHE', false)
     ],
-    'contracts'     => [
-        'response'         => Contracts\Response::class,
-        'laravel_support'  => Contracts\LaravelSupport::class
+    'app' => [
+        'contracts'     => [
+            //ADD YOUR CONTRACTS HERE
+            // 'response'         => Contracts\Response::class,
+            // 'laravel_support'  => Contracts\LaravelSupport::class
+        ],
     ],
     'database'      => [
         'scope'     => [
@@ -49,16 +56,16 @@ return [
             ]
         ],
         'models'  => [
-            'Activity'          => Models\Activity\Activity::class,
-            'ActivityStatus'    => Models\Activity\ActivityStatus::class,
-            'LogHistory'        => Models\LogHistory\LogHistory::class,
-            'ModelHasRelation'  => Models\Relation\ModelHasRelation::class,
-            'PayloadMonitoring' => Models\PayloadMonitoring\PayloadMonitoring::class,
-            'ModelHasPhone'     => Models\Phone\ModelHasPhone::class,
-            'Encoding'          => Models\Encoding\Encoding::class,
-            'ModelHasEncoding'  => Models\Encoding\ModelHasEncoding::class,
-            'ModelHasPhone'     => Models\Phone\ModelHasPhone::class,
-            'ReportSummary'     => Models\ReportSummary\ReportSummary::class
+            // 'Activity'          => Models\Activity\Activity::class,
+            // 'ActivityStatus'    => Models\Activity\ActivityStatus::class,
+            // 'LogHistory'        => Models\LogHistory\LogHistory::class,
+            // 'ModelHasRelation'  => Models\Relation\ModelHasRelation::class,
+            // 'PayloadMonitoring' => Models\PayloadMonitoring\PayloadMonitoring::class,
+            // 'ModelHasPhone'     => Models\Phone\ModelHasPhone::class,
+            // 'Encoding'          => Models\Encoding\Encoding::class,
+            // 'ModelHasEncoding'  => Models\Encoding\ModelHasEncoding::class,
+            // 'ModelHasPhone'     => Models\Phone\ModelHasPhone::class,
+            // 'ReportSummary'     => Models\ReportSummary\ReportSummary::class
         ]
     ],
     'class_discovering' => [

@@ -9,6 +9,7 @@ use Hanafalah\LaravelSupport\{
     Concerns\Support,
     Concerns\PackageManagement as Package
 };
+use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
 use Hanafalah\LaravelSupport\Contracts\DataManagement;
 
@@ -69,7 +70,24 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
 
     public function schemaContract(string $contract)
     {
+        $contract = Str::studly($contract);
         return app(config('app.contracts.' . $contract));
+    }
+
+    public function usingEntity(): Model{
+        return $this->{$this->__entity.'Model'}();
+    }
+
+    public function viewEntityResource(callable $callback): array{
+        return $this->transforming($this->usingEntity()->getViewResource(),function() use ($callback){
+            return $callback();
+        });
+    }
+
+    public function showEntityResource(callable $callback): array{
+        return $this->transforming($this->usingEntity()->getShowResource(),function() use ($callback){
+            return $callback();
+        });
     }
 
     public function myModel(?Model $model = null)

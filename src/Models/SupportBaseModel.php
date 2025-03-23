@@ -6,14 +6,14 @@ use Hanafalah\LaravelSupport\Concerns as SupportConcerns;
 use Hanafalah\LaravelHasProps\Concerns as PropsConcerns;
 use Hanafalah\LaravelHasProps\Concerns\HasConfigProps;
 use Illuminate\Support\Str;
-use Projects\Klinik\Models\ModelHasRelation\ModelHasRelation;
 use Hanafalah\LaravelHasProps\Models\Scopes\HasCurrentScope;
-use Hanafalah\LaravelSupport\Concerns\Support\HasSoftDeletes;
 
 class SupportBaseModel extends AbstractModel
 {
     use HasConfigProps;
     use SupportConcerns\Support\HasDatabase;
+    use SupportConcerns\DatabaseConfiguration\HasModelConfiguration;
+    use SupportConcerns\Support\HasConfigDatabase;
     use SupportConcerns\Support\HasRepository;
 
     const STATUS_ACTIVE     = 1;
@@ -27,13 +27,13 @@ class SupportBaseModel extends AbstractModel
     protected $keyType      = "int";
     protected $list         = [];
     protected $show         = [];
+
     protected static function booted(): void
     {
         parent::booted();
         static::addGlobalScope(new HasCurrentScope);
         static::creating(function ($query) {
             PropsConcerns\HasCurrent::currentChecking($query);
-
             if (self::isSetUuid($query) && !isset($query->{$query->getUuidName()})) {
                 $query->uuid = Str::orderedUuid();
             }
@@ -49,11 +49,6 @@ class SupportBaseModel extends AbstractModel
             });
         });
         static::deleting(function ($query) {
-            if (method_exists($query, 'hasSoftDeletes') && !$query->forceDeleting) {
-                if ($query->hasSoftDeletes()) {
-                    HasSoftDeletes::softDeleting($query, static::new()->SoftDeleteModel());
-                }
-            }
         });
     }
 
@@ -73,19 +68,24 @@ class SupportBaseModel extends AbstractModel
         return [];
     }
 
-    public function toViewApi()
-    {
-        if (\method_exists($this, 'getViewResource')) return (new $this->getViewResource())($this);
-
-        return [];
+    public function getViewResource(){
+        return null;
     }
 
-    public function toShowApi()
-    {
-        if (\method_exists($this, 'getShowResource')) {
-            return (new $this->getShowResource())($this);
-        }
-        return [];
+    public function getShowResource(){
+        return null;
+    }
+
+    public function toViewApi(){
+        return ($this->getViewResource() !== null)
+            ? (new $this->getViewResource())($this)
+            : $this->toArray();
+    }
+
+    public function toShowApi(){
+        return ($this->getShowResource() !== null)
+            ? (new $this->getShowResource())($this)
+            : $this->toArray();
     }
 
     //MUTATOR SECTION
@@ -102,6 +102,9 @@ class SupportBaseModel extends AbstractModel
     }
     //END METHOD SECTION
 
+    public function getMorphClass(): string{
+        return \class_basename(static::class);
+    }
 
     //EIGER SECTION
     public function activity()

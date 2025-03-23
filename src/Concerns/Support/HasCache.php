@@ -58,7 +58,14 @@ trait HasCache
     public function forgetTags(array|string $tags = [])
     {
         $tags = $this->mustArray($tags);
-        return Cache::tags($tags)->flush();
+        if ($cacheDriver === 'redis') {
+            return Cache::tags($tags)->flush();
+        } elseif ($cacheDriver === 'database') {
+            // Perform actions specific to Database cache
+        } else {
+            // Handle other cache drivers or default actions
+        }
+        return null;
     }
 
     /**

@@ -10,6 +10,15 @@ class Data extends SpatieData
 {
     use HasArray, HasConfigDatabase;
 
+    protected object $__data;
+
+    public function __construct()
+    {
+        if (\method_exists($this,'initializeProps')){
+            $this->setProps($this->initializeProps($this->props ?? request()->props));
+        }
+    }
+
     public function findFromVariadic(string $class, ...$args)
     {
         $filters = array_filter($args, function ($arg) use ($class) {
@@ -19,6 +28,15 @@ class Data extends SpatieData
         });
         return (count($filters) == 1) ? end($filters) : null;
     }
+
+    protected function setProps(array|callable $callback): void{
+        $this->props = (\is_array($callback)) ? $callback : $callback();
+    }
+
+    public function getProps(): array{
+        return $this->props ?? [];
+    }
+
 
     public function callCustomMethod(): array
     {
