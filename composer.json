@@ -17,10 +17,10 @@
         }
     ],
     "require": {
-        "hanafalah/laravel-has-props": "1.x",
         "stancl/jobpipeline": "^1.6.2",
         "stichoza/google-translate-php": "^5.2",
         "spatie/laravel-data": "^4.13",
+        "hanafalah/laravel-has-props": "1.x",
         "hanafalah/laravel-stub": "1.x",
         "symfony/filesystem": "^7.2"
     },

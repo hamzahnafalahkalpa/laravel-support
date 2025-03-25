@@ -42,23 +42,37 @@ trait HasCache
 
     public function getCache($key, mixed $tags = null, $default = null)
     {
-        $cache = cache();
-        if (isset($tags)) $cache = $cache->tags($tags);
-        return $cache->get($key, $default);
+        return $this->cacheDriver(function($cache_driver) use ($key,$tags,$default){
+            $cache = cache();
+            if (isset($tags) && $cache_driver == 'redis') $cache = $cache->tags($tags);
+            return $cache->get($key, $default);
+        });
     }
 
 
     public function forgetKey($key, mixed $tags = null)
     {
-        $cache = cache();
-        if (isset($tags)) $cache = $cache->tags($tags);
-        return $cache->forget($key);
+        return $this->cacheDriver(function($cache_driver) use ($key,$tags){
+            $cache = cache();
+            if (isset($tags) && $cache_driver == 'redis') $cache = $cache->tags($tags);
+            return $cache->forget($key);
+        });
     }
 
     public function forgetTags(array|string $tags = [])
     {
-        $tags = $this->mustArray($tags);
-        return Cache::tags($tags)->flush();
+        return $this->cacheDriver(function($cache_driver) use ($tags){
+            if ($cache_driver === 'redis') {
+                $tags = $this->mustArray($tags);
+                return Cache::tags($tags)->flush();
+            }
+            return null;
+        });
+    }
+
+    public function cacheDriver(callable $callback){
+        $cache_driver = config('cache.default','database');
+        return $callback($cache_driver);
     }
 
     /**

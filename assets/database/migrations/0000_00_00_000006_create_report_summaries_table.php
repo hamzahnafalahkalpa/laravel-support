@@ -39,8 +39,7 @@ return new class extends Migration
 
                 $table->index([
                     'morph',
-                    'flag',
-                    'tenant_id'
+                    'flag'
                 ], 'report_sum');
             });
         }

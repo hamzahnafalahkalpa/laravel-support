@@ -17,7 +17,6 @@ if (config('micro-tenant') !== null) {
     {
         public static $__activity;
 
-
         /**
          * The "booted" method of the model.
          *

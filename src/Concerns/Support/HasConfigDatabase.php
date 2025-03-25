@@ -114,7 +114,9 @@ trait HasConfigDatabase
 
                                 foreach ($parameter as $param) {
                                     if (!is_array($param)) {
-                                        $query->where($query_field, $param);
+                                        if ($this->dateChecking($param)){
+                                            $query->where($query_field, $param);
+                                        }
                                     } else {
                                         if (!is_string($param[0]))
                                             $param[0] = $param[0];
@@ -171,8 +173,9 @@ trait HasConfigDatabase
         });
     }
 
-    private function dateChecking(array $params)
+    private function dateChecking(string|array $params)
     {
+        $params = $this->mustArray($params);
         $is_date = true;
         foreach ($params as $param) {
             if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $param) && !preg_match('/^\d{4}-\d{2}$/', $param) && !preg_match('/^\d{4}$/', $param)) {

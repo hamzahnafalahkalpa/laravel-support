@@ -10,6 +10,8 @@ class Data extends SpatieData
 {
     use HasArray, HasConfigDatabase;
 
+    protected object $__data;
+
     public function findFromVariadic(string $class, ...$args)
     {
         $filters = array_filter($args, function ($arg) use ($class) {

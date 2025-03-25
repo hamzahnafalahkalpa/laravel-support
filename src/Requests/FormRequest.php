@@ -5,10 +5,7 @@ namespace Hanafalah\LaravelSupport\Requests;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest as Request;
 use Illuminate\Validation\Rule;
-use Projects\Klinik\Models\Regional\Village;
 use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
-use Hanafalah\LaravelSupport\Concerns\Support\HasArray;
-use Hanafalah\LaravelSupport\Concerns\Support\HasRequest;
 use Illuminate\Support\Str;
 
 class FormRequest extends Request
@@ -35,8 +32,11 @@ class FormRequest extends Request
         request()->merge($attributes);
     }
 
-    protected function decimal($length)
-    {
+    protected function digit(){
+        return 'regex:/^\d+$/';
+    }
+
+    protected function decimal($length){
         return 'regex:/^(\d+(\.\d{1,' . $length . '})?|(\.\d{1,' . $length . '})?)$/';
     }
 
@@ -82,9 +82,13 @@ class FormRequest extends Request
     protected function idValidation($model)
     {
         $model = $this->configModel($model);
-        // if ($model instanceof Village)
-        // dd($model,$this->connectionTable($model),$model->getKeyName());
         return Rule::exists($this->connectionTable($model), $model->getKeyName());
+    }
+
+    protected function existsValidation($model,string $key)
+    {
+        $model = $this->configModel($model);
+        return Rule::exists($this->connectionTable($model), $key);
     }
 
     protected function uniqueValidation($model, ...$args)

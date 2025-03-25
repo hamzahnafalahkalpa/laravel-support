@@ -11,18 +11,18 @@ use Illuminate\Support\{
     ServiceProvider
 };
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Gate;
 use Hanafalah\LaravelSupport\Concerns\{
     DatabaseConfiguration as Database,
     ServiceProvider as Service,
     Support
 };
+use Illuminate\Support\Facades\File;
 
 use Hanafalah\LaravelSupport\Concerns\PackageManagement\HasEvent;
 
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Enums\Provider\ProviderRegisterMethod;
-use Hanafalah\MicroTenant\Models\Tenant\Tenant;
+use Symfony\Component\HttpKernel\Event\ControllerArgumentsEvent;
 
 abstract class BaseServiceProvider extends ServiceProvider
 {
@@ -160,6 +160,7 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function overrideConfig(string $key, mixed $value, array $config_root = [])
     {
+        $key = Str::studly($key);
         $config_root[] = $key;
         if ($this->isArray($value)) {
             foreach ($value as $k => $v) {
@@ -227,6 +228,10 @@ abstract class BaseServiceProvider extends ServiceProvider
         $this->__finished_register  = [];
         $this->setClassBaseName($main_class)
             ->setLowerPackageName($this->__class_basename);
+
+        $this->registerConfig();
+        $this->addDataToConfig('app','contract');
+        $this->autoBinds();
 
         if (\method_exists('events', $main_class)) {
             //GET EVENTS DATA
@@ -379,22 +384,17 @@ abstract class BaseServiceProvider extends ServiceProvider
         return ucfirst(\strtolower($name));
     }
 
-    /**
-     * Binds a service to the container.
-     *
-     * This method takes an associative array of key-value pairs. The key is
-     * the name of the service to bind, and the value is the binding to be
-     * registered. The binding can be a callable, an object, or a string.
-     *
-     * If the binding is a callable, it will be called and the return value
-     * will be registered as the service. If the binding is an object, it will
-     * be registered directly. If the binding is a string, it will be treated
-     * as a class name and an instance of the class will be registered.
-     *
-     * @param array $binds The associative array of key-value pairs to bind.
-     *
-     * @return self
-     */
+    protected function autoBinds(): self{
+        $contracts     = config($this->__lower_package_name.'.app.contracts', []);
+        $contract_name = config($this->__lower_package_name.'.libs.contract','Contracts');
+        $schema_name   = config($this->__lower_package_name.'.libs.schema','Schemas');
+        foreach ($contracts as $key => $contract) {
+            $schema_namespace = Str::replace($contract_name,$schema_name,$contract,true);
+            $this->binds([$contract => $schema_namespace]);
+        }
+        return $this;
+    }
+
     protected function binds(array $binds)
     {
         foreach ($binds as $key => $bind) {
@@ -564,13 +564,35 @@ abstract class BaseServiceProvider extends ServiceProvider
     protected function registerModel(?callable $callback = null): self
     {
         if ($this->isExistsDatabaseModel()) {
-            $this->morphMap($this->__config[$this->__lower_package_name]['database']['models']);
             $this->callMeBack($callback);
-            $morphMaps = config('database.models');
-            config(['database.models' => $this->mergeArray($morphMaps ?? [], $this->__config[$this->__lower_package_name]['database']['models'])]);
+            $this->addDataToConfig('database','model');
         }
         $this->setFinishedRegister(ProviderRegisterMethod::MODEL->value);
         return $this;
+    }
+
+    protected function addDataToConfig(string $config_name,string $type){
+        $config           = $this->__config[$this->__lower_package_name];
+        $plural_type      = Str::plural($type);
+        $config_type      = "$config_name.$plural_type";
+        $morphMaps        = config($config_type,[]);
+        if (isset($config['libs'], $config['libs'][$type])) {
+            $exploded = explode('\\', static::class);
+            $prefix   = implode('\\', array_slice($exploded, 0, 2));
+            $path     = (\method_exists($this,'basePath'))
+                        ? $this->basePath() 
+                        : $this->dir();
+            $files = File::allFiles($path.$config['libs'][$type]);
+            $new_map = [];
+            foreach ($files as $file) {
+                $relativePath = $file->getRelativePathname();
+                $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
+                $new_map[class_basename($className)] = $className;
+            }
+        }
+        $package_morph = $this->mergeArray($new_map ?? [], $config[$config_name][$plural_type] ?? []);
+        config([$config_type => $this->mergeArray($morphMaps, $package_morph ?? [])]);
+        config([$this->__lower_package_name.'.'.$config_type => $package_morph ?? []]);
     }
 
     /**
@@ -578,11 +600,11 @@ abstract class BaseServiceProvider extends ServiceProvider
      *
      * @param Model $model The model instance to check and register providers for.
      */
-    public function deferredProviders(Model $model)
-    {
-        $this->app->register($this->replacement($model->app['provider']));
-        $this->app->register($this->replacement($model->group['provider']));
-    }
+    // public function deferredProviders(Model $model)
+    // {
+    //     $this->app->register($this->replacement($model->app['provider']));
+    //     $this->app->register($this->replacement($model->group['provider']));
+    // }
 
     /**
      * Replaces multiple backslashes with a single backslash in the given string.
@@ -605,17 +627,16 @@ abstract class BaseServiceProvider extends ServiceProvider
      * @return self The current instance of the class.
      */
     public function registerConfig(?callable $callback = null): self
-    {
+    {        
         if (isset($this->__lower_package_name)) {
             $this->mergeConfigWith($this->__lower_package_name)
                 ->setLocalConfig($this->__lower_package_name);
         }
-        if ($this->__lower_package_name == 'module-class-room')
-            if (isset($this->__config[$this->__lower_package_name]['contracts'])) {
-                $general_contracts = config('app.contracts', []);
-                $contracts = $this->__config[$this->__lower_package_name]['contracts'];
-                config(['app.contracts' => $this->mergeArray($general_contracts, $contracts)]);
-            }
+        // if (isset($this->__config[$this->__lower_package_name]['contracts'])) {
+        //     $general_contracts = config('app.contracts', []);
+        //     $contracts = $this->__config[$this->__lower_package_name]['contracts'];
+        //     config(['app.contracts' => $this->mergeArray($general_contracts, $contracts)]);
+        // }
 
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::CONFIG->value);
@@ -633,9 +654,9 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function registerDatabase(?callable $callback = null): self
     {
-        if ($this->isExistsDatabaseModel()) {
-            $this->setAppModels($this->__config[$this->__lower_package_name]['database']['models']);
-        }
+        // if ($this->isExistsDatabaseModel()) {
+        //     $this->setAppModels($this->__config[$this->__lower_package_name]['database']['models']);
+        // }
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::DATABASE->value);
         return $this;
