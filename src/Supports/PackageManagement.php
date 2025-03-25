@@ -12,6 +12,7 @@ use Hanafalah\LaravelSupport\{
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
 use Hanafalah\LaravelSupport\Contracts\DataManagement;
+use ReflectionClass;
 
 /** 
  * @method static self useSchema(string $className)
@@ -90,6 +91,27 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         });
     }
 
+    public function requestDTO(string $dto, ?array $attributes = null, string|array|null $excludes = null): Data{
+        $excludes  ??= 'props';
+        $excludes    = $this->mustArray($excludes);
+        $class       = new ReflectionClass($dto);
+        $constructor = $class->getConstructor();
+        $parameters  = $constructor->getParameters();
+
+        $parameterNames = array_map(
+            fn($param) => $param->getName(),
+            array_filter(
+                $parameters,
+                fn($param) => !in_array($param->getName(), $excludes)
+            )
+        );
+
+        $attributes            ??= request()->all();
+        $props                   = array_diff_key($attributes, array_flip($parameterNames));
+        $parameterNames['props'] = $props;
+        return $dto::from($parameterNames);
+    }
+
     public function myModel(?Model $model = null)
     {
         $model = $this->model ??= $model;
@@ -103,8 +125,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         return $this;
     }
 
-    public function getParamLogic(): string
-    {
+    public function getParamLogic(): string{
         return static::$param_logic;
     }
 
