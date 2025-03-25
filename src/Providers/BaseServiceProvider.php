@@ -22,7 +22,6 @@ use Hanafalah\LaravelSupport\Concerns\PackageManagement\HasEvent;
 
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Enums\Provider\ProviderRegisterMethod;
-use Symfony\Component\HttpKernel\Event\ControllerArgumentsEvent;
 
 abstract class BaseServiceProvider extends ServiceProvider
 {
@@ -582,12 +581,15 @@ abstract class BaseServiceProvider extends ServiceProvider
             $path     = (\method_exists($this,'basePath'))
                         ? $this->basePath() 
                         : $this->dir();
-            $files = File::allFiles($path.$config['libs'][$type]);
-            $new_map = [];
-            foreach ($files as $file) {
-                $relativePath = $file->getRelativePathname();
-                $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
-                $new_map[class_basename($className)] = $className;
+            $path     = $path.$config['libs'][$type];
+            if (is_dir($path)){
+                $files = File::allFiles($path);
+                $new_map = [];
+                foreach ($files as $file) {
+                    $relativePath = $file->getRelativePathname();
+                    $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
+                    $new_map[class_basename($className)] = $className;
+                }
             }
         }
         $package_morph = $this->mergeArray($new_map ?? [], $config[$config_name][$plural_type] ?? []);
