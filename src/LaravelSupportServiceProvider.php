@@ -22,9 +22,7 @@ class LaravelSupportServiceProvider extends BaseServiceProvider
             Contracts\LaravelSupport::class => function ($app) {
               return new LaravelSupport($app);
             },
-            Contracts\ReportSummary::class  => Schemas\ReportSummary\ReportSummary::class,
-            Contracts\FileRepository::class => FileRepository::class,
-            Contracts\Response::class       => Response::class,
+            Contracts\Supports\DataManagement::class => Supports\PackageManagement::class
           ]);
         }
       ])

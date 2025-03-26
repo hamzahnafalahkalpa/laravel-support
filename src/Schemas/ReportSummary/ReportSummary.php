@@ -5,12 +5,12 @@ namespace Hanafalah\LaravelSupport\Schemas\ReportSummary;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Hanafalah\LaravelSupport\{
-    Supports,
-    Contracts
+    Supports
 };
+use Hanafalah\LaravelSupport\Contracts\Schemas\ReportSummary\ReportSummary as SchemaReportSummary;
 use Hanafalah\LaravelSupport\Resources\ReportSummary\ViewReportSummary;
 
-class ReportSummary extends Supports\PackageManagement implements Contracts\ReportSummary
+class ReportSummary extends Supports\PackageManagement implements SchemaReportSummary
 {
     protected string $__entity = 'ReportSummary';
 

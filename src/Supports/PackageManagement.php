@@ -11,7 +11,7 @@ use Hanafalah\LaravelSupport\{
 };
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
-use Hanafalah\LaravelSupport\Contracts\DataManagement;
+use Hanafalah\LaravelSupport\Contracts\Supports\DataManagement;
 use ReflectionClass;
 
 /** 

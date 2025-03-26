@@ -382,15 +382,17 @@ abstract class BaseServiceProvider extends ServiceProvider
     }
 
     protected function autoBinds(): self{
-        $contracts     = config($this->__lower_package_name.'.app.contracts', []);
-        $contract_name = config($this->__lower_package_name.'.libs.contract','Contracts');
-        $schema_name   = config($this->__lower_package_name.'.libs.schema','Schemas');
-        foreach ($contracts as $key => $contract) {
-            $schema_namespace = Str::replace($contract_name,$schema_name,$contract,true);
-            $this->binds([$contract => $schema_namespace]);
+        $contracts     = config($this->__lower_package_name . '.app.contracts', []);
+        $contract_name = config($this->__lower_package_name . '.libs.contract', 'Contracts');
+        
+        foreach ($contracts as $contract) {
+            $target_contract = Str::replace($contract_name.'\\','',$contract);
+            $this->binds([$contract => $target_contract]);
         }
+
         return $this;
     }
+
 
     protected function binds(array $binds)
     {

@@ -69,13 +69,11 @@ class FormRequest extends Request
         return $rules;
     }
 
-    private function connectionTable($model)
-    {
+    private function connectionTable($model){
         return $model->getConnectionName() . '.' . Str::after($model->getTable(), '.');
     }
 
-    protected function inCasesValidation($cases)
-    {
+    protected function inCasesValidation($cases){
         return Rule::in(...array_column($cases, 'value'));
     }
 
