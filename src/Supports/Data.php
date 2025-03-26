@@ -2,13 +2,14 @@
 
 namespace Hanafalah\LaravelSupport\Supports;
 
+use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
 use Spatie\LaravelData\Data as SpatieData;
 use Hanafalah\LaravelSupport\Concerns\Support\HasArray;
 use Hanafalah\LaravelSupport\Concerns\Support\HasConfigDatabase;
 
 class Data extends SpatieData
 {
-    use HasArray, HasConfigDatabase;
+    use HasArray, HasModelConfiguration;
 
     protected object $__data;
 

@@ -129,7 +129,7 @@ abstract class BaseServiceProvider extends ServiceProvider
                     }
                 }
             }
-
+            
             $packages  = config()->get("$config_name.packages");
             if (isset($packages)) {
                 foreach ($packages as $key => $package) {
@@ -159,7 +159,6 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function overrideConfig(string $key, mixed $value, array $config_root = [])
     {
-        $key = Str::studly($key);
         $config_root[] = $key;
         if ($this->isArray($value)) {
             foreach ($value as $k => $v) {
@@ -168,7 +167,6 @@ abstract class BaseServiceProvider extends ServiceProvider
         } else {
             $config_root = implode('.', $config_root);
             config()->set($config_root, $value);
-            config()->set('app.contracts.' . $key, $value);
         }
     }
 

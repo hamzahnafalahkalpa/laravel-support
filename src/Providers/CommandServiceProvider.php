@@ -8,7 +8,8 @@ use Hanafalah\LaravelSupport\Commands;
 class CommandServiceProvider extends ServiceProvider
 {
     protected $__commands = [
-        Commands\InstallMakeCommand::class
+        Commands\InstallMakeCommand::class,
+        Commands\AddPackageCommand::class
     ];
 
     public function register()
