@@ -49,49 +49,6 @@ trait HasRequest
     return true;
   }
 
-  /**
-   * @param string $dto
-   * @param array|null $attributes
-   * @param string|array|null $excludes
-   * @return Data
-   *
-   * Membuat instance DTO berdasarkan parameter yang dikirimkan,
-   * parameter yang tidak terdapat dalam constructor DTO tidak akan di
-   * tambahkan ke dalam DTO.
-   *
-   * Jika $excludes diisi maka parameter yang terdapat dalam $excludes
-   * tidak akan di tambahkan ke dalam DTO.
-   *
-   * Jika $attributes tidak diisi maka akan mengambil data dari request
-   * yang sedang berlangsung.
-   *
-   * contoh penggunaan:
-   * $requestDTO = LaravelSupport::requestDTO(MyDTO::class, request()->all(), 'props');
-   */
-  // public function requestDTO(string $dto, ?array $attributes = null, string|array|null $excludes = null): Data{
-  //   $excludes  ??= 'props';
-  //   $excludes    = $this->mustArray($excludes);
-  //   $class       = new ReflectionClass($dto);
-  //   $constructor = $class->getConstructor();
-  //   $parameters  = $constructor->getParameters();
-
-  //   $parameterNames = array_map(
-  //       fn($param) => $param->getName(),
-  //       array_filter(
-  //           $parameters,
-  //           fn($param) => !in_array($param->getName(), $excludes)
-  //       )
-  //   );
-
-  //   $attributes            ??= request()->all();
-  //   // Pisahkan data yang sesuai dengan nama parameter dan data lainnya (props)
-  //   $validAttributes = array_intersect_key($attributes, array_flip($parameterNames));
-  //   $props           = array_diff_key($attributes, $validAttributes);
-    
-  //   // Tambahkan props ke atribut utama
-  //   $validAttributes['props'] = $props;
-  //   return $dto::from($parameterNames);
-  // }
   public function requestDTO(string $dto, ?array $attributes = null, string|array|null $excludes = null): Data{
       $excludes = $this->mustArray($excludes ?? 'props');
       $attributes ??= request()->all();
