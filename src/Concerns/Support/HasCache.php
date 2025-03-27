@@ -59,12 +59,12 @@ trait HasCache
         });
     }
 
-    public function forgetTags(mixed $tags = [])
+    public function forgetTags(string|array $tags = [])
     {
         return $this->cacheDriver(function($cache_driver) use ($tags){
             if ($cache_driver === 'redis') {
                 $tags = $this->mustArray($tags);
-                return Cache::tags($tags)->flush();
+                // return Cache::tags($tags)->flush();
             }
             return null;
         });
