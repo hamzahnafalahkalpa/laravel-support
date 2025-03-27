@@ -2,8 +2,6 @@
 
 namespace Hanafalah\LaravelSupport\Commands;
 
-use Hanafalah\LaravelSupport\Concerns\ServiceProvider\HasMigrationConfiguration;
-
 class InstallMakeCommand extends EnvironmentCommand
 {
     /**

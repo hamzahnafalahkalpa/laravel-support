@@ -11,7 +11,8 @@ use Hanafalah\LaravelSupport\{
 };
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
-use Hanafalah\LaravelSupport\Contracts\DataManagement;
+use Hanafalah\LaravelSupport\Contracts\Supports\DataManagement;
+use ReflectionClass;
 
 /** 
  * @method static self useSchema(string $className)
@@ -103,8 +104,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         return $this;
     }
 
-    public function getParamLogic(): string
-    {
+    public function getParamLogic(): string{
         return static::$param_logic;
     }
 

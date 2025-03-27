@@ -22,7 +22,6 @@ use Hanafalah\LaravelSupport\Concerns\PackageManagement\HasEvent;
 
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Enums\Provider\ProviderRegisterMethod;
-use Symfony\Component\HttpKernel\Event\ControllerArgumentsEvent;
 
 abstract class BaseServiceProvider extends ServiceProvider
 {
@@ -130,7 +129,7 @@ abstract class BaseServiceProvider extends ServiceProvider
                     }
                 }
             }
-
+            
             $packages  = config()->get("$config_name.packages");
             if (isset($packages)) {
                 foreach ($packages as $key => $package) {
@@ -160,7 +159,6 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function overrideConfig(string $key, mixed $value, array $config_root = [])
     {
-        $key = Str::studly($key);
         $config_root[] = $key;
         if ($this->isArray($value)) {
             foreach ($value as $k => $v) {
@@ -169,7 +167,6 @@ abstract class BaseServiceProvider extends ServiceProvider
         } else {
             $config_root = implode('.', $config_root);
             config()->set($config_root, $value);
-            config()->set('app.contracts.' . $key, $value);
         }
     }
 
@@ -385,15 +382,17 @@ abstract class BaseServiceProvider extends ServiceProvider
     }
 
     protected function autoBinds(): self{
-        $contracts     = config($this->__lower_package_name.'.app.contracts', []);
-        $contract_name = config($this->__lower_package_name.'.libs.contract','Contracts');
-        $schema_name   = config($this->__lower_package_name.'.libs.schema','Schemas');
-        foreach ($contracts as $key => $contract) {
-            $schema_namespace = Str::replace($contract_name,$schema_name,$contract,true);
-            $this->binds([$contract => $schema_namespace]);
+        $contracts     = config($this->__lower_package_name . '.app.contracts', []);
+        $contract_name = config($this->__lower_package_name . '.libs.contract', 'Contracts');
+        
+        foreach ($contracts as $contract) {
+            $target_contract = Str::replace($contract_name.'\\','',$contract);
+            $this->binds([$contract => $target_contract]);
         }
+
         return $this;
     }
+
 
     protected function binds(array $binds)
     {
@@ -582,12 +581,15 @@ abstract class BaseServiceProvider extends ServiceProvider
             $path     = (\method_exists($this,'basePath'))
                         ? $this->basePath() 
                         : $this->dir();
-            $files = File::allFiles($path.$config['libs'][$type]);
-            $new_map = [];
-            foreach ($files as $file) {
-                $relativePath = $file->getRelativePathname();
-                $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
-                $new_map[class_basename($className)] = $className;
+            $path     = $path.$config['libs'][$type];
+            if (is_dir($path)){
+                $files = File::allFiles($path);
+                $new_map = [];
+                foreach ($files as $file) {
+                    $relativePath = $file->getRelativePathname();
+                    $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
+                    $new_map[class_basename($className)] = $className;
+                }
             }
         }
         $package_morph = $this->mergeArray($new_map ?? [], $config[$config_name][$plural_type] ?? []);

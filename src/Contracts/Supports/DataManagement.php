@@ -1,6 +1,6 @@
 <?php
 
-namespace Hanafalah\LaravelSupport\Contracts;
+namespace Hanafalah\LaravelSupport\Contracts\Supports;
 
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;

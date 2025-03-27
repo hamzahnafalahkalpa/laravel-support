@@ -80,6 +80,9 @@ return [
         //etc
     ],
     'commands' => [
-        Commands\InstallMakeCommand::class
-    ]
+        Commands\InstallMakeCommand::class,
+        Commands\AddPackageCommand::class
+    ],
+    // Add models from the desired namespaces to 'package_model_list' to keep track of providers
+    'package_model_list' => null
 ];
