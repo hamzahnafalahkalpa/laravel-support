@@ -387,7 +387,7 @@ abstract class BaseServiceProvider extends ServiceProvider
         
         foreach ($contracts as $contract) {
             $target_contract = Str::replace($contract_name.'\\','',$contract);
-            $this->binds([$contract => $target_contract]);
+            if (\class_exists($target_contract)) $this->binds([$contract => $target_contract]);
         }
 
         return $this;
