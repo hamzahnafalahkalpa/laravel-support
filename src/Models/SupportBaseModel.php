@@ -78,13 +78,13 @@ class SupportBaseModel extends AbstractModel
 
     public function toViewApi(){
         return ($this->getViewResource() !== null)
-            ? (new $this->getViewResource())($this)
+            ? new ($this->getViewResource())($this)
             : $this->toArray();
     }
 
     public function toShowApi(){
         return ($this->getShowResource() !== null)
-            ? (new $this->getShowResource())($this)
+            ? new ($this->getShowResource())($this)
             : $this->toArray();
     }
 

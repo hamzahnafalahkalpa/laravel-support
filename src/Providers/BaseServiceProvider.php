@@ -593,8 +593,10 @@ abstract class BaseServiceProvider extends ServiceProvider
             }
         }
         $package_morph = $this->mergeArray($new_map ?? [], $config[$config_name][$plural_type] ?? []);
-        config([$config_type => $this->mergeArray($morphMaps, $package_morph ?? [])]);
+        $morphMaps = $this->mergeArray($morphMaps, $package_morph ?? []);
+        config([$config_type => $morphMaps]);
         config([$this->__lower_package_name.'.'.$config_type => $package_morph ?? []]);
+        Relation::morphMap($morphMaps);
     }
 
     /**
