@@ -20,8 +20,8 @@
         "stancl/jobpipeline": "^1.6.2",
         "stichoza/google-translate-php": "^5.2",
         "spatie/laravel-data": "^4.13",
-        "hanafalah/laravel-has-props": "1.x",
-        "hanafalah/laravel-stub": "1.x",
+        "hanafalah/laravel-has-props": "dev-main",
+        "hanafalah/laravel-stub": "dev-main",
         "symfony/filesystem": "^7.2"
     },
     "extra": {
