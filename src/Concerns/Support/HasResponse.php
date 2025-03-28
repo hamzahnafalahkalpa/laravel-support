@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Hanafalah\ApiHelper\Facades\ApiAccess;
 use Hanafalah\LaravelPermission\Resources\Permission\ViewPermission;
 use Hanafalah\LaravelSupport\Facades\Response;
+use Illuminate\Support\Facades\Auth;
 
 trait HasResponse
 {
@@ -48,7 +49,6 @@ trait HasResponse
         if ($success) {
             $this->renderAclResponse();
         }
-        ksort($this->__response);
         return $this->__response;
     }
 
@@ -56,16 +56,15 @@ trait HasResponse
     {
         $route      = request()->route();
         $route_name = $route ? $route->getName() : null;
-        if (auth()->check()) {
+        if (Auth::check()) {
             $user = $this->prepareUser();
-
             $permission = app(config('database.models.Permission'));
+
             if (isset($route_name) && \is_subclass_of($permission, Model::class)) {
                 $permission = $permission->where("alias", $route_name)->first();
                 if (!isset($permission) && Response::getAclPermission() !== null) {
                     $permission = Response::getAclPermission();
                 }
-
                 if (isset($permission)) {
                     $permission->load(['childs' => fn($q) => $q->showInAcl()]);
                     $role = $user->userReference->role;

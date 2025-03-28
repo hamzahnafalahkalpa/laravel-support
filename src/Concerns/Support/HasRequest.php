@@ -166,6 +166,7 @@ trait HasRequest
       foreach ($user_connections as $connection_name) {
         DB::connection($connection_name)->rollBack();
       }
+
       LaravelSupport::catch($e);
       $result = false;
       if (Request::wantsJson()) {
