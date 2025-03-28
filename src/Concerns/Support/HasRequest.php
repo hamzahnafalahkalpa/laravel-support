@@ -147,6 +147,8 @@ trait HasRequest
     DB::statement('SET GLOBAL TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
     DB::statement('SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
 
+    $class_base_name = \class_basename($this);
+    Log::modules($class_base_name.': Start Transaction');
     $user_connections = [];
     try {
       DB::listen(function ($query) use (&$user_connections) {
@@ -162,10 +164,13 @@ trait HasRequest
         DB::connection($connection_name)->commit();
       }
       $result = true;
+      Log::modules($class_base_name.': Success Transaction');
     } catch (\Throwable $e) {
       foreach ($user_connections as $connection_name) {
         DB::connection($connection_name)->rollBack();
       }
+      Log::modules($class_base_name.': ERR Transaction => '.$e->getMessage());
+
       LaravelSupport::catch($e);
       $result = false;
       if (Request::wantsJson()) {
