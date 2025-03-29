@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest as Request;
 use Illuminate\Validation\Rule;
 use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
+use Hanafalah\LaravelSupport\Concerns\Support\HasRequestData;
 use Illuminate\Support\Str;
 
 class FormRequest extends Request
 {
-    use HasModelConfiguration;
+    use HasModelConfiguration, HasRequestData;
 
     public function callCustomMethod(): array
     {
@@ -94,7 +95,7 @@ class FormRequest extends Request
 
     protected function uniqueValidation($model, ...$args){
         $model = $this->configModel($model);
-        return Rule::unique($this->connectionTable($model), $model->getKeyName(), ...$args);
+        return Rule::unique($model->getTableName(), ...$args);
     }
 
     public function setRulesUUID(array $rules): array{
