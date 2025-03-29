@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest as Request;
 use Illuminate\Validation\Rule;
 use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
+use Hanafalah\LaravelSupport\Concerns\Support\HasRequestData;
 use Illuminate\Support\Str;
 
 class FormRequest extends Request
 {
-    use HasModelConfiguration;
+    use HasModelConfiguration, HasRequestData;
 
     public function callCustomMethod(): array
     {
@@ -77,26 +78,27 @@ class FormRequest extends Request
         return Rule::in(...array_column($cases, 'value'));
     }
 
-    protected function idValidation($model)
-    {
-        $model = $this->configModel($model);
-        return Rule::exists($this->connectionTable($model), $model->getKeyName());
-    }
-
-    protected function existsValidation($model,string $key)
-    {
+    protected function uuidValidation($model, string $key = 'uuid'){
         $model = $this->configModel($model);
         return Rule::exists($this->connectionTable($model), $key);
     }
 
-    protected function uniqueValidation($model, ...$args)
-    {
+    protected function idValidation($model){
         $model = $this->configModel($model);
-        return Rule::unique($this->connectionTable($model), $model->getKeyName(), ...$args);
+        return Rule::exists($this->connectionTable($model), $model->getKeyName());
     }
 
-    public function setRulesUUID(array $rules): array
-    {
+    protected function existsValidation($model,string $key){
+        $model = $this->configModel($model);
+        return Rule::exists($this->connectionTable($model), $key);
+    }
+
+    protected function uniqueValidation($model, ...$args){
+        $model = $this->configModel($model);
+        return Rule::unique($model->getTableName(), ...$args);
+    }
+
+    public function setRulesUUID(array $rules): array{
         $model = $this->getModel();
         $uuid  = $model::getUuidName();
         if (isset($rules[$uuid])) {

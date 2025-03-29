@@ -23,7 +23,7 @@ use ReflectionClass;
  */
 trait HasRequest
 {
-  use RequestManipulation, HasArray;
+  use RequestManipulation, HasArray, HasRequestData;
 
   protected $__exception = ["_token", 'button'];
   protected $__case      = [];
@@ -48,60 +48,6 @@ trait HasRequest
     }
     return true;
   }
-
-  public function requestDTO(string $dto, ?array $attributes = null, string|array|null $excludes = null): Data{
-      $excludes = $this->mustArray($excludes ?? 'props');
-      $attributes ??= request()->all();
-
-      return $this->mapToDTO($dto, $attributes, $excludes);
-  }
-
-  /**
-   * Rekursif untuk memetakan data menjadi DTO
-   */
-  private function mapToDTO(string $dto, array $attributes, array $excludes): Data
-  {
-      $class = new ReflectionClass($dto);
-      $constructor = $class->getConstructor();
-      $parameters = $constructor->getParameters();
-
-      $parameterDetails = array_map(function ($param) use ($excludes) {
-          $name = $param->getName();
-          $type = $param->getType();
-          if (!\method_exists($type,'getTypes')){
-            $type = $param->getType()->getName() ?? null; // Ambil nama tipe jika ada
-          }
-          $isDTO = $type && is_subclass_of($type, Data::class);
-          return compact('name', 'type', 'isDTO');
-      }, array_filter(
-          $parameters,
-          fn($param) => !in_array($param->getName(), $excludes)
-      ));
-
-      $validAttributes = [];
-      $props = array_diff_key($attributes, array_flip(array_column($parameterDetails, 'name')));
-
-      foreach ($parameterDetails as $paramDetail) {
-          $name = $paramDetail['name'];
-          $type = $paramDetail['type'];
-          $isDTO = $paramDetail['isDTO'];
-
-          if (array_key_exists($name, $attributes)) {
-            if ($isDTO && is_array($attributes[$name])) {
-              // Rekursif jika tipe adalah DTO
-              $validAttributes[$name] = $this->mapToDTO($type, $attributes[$name], $excludes);
-            } else {
-              $validAttributes[$name] = $attributes[$name];
-            }
-          }
-        }
-
-      // Tambahkan `props` untuk data lain yang tidak dikenali
-      $validAttributes['props'] = $props;
-
-      return $dto::from($validAttributes);
-  }
-
 
   /**
    * Merge the array from URL parameters into the request object.
