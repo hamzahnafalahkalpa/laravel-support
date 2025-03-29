@@ -77,26 +77,27 @@ class FormRequest extends Request
         return Rule::in(...array_column($cases, 'value'));
     }
 
-    protected function idValidation($model)
-    {
-        $model = $this->configModel($model);
-        return Rule::exists($this->connectionTable($model), $model->getKeyName());
-    }
-
-    protected function existsValidation($model,string $key)
-    {
+    protected function uuidValidation($model, string $key = 'uuid'){
         $model = $this->configModel($model);
         return Rule::exists($this->connectionTable($model), $key);
     }
 
-    protected function uniqueValidation($model, ...$args)
-    {
+    protected function idValidation($model){
+        $model = $this->configModel($model);
+        return Rule::exists($this->connectionTable($model), $model->getKeyName());
+    }
+
+    protected function existsValidation($model,string $key){
+        $model = $this->configModel($model);
+        return Rule::exists($this->connectionTable($model), $key);
+    }
+
+    protected function uniqueValidation($model, ...$args){
         $model = $this->configModel($model);
         return Rule::unique($this->connectionTable($model), $model->getKeyName(), ...$args);
     }
 
-    public function setRulesUUID(array $rules): array
-    {
+    public function setRulesUUID(array $rules): array{
         $model = $this->getModel();
         $uuid  = $model::getUuidName();
         if (isset($rules[$uuid])) {
