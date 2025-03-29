@@ -142,6 +142,10 @@ abstract class BaseServiceProvider extends ServiceProvider
                 $laravel_encodings,
                 config()->get("$config_name.encodings") ?? []
             ));
+
+            if (config("$config_name.app.impersonate") !== null) {
+                config()->set('app.impersonate', config("$config_name.app.impersonate"));
+            }
         });
         return $this;
     }
@@ -387,7 +391,9 @@ abstract class BaseServiceProvider extends ServiceProvider
         
         foreach ($contracts as $contract) {
             $target_contract = Str::replace($contract_name.'\\','',$contract);
-            if (\class_exists($target_contract)) $this->binds([$contract => $target_contract]);
+            if (\class_exists($target_contract)) {
+                $this->binds([$contract => $target_contract]);
+            }
         }
 
         return $this;
