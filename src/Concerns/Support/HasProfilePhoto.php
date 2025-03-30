@@ -55,4 +55,19 @@ trait HasProfilePhoto{
         }
         return $this->profile;
     }
+
+    public function getProfilePhoto(string $path = 'PROFILES'){
+        if (!$this->profile) {
+            abort(404);
+        }
+
+        $disk = $this->__filesystem_disk ?? $this->driver();
+        $filePath = $this->getProfilePhotoPath($path) . '/' . $this->profile;
+
+        if (!Storage::disk($disk)->exists($filePath)) {
+            abort(404);
+        }
+
+        return response()->file(Storage::disk($disk)->path($filePath));
+    }
 }
