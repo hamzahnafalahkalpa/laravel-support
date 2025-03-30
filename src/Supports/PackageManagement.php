@@ -79,16 +79,16 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         return $this->{$this->__entity.'Model'}();
     }
 
-    public function viewEntityResource(callable $callback): array{
+    public function viewEntityResource(callable $callback,array $options = []): array{
         return $this->transforming($this->usingEntity()->getViewResource(),function() use ($callback){
             return $callback();
-        });
+        },$options);
     }
 
-    public function showEntityResource(callable $callback): array{
+    public function showEntityResource(callable $callback,array $options = []): array{
         return $this->transforming($this->usingEntity()->getShowResource(),function() use ($callback){
             return $callback();
-        });
+        },$options);
     }
 
     public function myModel(?Model $model = null)
