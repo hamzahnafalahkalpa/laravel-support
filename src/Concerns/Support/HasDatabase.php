@@ -2,6 +2,7 @@
 
 namespace Hanafalah\LaravelSupport\Concerns\Support;
 
+use Hanafalah\ModuleEncoding\Concerns\Support\HasEncoding;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
@@ -78,22 +79,8 @@ trait HasDatabase
     return in_array(static::getUuidName(), $query->getFillable());
   }
 
-  public static function needRooting(): bool
-  {
+  public static function needRooting(): bool{
     return static::$__need_root;
-  }
-
-  public static function hasEncoding(string $flag): mixed
-  {
-    $encoding = config()->get("laravel-support.encodings.$flag");
-    if (isset($encoding)) {
-      try {
-        return self::generateCode($encoding['flag']);
-      } catch (\Throwable $th) {
-        throw new \Exception($th->getMessage() . ' : flag ' . $flag . ' di model ' . (new static)->getMorphClass());
-      }
-    }
-    return null;
   }
 
   //GETTER SECTION
