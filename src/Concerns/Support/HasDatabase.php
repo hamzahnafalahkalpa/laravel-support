@@ -2,7 +2,7 @@
 
 namespace Hanafalah\LaravelSupport\Concerns\Support;
 
-use Hanafalah\ModuleEncoding\Concerns\Support\HasEncoding;
+use Hanafalah\ModuleEncoding\Concerns\HasEncoding;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
