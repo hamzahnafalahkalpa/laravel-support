@@ -15,7 +15,7 @@ trait NowYouSeeMe
         });
     }
 
-    public function isColumnExists($column_name)
+    public function isColumnExists($column_name, $table_name = null)
     {
         return $this->schema(function ($schema, $table_name) use ($column_name) {
             return $schema->hasColumn($table_name, $column_name);

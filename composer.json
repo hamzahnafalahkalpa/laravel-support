@@ -22,7 +22,8 @@
         "spatie/laravel-data": "^4.13",
         "hanafalah/laravel-has-props": "1.x",
         "hanafalah/laravel-stub": "1.x",
-        "symfony/filesystem": "^7.2"
+        "symfony/filesystem": "^7.2",
+        "hanafalah/module-encoding": "1.x"
     },
     "extra": {
         "laravel": {

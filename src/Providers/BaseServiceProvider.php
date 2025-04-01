@@ -137,8 +137,8 @@ abstract class BaseServiceProvider extends ServiceProvider
                     $this->overrideConfig($key, $package['config'] ?? config($key));
                 }
             }
-            $laravel_encodings = config()->get('laravel-support.encodings') ?? [];
-            config()->set('laravel-support.encodings', $this->mergeArray(
+            $laravel_encodings = config()->get('module-encoding.encodings') ?? [];
+            config()->set('module-encoding.encodings', $this->mergeArray(
                 $laravel_encodings,
                 config()->get("$config_name.encodings") ?? []
             ));

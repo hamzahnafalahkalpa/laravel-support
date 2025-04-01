@@ -2,32 +2,72 @@
 
 namespace Hanafalah\LaravelSupport\Concerns\Support;
 
+use Hanafalah\LaravelSupport\Resources\ProfilePhoto\ViewPhotoResource;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 trait HasProfilePhoto{
-    public $profile;
+    protected $__filesystem_disk = 'public';
 
     public function driver(): string{
-        return config('app.impersonate.storage.driver','local');
+        return config('app.impersonate.storage.driver',$this->__filesystem_disk);
     }
 
     public function storagePath(string $path = ''){
-        return \storage_path($path);
+        return $path;
+    }
+
+    public function setFilesystemDisk(string $disk): self{
+        $this->__filesystem_disk = $disk;
+        return $this;
+    }
+
+    public function getViewPhotoResource(){
+        return ViewPhotoResource::class;
     }
 
     protected function getProfilePhotoPath(string $path = 'PROFILES'): string{
         return $this->storagePath($path);
     }
 
-    public function setProfilePhoto(string|UploadedFile|null $profile = null,string $path = '', string $filename = null): mixed{
-        if ($profile instanceof UploadedFile){
-            $filename ??= $profile->getClientOriginalName();
-            $ext           = $profile->getClientOriginalExtension();
-            $filename_ext  = $filename.'.'.$ext;
-            $this->profile = $profile->storeAs($this->getProfilePhotoPath($path),$filename_ext);
-        }elseif(!is_string($profile)){
+    public function setProfilePhoto(string|UploadedFile|null $profile = null, string $path = 'PROFILES', string $filename = null): ?string{
+        $current = $this->profile ?? null;
+
+        if ($profile instanceof UploadedFile) {
+            $filename ??= Str::orderedUuid();
+            $ext  = $profile->getClientOriginalExtension();
+            $filename .= '.' . $ext;
+            $profile->storePubliclyAs($this->getProfilePhotoPath($path), $filename, [
+                'disk' => $this->__filesystem_disk ?? $this->driver()
+            ]);
+            $this->profile = $filename;
+            $remove_current = true;
+        } elseif (is_string($profile)) {
+            $this->profile = $profile;
+        } else {
+            $remove_current = true;
             $this->profile = null;
         }
+        if (isset($current, $remove_current)){
+            $disk = $this->__filesystem_disk ?? $this->driver();
+            Storage::disk($disk)->delete($this->getProfilePhotoPath($path) . '/' . $current);
+        }
         return $this->profile;
+    }
+
+    public function getProfilePhoto(string $path = 'PROFILES'){
+        if (!$this->profile) {
+            abort(404);
+        }
+
+        $disk = $this->__filesystem_disk ?? $this->driver();
+        $filePath = $this->getProfilePhotoPath($path) . '/' . $this->profile;
+
+        if (!Storage::disk($disk)->exists($filePath)) {
+            abort(404);
+        }
+
+        return response()->file(Storage::disk($disk)->path($filePath));
     }
 }
