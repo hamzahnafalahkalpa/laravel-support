@@ -18,7 +18,8 @@ trait HasRequestData
     return $this->mapToDTO($dto, $attributes, $excludes);
   }
 
-  private function mapToDTO(string $dto, array $attributes, ?array $excludes = []): Data{
+  private function mapToDTO(string $dto, mixed $attributes = null, ?array $excludes = []): ?Data{    
+    if (!isset($attributes)) return null;
     if (Str::contains($dto,'\\Contracts\\')){
       $binding = app()->getBindings()[$dto];
 
@@ -57,7 +58,6 @@ trait HasRequestData
       $paramDetail = $this->DTOChecking($prop);
       $validAttributes['props'] = $this->DTOParamChecking($paramDetail, $validAttributes, []);
     }
-    // if ($attributes['name'] == 'Manajemen Role') dd($dto::from($validAttributes));
 
     return $dto::from($validAttributes);
   }
@@ -68,9 +68,13 @@ trait HasRequestData
     $isDTO    = $paramDetail['isDTO'];
     
     if (array_key_exists($name, $attributes)) {
-      if ($isDTO && is_array($attributes[$name])) {        
-        foreach ($attributes[$name] as &$attribute_name) {          
-          $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
+      if ($isDTO) {        
+        if (array_is_list($attributes[$name])){
+          foreach ($attributes[$name] as &$attribute_name) {          
+            $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
+          }
+        }else{
+          $attributes[$name] = $this->mapToDTO($typeName, $attributes[$name], $excludes);
         }
         return $attributes[$name];
       } else {
@@ -83,33 +87,32 @@ trait HasRequestData
     $name = $param->getName();
     $type = $param->getType();
     $typeName = null;
-    // if ($type && !$type->isBuiltin()) {
-      if (method_exists($type, 'getTypes')) {
-          foreach ($type->getTypes() as $unionType) {
-              if (!$unionType->isBuiltin()) {
-                  $typeName = $unionType->getName();
-                  break;
-              }
-          }
-      } else {
-          $typeName = $type->getName();
-      }
-      // Resolve jika typeName adalah contract
+    $isDTO = false;
+    if (method_exists($type, 'getTypes')) {
+        foreach ($type->getTypes() as $unionType) {
+            if (!$unionType->isBuiltin()) {
+                $typeName = $unionType->getName();
+                break;
+            }
+        }
+    } else {
+        $typeName = $type->getName();
+    }
+    // Resolve jika typeName adalah contract
 
-      if ($typeName && Str::contains($typeName, '\\Contracts\\')) {
-          $binding = app()->getBindings()[$typeName];
-          $concrete = $binding['concrete'];
+    if ($typeName && Str::contains($typeName, '\\Contracts\\')) {
+        $binding = app()->getBindings()[$typeName];
+        $concrete = $binding['concrete'];
 
-          if ($concrete instanceof Closure) {
-              $parameters = (new ReflectionFunction($concrete))->getStaticVariables();
-              $resolvedClass = $parameters['bind'] ?? null;
-          } else {
-              $resolvedClass = $concrete;
-          }
+        if ($concrete instanceof Closure) {
+            $parameters = (new ReflectionFunction($concrete))->getStaticVariables();
+            $resolvedClass = $parameters['bind'] ?? null;
+        } else {
+            $resolvedClass = $concrete;
+        }
 
-          $typeName = $resolvedClass;
-      }
-    // }
+        $typeName = $resolvedClass;
+    }
     if ($typeName == 'array'){
       $attributes = $param->getAttributes();
       foreach ($attributes as $attribute) {
