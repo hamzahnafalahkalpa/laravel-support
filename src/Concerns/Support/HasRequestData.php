@@ -7,6 +7,7 @@ use Hanafalah\LaravelSupport\Supports\Data;
 use ReflectionClass;
 use Illuminate\Support\Str;
 use ReflectionFunction;
+use Spatie\LaravelData\Attributes\DataCollectionOf;
 
 trait HasRequestData
 {
@@ -33,7 +34,7 @@ trait HasRequestData
       $dto = $resolvedClass;
     }
     $class = new ReflectionClass($dto);
-
+    
     $constructor = $class->getConstructor();
     $parameters  = $constructor->getParameters();
     $parameterDetails = array_map(function ($param) use ($excludes) {
@@ -56,6 +57,7 @@ trait HasRequestData
       $paramDetail = $this->DTOChecking($prop);
       $validAttributes['props'] = $this->DTOParamChecking($paramDetail, $validAttributes, []);
     }
+    // if ($attributes['name'] == 'Manajemen Role') dd($dto::from($validAttributes));
 
     return $dto::from($validAttributes);
   }
@@ -64,9 +66,13 @@ trait HasRequestData
     $name     = $paramDetail['name'];
     $typeName = $paramDetail['typeName'];
     $isDTO    = $paramDetail['isDTO'];
+    
     if (array_key_exists($name, $attributes)) {
       if ($isDTO && is_array($attributes[$name])) {        
-        return $this->mapToDTO($typeName, $attributes[$name], $excludes);
+        foreach ($attributes[$name] as &$attribute_name) {          
+          $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
+        }
+        return $attributes[$name];
       } else {
         return $attributes[$name];
       }
@@ -77,7 +83,6 @@ trait HasRequestData
     $name = $param->getName();
     $type = $param->getType();
     $typeName = null;
-
     // if ($type && !$type->isBuiltin()) {
       if (method_exists($type, 'getTypes')) {
           foreach ($type->getTypes() as $unionType) {
@@ -105,7 +110,21 @@ trait HasRequestData
           $typeName = $resolvedClass;
       }
     // }
-    $isDTO = $typeName && is_subclass_of($typeName, Data::class);
+    if ($typeName == 'array'){
+      $attributes = $param->getAttributes();
+      foreach ($attributes as $attribute) {
+        if ($attribute->getName() == DataCollectionOf::class){
+          $isDTO = true;
+          foreach ($attribute->getArguments() as $argument) {
+            $typeName = $argument;
+            break;
+          }
+          break;
+        }
+      }
+    }else{
+      $isDTO = $typeName && is_subclass_of($typeName, Data::class);
+    }
     return compact('name', 'typeName', 'isDTO');
   }
 }
