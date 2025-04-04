@@ -312,11 +312,26 @@ trait HasConfigDatabase
      * @param  string|null  $relation
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<TRelatedModel, $this>
      */
-    public function belongsToModel($related, $foreignKey = null, $ownerKey = null, $relation = null)
-    {
+    public function belongsToModel($related, $foreignKey = null, $ownerKey = null, $relation = null){
         $instance = $this->{$related . 'ModelInstance'}();
         $model    = app($instance);
         return $this->belongsTo($instance, $foreignKey ?? $model->getForeignKey(), $ownerKey, $relation);
+    }
+
+    /**
+     * Define an inverse one-to-one or many JSON relationship.
+     *
+     * @template TRelatedModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param class-string<TRelatedModel> $related
+     * @param string|array $foreignKey
+     * @param string|array $ownerKey
+     * @param string $relation
+     * @return \Staudenmeir\EloquentJsonRelations\Relations\BelongsToJson<TRelatedModel, $this>
+     */
+    public function belongsToJsonModel($related, $foreignKey, $ownerKey = null, $relation = null){
+        $related = $this->{$related . 'ModelInstance'}();
+        return $this->belongsToJson($related, $foreignKey, $ownerKey, $relation);
     }
 
     /**
