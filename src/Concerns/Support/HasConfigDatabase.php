@@ -345,7 +345,7 @@ trait HasConfigDatabase
      * @param string|null $relatedKey
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<TRelatedModel, $this>
      */
-    public function belongsToManyModel($related, $table = null, $foreignKey = null, $relatedKey = null)
+    public function belongsToManyModel($related, $table = null, $foreignPivotKey = null, $relatedPivotKey = null, $parentKey = null, $relatedKey = null, $relation = null)
     {
         $instance = $this->{$related . 'ModelInstance'}();
         $model = app($instance);
@@ -359,8 +359,9 @@ trait HasConfigDatabase
         return $this->belongsToMany(
             $instance,
             $table ?? $this->getBelongsToManyTable($related),
-            $foreignKey ?? $this->getForeignKey(),
-            $relatedKey ?? $model->getForeignKey()
+            $foreignPivotKey ?? $this->getForeignKey(),
+            $relatedPivotKey ?? $model->getForeignKey(),
+            $parentKey, $relatedKey, $relation
         );
     }
 

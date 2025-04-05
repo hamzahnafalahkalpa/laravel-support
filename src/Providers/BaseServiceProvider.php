@@ -413,6 +413,25 @@ abstract class BaseServiceProvider extends ServiceProvider
         }
     }
 
+    protected function contextualBindings(array $binds): self{
+        foreach ($binds as $key => $bind) {
+            if (!isset($bind['needs']) || !isset($bind['give'])) {
+                if (count($bind) == 2){
+                    list($needs,$give) = $bind;
+                }else{
+                    continue;
+                }
+            }else{
+                $needs = $bind['needs'];
+                $give  = $bind['give'];
+            }
+            $this->app->when($key)
+                ->needs($needs)
+                ->give($give);
+        }
+        return $this;
+    }
+
     /**
      * Registers a callback to be called when the application is booting.
      *

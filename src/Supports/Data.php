@@ -6,10 +6,11 @@ use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguratio
 use Spatie\LaravelData\Data as SpatieData;
 use Hanafalah\LaravelSupport\Concerns\Support\HasArray;
 use Hanafalah\LaravelSupport\Concerns\Support\HasConfigDatabase;
+use Hanafalah\LaravelSupport\Concerns\Support\HasRequestData;
 
 class Data extends SpatieData
 {
-    use HasArray, HasModelConfiguration;
+    use HasArray, HasModelConfiguration, HasRequestData;
 
     protected object $__data;
 

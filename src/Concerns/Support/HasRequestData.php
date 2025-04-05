@@ -11,7 +11,7 @@ use Spatie\LaravelData\Attributes\DataCollectionOf;
 
 trait HasRequestData
 {
-  public function requestDTO(string $dto, ?array $attributes = null, string|array|null $excludes = null): Data{
+  public function requestDTO(string $dto, ?array $attributes = null, string|array|null $excludes = null): mixed{
     $excludes = $excludes ?? 'props';
     if (!is_array($excludes)) $excludes = [$excludes];
     $attributes ??= request()->all();
