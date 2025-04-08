@@ -120,7 +120,7 @@ abstract class BaseServiceProvider extends ServiceProvider
     {
         $this->registerConfig(function () use ($config_name, $additional_config_path) {
             if (isset($additional_config_path)) {
-                $configs = array_diff(scandir($additional_config_path), ['.', '..', 'config.php']);
+                $configs = array_values(array_diff(scandir($additional_config_path), ['.', '..', 'config.php']));
                 foreach ($configs as $config) {
                     $path = $additional_config_path . '/' . $config;
                     if (is_file($path)) {
@@ -171,6 +171,9 @@ abstract class BaseServiceProvider extends ServiceProvider
         } else {
             $config_root = implode('.', $config_root);
             config()->set($config_root, $value);
+        }
+        if ($key == 'contextual_bindings') {
+            $this->contextualBindings($value);
         }
     }
 
@@ -408,26 +411,32 @@ abstract class BaseServiceProvider extends ServiceProvider
                     return $bind($app);
                 }
                 if (is_object($bind)) return $bind;
-                if (is_string($bind)) return new $bind($app);
+                if (is_string($bind)) return new $bind;
             });
         }
     }
 
-    protected function contextualBindings(array $binds): self{
-        foreach ($binds as $key => $bind) {
-            if (!isset($bind['needs']) || !isset($bind['give'])) {
-                if (count($bind) == 2){
-                    list($needs,$give) = $bind;
+    protected function contextualBindings(callable|array $binds): self{
+        if (\is_callable($binds)) {
+            $binds = $binds();
+        }
+        if (isset($binds) && is_array($binds)){
+            foreach ($binds as $key => $bind) {
+                if (!isset($bind['from']) || !isset($bind['give'])) {
+                    if (count($bind) == 2){
+                        list($from,$give) = $bind;
+                    }else{
+                        continue;
+                    }
                 }else{
-                    continue;
+                    $from = $bind['from'];
+                    $give  = $bind['give'];
                 }
-            }else{
-                $needs = $bind['needs'];
-                $give  = $bind['give'];
+
+                $this->app->when($from)
+                    ->needs($key)
+                    ->give($give);
             }
-            $this->app->when($key)
-                ->needs($needs)
-                ->give($give);
         }
         return $this;
     }

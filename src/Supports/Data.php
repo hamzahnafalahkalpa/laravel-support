@@ -24,6 +24,10 @@ class Data extends SpatieData
         return (count($filters) == 1) ? end($filters) : null;
     }
 
+    protected static function new(){
+        return (new static);
+    }
+
     public function callCustomMethod(): array
     {
         return ['Model'];

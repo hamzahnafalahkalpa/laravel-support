@@ -11,16 +11,16 @@ use Spatie\LaravelData\Attributes\DataCollectionOf;
 
 trait HasRequestData
 {
-  public function requestDTO(string $dto, ?array $attributes = null, string|array|null $excludes = null): mixed{
+  public function requestDTO(object|string $dto, ?array $attributes = null, string|array|null $excludes = null): mixed{
     $excludes = $excludes ?? 'props';
     if (!is_array($excludes)) $excludes = [$excludes];
     $attributes ??= request()->all();
     return $this->mapToDTO($dto, $attributes, $excludes);
   }
 
-  private function mapToDTO(string $dto, mixed $attributes = null, ?array $excludes = []): ?Data{    
+  private function mapToDTO(object|string $dto, mixed $attributes = null, ?array $excludes = []): ?Data{    
     if (!isset($attributes)) return null;
-    if (Str::contains($dto,'\\Contracts\\')){
+    if (is_string($dto) && Str::contains($dto,'\\Contracts\\')){
       $binding = app()->getBindings()[$dto];
 
       $concrete = $binding['concrete'];
@@ -34,15 +34,20 @@ trait HasRequestData
       if (!$resolvedClass) throw new \Exception("Unable to determine the target class for {$dto}");
       $dto = $resolvedClass;
     }
-    $class = new ReflectionClass($dto);
+    $class = new ReflectionClass(is_object($dto) ? $dto::class : $dto);
     
     $constructor = $class->getConstructor();
-    $parameters  = $constructor->getParameters();
+    if (isset($constructor)) {
+      $parameters = $constructor->getParameters();
+    }else{
+      $parameters = $class->getProperties();
+    }
+    // $parameters  = (isset($constructor)) ? $constructor->getParameters() : $class->getProperties();
     $parameterDetails = array_map(function ($param) use ($excludes) {
         return $this->DTOChecking($param, $excludes);
     }, array_filter(
         $parameters,
-        fn($param) => !in_array($param->getName(), $excludes)
+        fn($param) => !in_array($param->getName(), $excludes) && !Str::contains($param->getName(), '__')
     ));
 
     $validAttributes = [];
@@ -54,12 +59,16 @@ trait HasRequestData
     $validAttributes['props'] = $props;
 
     $prop = end($parameters);
-    if ($prop->name == 'props'){
+    if (isset($prop->name) && $prop->name == 'props'){
       $paramDetail = $this->DTOChecking($prop);
       $validAttributes['props'] = $this->DTOParamChecking($paramDetail, $validAttributes, []);
     }
 
-    return $dto::from($validAttributes);
+    $data = $dto::from($validAttributes);
+    if (method_exists($dto, 'after') && (new \ReflectionMethod($dto, 'after'))->isStatic()) {
+      $data = $dto::after($data);
+    }
+    return $data;
   }
 
   private function DTOParamChecking(array $paramDetail, array $attributes, ?array $excludes = []){
@@ -85,10 +94,10 @@ trait HasRequestData
 
   private function DTOChecking($param,array $excludes = []): array{
     $name = $param->getName();
-    $type = $param->getType();
+    $type = $param->getType() ?? null;
     $typeName = null;
     $isDTO = false;
-    if (method_exists($type, 'getTypes')) {
+    if (isset($type) && method_exists($type, 'getTypes')) {
         foreach ($type->getTypes() as $unionType) {
             if (!$unionType->isBuiltin()) {
                 $typeName = $unionType->getName();
