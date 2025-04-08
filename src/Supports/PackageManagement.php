@@ -69,6 +69,20 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         $this->__schema_contracts = config('app.contracts', []);
     }
 
+    protected function fillingProps(Model &$model, mixed $props, ?array $onlies = []){
+        foreach ($props as $key => $prop) {
+            if ($key == 'props'){
+                $this->fillingProps($model, $prop);
+            }else{
+                if (count($onlies) > 0 && in_array($key, $onlies)){
+                    $model->{$key} = $prop;
+                }else{
+                    $model->{$key} = $prop;
+                }
+            }
+        }
+    }
+
     public function schemaContract(string $contract)
     {
         $contract = Str::studly($contract);

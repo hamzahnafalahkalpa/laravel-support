@@ -35,39 +35,53 @@ trait HasRequestData
       $dto = $resolvedClass;
     }
     $class = new ReflectionClass(is_object($dto) ? $dto::class : $dto);
-    
     $constructor = $class->getConstructor();
     if (isset($constructor)) {
       $parameters = $constructor->getParameters();
     }else{
       $parameters = $class->getProperties();
+      $parameters = array_filter($parameters, function($param){
+        return !Str::startsWith($param->getName(), '_');
+      });
+      $parameters = \array_values($parameters);
     }
-    // $parameters  = (isset($constructor)) ? $constructor->getParameters() : $class->getProperties();
-    $parameterDetails = array_map(function ($param) use ($excludes) {
+    
+    $parameterDetails = array_values(array_map(function ($param) use ($excludes,$dto) {
         return $this->DTOChecking($param, $excludes);
     }, array_filter(
         $parameters,
         fn($param) => !in_array($param->getName(), $excludes) && !Str::contains($param->getName(), '__')
-    ));
-
+    )));
+    
     $validAttributes = [];
     $props = array_diff_key($attributes, array_flip(array_column($parameterDetails, 'name')));
-
     foreach ($parameterDetails as $paramDetail) {
       $validAttributes[$paramDetail['name']] = $this->DTOParamChecking($paramDetail, $attributes, $excludes);        
     }
-    $validAttributes['props'] = $props;
-
-    $prop = end($parameters);
-    if (isset($prop->name) && $prop->name == 'props'){
-      $paramDetail = $this->DTOChecking($prop);
-      $validAttributes['props'] = $this->DTOParamChecking($paramDetail, $validAttributes, []);
+    
+    $prop = null;
+    $prop_exists = false;
+    foreach($parameters as $param){
+      if($param->getName() == 'props'){
+        $prop_exists = true;
+        $prop = $param;
+        break;
+      }
     }
+    if ($prop_exists){
+      $validAttributes['props'] = $props;
 
+      if (isset($prop->name) && $prop->name == 'props'){
+        $paramDetail = $this->DTOChecking($prop);
+        $validAttributes['props'] = $this->DTOParamChecking($paramDetail, $validAttributes, []);
+      }
+    }
+    
     $data = $dto::from($validAttributes);
     if (method_exists($dto, 'after') && (new \ReflectionMethod($dto, 'after'))->isStatic()) {
       $data = $dto::after($data);
     }
+
     return $data;
   }
 
@@ -75,15 +89,16 @@ trait HasRequestData
     $name     = $paramDetail['name'];
     $typeName = $paramDetail['typeName'];
     $isDTO    = $paramDetail['isDTO'];
-    
     if (array_key_exists($name, $attributes)) {
-      if ($isDTO) {        
-        if (array_is_list($attributes[$name])){
-          foreach ($attributes[$name] as &$attribute_name) {          
-            $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
+      if ($isDTO) {  
+        if (isset($attributes[$name])){
+          if (is_array($attributes[$name]) && array_is_list($attributes[$name])){
+            foreach ($attributes[$name] as &$attribute_name) {          
+              $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
+            }
+          }else{
+            $attributes[$name] = $this->mapToDTO($typeName, $attributes[$name], $excludes);
           }
-        }else{
-          $attributes[$name] = $this->mapToDTO($typeName, $attributes[$name], $excludes);
         }
         return $attributes[$name];
       } else {
@@ -107,8 +122,8 @@ trait HasRequestData
     } else {
         $typeName = $type->getName();
     }
-    // Resolve jika typeName adalah contract
 
+    // Resolve jika typeName adalah contract
     if ($typeName && Str::contains($typeName, '\\Contracts\\')) {
         $binding = app()->getBindings()[$typeName];
         $concrete = $binding['concrete'];
@@ -137,6 +152,7 @@ trait HasRequestData
     }else{
       $isDTO = $typeName && is_subclass_of($typeName, Data::class);
     }
+
     return compact('name', 'typeName', 'isDTO');
   }
 }
