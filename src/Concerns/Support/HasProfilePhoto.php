@@ -8,26 +8,26 @@ use Illuminate\Http\UploadedFile;
 trait HasProfilePhoto{
     use HasImageProcessing;
 
-    public function getViewPhotoResource(){
+    public function getViewFileResource(){
         return ViewPhotoResource::class;
     }
 
-    protected function getPhotoPath(? string $path = null): string{
+    protected function getFilePath(? string $path = null): string{
         $path ??= 'PROFILES';
         return $this->storagePath($path);
     }
 
-    public function getImageName(){
+    public function getFileNameAttribute(){
         return 'profile';
     }
 
     public function setProfilePhoto(string|UploadedFile|null $photo = null, ?string $path = null, string $filename = null): ?string{
         $path ??= 'PROFILES';
-        return $this->setupPhoto($photo,$path,$filename);
+        return $this->setupFile($photo,$path,$filename);
     }
 
     public function getProfilePhoto(? string $path = null){
         $path ??= 'PROFILES';
-        return $this->getImageFile($path);
+        return $this->getStorageFile($path);
     }
 }

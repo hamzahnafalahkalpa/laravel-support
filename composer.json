@@ -20,10 +20,11 @@
         "stancl/jobpipeline": "^1.6.2",
         "stichoza/google-translate-php": "^5.2",
         "spatie/laravel-data": "^4.13",
-        "hanafalah/laravel-has-props": "1.x",
-        "hanafalah/laravel-stub": "1.x",
+        "hanafalah/laravel-has-props": "1.x-dev as 1.0",
+        "hanafalah/laravel-stub": "1.x-dev as 1.0",
         "symfony/filesystem": "^7.2",
-        "hanafalah/module-encoding": "1.x"
+        "hanafalah/module-encoding": "1.x-dev as 1.0",
+        "spatie/laravel-medialibrary": "^11.12"
     },
     "extra": {
         "laravel": {
@@ -31,7 +32,5 @@
                 "Hanafalah\\LaravelSupport\\LaravelSupportServiceProvider"
             ]
         }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": false
+    }
 }

@@ -616,9 +616,11 @@ abstract class BaseServiceProvider extends ServiceProvider
                         ? $this->basePath() 
                         : $this->dir();
             $path     = $path.$config['libs'][$type];
+
             if (is_dir($path)){
-                $files = File::allFiles($path);
+                $files   = File::allFiles($path);
                 $new_map = [];
+
                 foreach ($files as $file) {
                     $relativePath = $file->getRelativePathname();
                     $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
