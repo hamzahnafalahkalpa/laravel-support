@@ -69,6 +69,14 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         $this->__schema_contracts = config('app.contracts', []);
     }
 
+    protected function viewUsingRelation(): array{
+        return [];
+    }
+
+    protected function showUsingRelation(): array{
+        return [];
+    }
+
     protected function fillingProps(Model &$model, mixed $props, ?array $onlies = []){
         foreach ($props as $key => $prop) {
             if ($key == 'props'){
