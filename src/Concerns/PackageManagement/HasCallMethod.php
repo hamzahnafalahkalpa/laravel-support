@@ -49,6 +49,14 @@ trait HasCallMethod
             return $this->generalViewList();
         }
 
+        if ($method !== 'generalFind' && Str::startsWith($method, 'generalFind'.$this->__entity)){
+            return $this->generalPrepareFind(...$arguments);
+        }
+
+        if ($method == 'find'.$this->__entity){
+            return $this->generalFind(...$arguments);
+        }
+
         if ($method !== 'prepareDelete' && Str::startsWith($method, 'prepareDelete'.$this->__entity)){
             return $this->generalPrepareDelete(...$arguments);
         }
@@ -59,9 +67,38 @@ trait HasCallMethod
         
     }
 
+    public function autolist(?string $response = 'list',?callable $callback = null): mixed{
+        switch ($response) {
+            case 'list':
+                return $this->{'view'.$this->__entity.'List'}($callback);
+            break;
+            case 'paginate':
+                return $this->{'view'.$this->__entity.'Paginate'}($callback);
+            break;
+            case 'find':
+                return $this->{'find'.$this->__entity}($callback);
+            break;
+        }
+        abort(404);
+    }
+
     public function generalGetModelEntity(): mixed{
         $entity = Str::snake($this->__entity);
         return static::${$entity.'_model'};
+    }
+
+    public function generalPrepareFind(?callable $callback = null, ? array $attributes = null): Model{
+        $attributes ??= request()->all();
+        $model = $this->generalGetModelEntity()->conditionals(isset($callback),function($query) use ($callback){
+            $this->mergeCondition($callback($query));
+        })->with($this->showUsingRelation())->first();
+        return static::${Str::snake($this->__entity).'_model'} = $model;
+    }   
+
+    public function generalFind(? callable $callback = null): array{
+        return $this->showEntityResource(function() use ($callback){
+            return $this->{'prepareFind'.$this->__entity}($callback);
+        });
     }
 
     public function generalPrepareShow(? Model $model = null, ? array $attributes = null): Model{
@@ -109,7 +146,7 @@ trait HasCallMethod
     }
 
     public function generalPrepareDelete(? array $attributes = null): bool{
-        $entity = Str::snakes($this->__entity);
+        $entity = Str::snake($this->__entity);
         $attributes ??= \request()->all();
         if (!$attributes['id']) throw new \Exception('No id provided', 422);
         $result = $this->{$this->__entity.'Model'}()->findOrFail($attributes['id'])->delete();
