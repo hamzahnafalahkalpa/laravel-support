@@ -73,7 +73,7 @@ trait HasFileUpload{
         return $newFiles->values()->all();
     }
 
-    public function setupFile(string|UploadedFile|null $file = null, ?string $path = null, string $filename = null): ?string{
+    public function setupFile(string|UploadedFile|null $file = null, ?string $path = null, ?string $filename = null): ?string{
         $current = $this->getFile() ?? null;
         if ($file instanceof UploadedFile) {
             $filename ??= Str::orderedUuid();
