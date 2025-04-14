@@ -11,8 +11,8 @@ use Hanafalah\LaravelSupport\{
 };
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
+use Hanafalah\LaravelSupport\Concerns\Support\Macroable;
 use Hanafalah\LaravelSupport\Contracts\Supports\DataManagement;
-use ReflectionClass;
 
 /** 
  * @method static self useSchema(string $className)

@@ -41,6 +41,14 @@ trait HasCallMethod
             return $this->generalPrepareShow(...$arguments);
         }
 
+        if ($method !== 'prepareView' && Str::startsWith($method, 'prepareView'.$this->__entity) && Str::endsWith($method,'Paginate')){
+            return $this->generalPrepareViewPaginate(...$arguments);
+        }
+
+        if ($method !== 'view' && Str::startsWith($method, 'view'.$this->__entity) && Str::endsWith($method,'Paginate')){
+            return $this->generalViewPaginate();
+        }
+
         if ($method !== 'prepareView' && Str::startsWith($method, 'prepareView'.$this->__entity) && Str::endsWith($method,'List')){
             return $this->generalPrepareViewList(...$arguments);
         }
