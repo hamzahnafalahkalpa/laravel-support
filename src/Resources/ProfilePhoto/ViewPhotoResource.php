@@ -11,7 +11,8 @@ class ViewPhotoResource extends ApiResource
     {
         $arr = [
             'id'       => $this->id,
-            'profile'  => $this->profile
+            'profile'  => $this->profile,
+            'url_profile' => $this->getFullUrl()
         ];
         return $arr;
     }

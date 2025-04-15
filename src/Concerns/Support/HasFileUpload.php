@@ -19,7 +19,7 @@ trait HasFileUpload{
         return $path;
     }
 
-    protected function getFileNameAttribute(): string{
+    protected function getFileNameAttribute(): string|callable{
         return 'file';
     }
 
@@ -28,7 +28,12 @@ trait HasFileUpload{
     }
 
     public function getFile(){
-        return $this->{$this->getFileNameAttribute()};
+        $attribute = $this->getFileNameAttribute();
+        if (is_callable($attribute)){
+            return $attribute($this);
+        }else{
+            return $this->{$attribute};
+        }
     }
 
     protected function getFilePath(? string $path = null): string{
@@ -54,6 +59,10 @@ trait HasFileUpload{
         return response()->file(Storage::disk($disk)->path($filePath));
     }
 
+    public function getFullUrl(?string $path = null): string{
+        return Storage::disk($this->__filesystem_disk ?? $this->driver())->url($this->getFilePath() . '/' . $path ?? $this->getFile());
+    }
+
     public function setupFiles(array $files, ?string $path = null): array{
         if (!method_exists($this, 'getCurrentFiles')) {
             throw new \Exception('Method getCurrentFiles() must be implemented in ' . get_class($this));
@@ -74,13 +83,15 @@ trait HasFileUpload{
     }
 
     public function setupFile(string|UploadedFile|null $file = null, ?string $path = null, ?string $filename = null): ?string{
-        $current = $this->getFile() ?? null;
+        $current    = $this->getFile() ?? null;
+        $file_path  = $this->getFilePath($path);
+        $disk       = $this->__filesystem_disk ?? $this->driver();
         if ($file instanceof UploadedFile) {
             $filename ??= Str::orderedUuid();
             $ext        = $file->getClientOriginalExtension();
             $filename  .= '.' . $ext;
-            $file->storePubliclyAs($this->getFilePath($path), $filename, [
-                'disk' => $this->__filesystem_disk ?? $this->driver()
+            $file->storePubliclyAs($file_path, $filename, [
+                'disk' => $disk
             ]);
             $result = $filename;
             $remove_current = true;
