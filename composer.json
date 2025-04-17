@@ -21,6 +21,7 @@
         "stichoza/google-translate-php": "^5.2",
         "spatie/laravel-data": "^4.13",
         "hanafalah/laravel-has-props": "1.x-dev as 1.0",
+        "hanafalah/laravel-package-generator": "1.x-dev as 1.0",
         "hanafalah/laravel-stub": "1.x-dev as 1.0",
         "symfony/filesystem": "^7.2",
         "hanafalah/module-encoding": "1.x-dev as 1.0",
