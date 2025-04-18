@@ -68,7 +68,7 @@ abstract class BaseServiceProvider extends ServiceProvider
         return $this->__events;
     }
 
-    protected function bootedRegisters(Model $model, string $config_name, ?string $migration_path = null): self
+    protected function bootedRegisters(array $packages, string $config_name, ?string $migration_path = null): self
     {
         if (isset($migration_path)) {
             if (isset($this->__config[$config_name]['libs']) && isset($this->__config[$config_name]['libs']['migration'])) {
@@ -79,8 +79,7 @@ abstract class BaseServiceProvider extends ServiceProvider
             }
         }
 
-        $this->registerProvider(function () use ($model, $config_name) {
-            $packages = $model->packages;
+        $this->registerProvider(function () use ($packages, $config_name) {
             if (isset($packages)) {
                 foreach ($packages as $key => $package) {
                     $provider = $this->replacement($package['provider']);
@@ -720,13 +719,12 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     public function registerNamespace(?callable $callback = null): self
     {
-
         $this->publishes([
-            $this->getConfigFullPath() => config_path($this->__lower_package_name . '.php'),
+            $this->getConfigFullPath() => support_config_path($this->__lower_package_name . '.php'),
         ], 'config');
 
         $this->publishes([
-            $this->getAssetPath('stubs') => base_path('Stubs/' . $this->__class_basename . 'Stubs'),
+            $this->getAssetPath('stubs') => base_path('stubs/' . $this->__class_basename . 'Stubs'),
         ], 'stubs');
 
         $this->publishes($this->scanForPublishMigration($this->__migration_path, $this->__target_migration_path), 'migrations');

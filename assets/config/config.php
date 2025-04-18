@@ -13,7 +13,10 @@ return [
         'model' => 'Models',
         'contract' => 'Contracts'
     ],
-    'stub'    => [
+    'config'    => [
+        'path'  => config_path()
+    ],
+    'stub'      => [
         /*
         |--------------------------------------------------------------------------
         | Overide hanafalah/laravel-stub
@@ -25,7 +28,7 @@ return [
         */
         'open_separator'  => '{{',
         'close_separator' => '}}',
-        'path'            => stub_path(),
+        'path'            => base_path('stubs'),
     ],
     'translate' => [
         'from'  => null, //default null to autodetect,

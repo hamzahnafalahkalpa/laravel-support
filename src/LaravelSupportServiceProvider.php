@@ -12,7 +12,7 @@ class LaravelSupportServiceProvider extends BaseServiceProvider
 {
   public function register()
   {
-    $this->registerMainClass(LaravelSupport::class)
+      $this->registerMainClass(LaravelSupport::class)
       ->registerCommandService(Providers\CommandServiceProvider::class)
       ->registers([
         '*',
