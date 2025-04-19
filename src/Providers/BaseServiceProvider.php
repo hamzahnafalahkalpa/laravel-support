@@ -233,6 +233,7 @@ abstract class BaseServiceProvider extends ServiceProvider
             ->setLowerPackageName($this->__class_basename);
 
         $this->registerConfig();
+
         $this->addDataToConfig('app','contract');
         $this->autoBinds();
 
@@ -595,10 +596,9 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function registerModel(?callable $callback = null): self
     {
-        if ($this->isExistsDatabaseModel()) {
-            $this->callMeBack($callback);
-            $this->addDataToConfig('database','model');
-        }
+        if (config()->get('database.models') == null) config()->set('database.models',[]);
+        $this->callMeBack($callback);
+        $this->addDataToConfig('database','model');
         $this->setFinishedRegister(ProviderRegisterMethod::MODEL->value);
         return $this;
     }
@@ -631,42 +631,14 @@ abstract class BaseServiceProvider extends ServiceProvider
         $morphMaps = $this->mergeArray($morphMaps, $package_morph ?? []);
         config([$config_type => $morphMaps]);
         config([$this->__lower_package_name.'.'.$config_type => $package_morph ?? []]);
-        Relation::morphMap($morphMaps);
+        if ($type == 'model') Relation::morphMap($morphMaps);
     }
 
-    /**
-     * Register deferred providers based on the given model.
-     *
-     * @param Model $model The model instance to check and register providers for.
-     */
-    // public function deferredProviders(Model $model)
-    // {
-    //     $this->app->register($this->replacement($model->app['provider']));
-    //     $this->app->register($this->replacement($model->group['provider']));
-    // }
-
-    /**
-     * Replaces multiple backslashes with a single backslash in the given string.
-     *
-     * @param string $value The string to process.
-     * @return string The processed string with reduced backslashes.
-     */
-    private function replacement(string $value)
-    {
+    private function replacement(string $value){
         return preg_replace('/\\\\+/', '\\', $value);
     }
 
-    /**
-     * Registers the configuration for the package.
-     *
-     * This method merges and sets the local configuration for the package
-     * identified by the lower package name. An optional callback can be executed.
-     *
-     * @param callable|null $callback The callback to be executed.
-     * @return self The current instance of the class.
-     */
-    public function registerConfig(?callable $callback = null): self
-    {        
+    public function registerConfig(?callable $callback = null): self{        
         if (isset($this->__lower_package_name)) {
             $this->mergeConfigWith($this->__lower_package_name)
                 ->setLocalConfig($this->__lower_package_name);
@@ -693,23 +665,9 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function registerDatabase(?callable $callback = null): self
     {
-        // if ($this->isExistsDatabaseModel()) {
-        //     $this->setAppModels($this->__config[$this->__lower_package_name]['database']['models']);
-        // }
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::DATABASE->value);
         return $this;
-    }
-
-    /**
-     * Checks if database models exist for the package.
-     *
-     * @return bool True if database models exist, false otherwise.
-     */
-    private function isExistsDatabaseModel(): bool
-    {
-        $config = $this->__config[$this->__lower_package_name];
-        return isset($config['database']) && isset($config['database']['models']);
     }
 
     /**
@@ -726,7 +684,6 @@ abstract class BaseServiceProvider extends ServiceProvider
         $this->publishes([
             $this->getAssetPath('stubs') => base_path('stubs/' . $this->__class_basename . 'Stubs'),
         ], 'stubs');
-
         $this->publishes($this->scanForPublishMigration($this->__migration_path, $this->__target_migration_path), 'migrations');
 
         $this->callMeBack($callback);

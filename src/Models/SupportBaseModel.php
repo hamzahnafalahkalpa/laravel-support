@@ -107,21 +107,9 @@ class SupportBaseModel extends AbstractModel
     }
 
     //EIGER SECTION
-    public function activity()
-    {
-        return $this->morphOneModel('Activity', 'reference');
-    }
-    public function activities()
-    {
-        return $this->morphManyModel('Activity', 'reference');
-    }
-    public function modelHasRelation()
-    {
-        return $this->morphOneModel('ModelHasRelation', 'model');
-    }
-    public function modelHasRelations()
-    {
-        return $this->morphManyModel('ModelHasRelation', 'model');
-    }
+    public function activity(){return $this->morphOneModel('Activity', 'reference');}
+    public function activities(){return $this->morphManyModel('Activity', 'reference');}
+    public function modelHasRelation(){return $this->morphOneModel('ModelHasRelation', 'model');}
+    public function modelHasRelations(){return $this->morphManyModel('ModelHasRelation', 'model');}
     //END EIGER SECTION
 }
