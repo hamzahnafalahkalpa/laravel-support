@@ -17,7 +17,9 @@ class LaravelSupportServiceProvider extends BaseServiceProvider
       ->registers([
         '*',
         'Migration' => function () {
-          return ['target' => $this->isMultitenancy() ? '/tenant' : ''];
+          return [
+            'target' => $this->isMultitenancy() ? '/tenant' : ''
+          ];
         },
         'Services' => function () {
           $this->binds([

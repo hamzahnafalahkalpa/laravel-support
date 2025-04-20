@@ -15,7 +15,9 @@ trait HasMicrotenant
     {
         $loader = require base_path('vendor/autoload.php');
         if (isset($loader->getPrefixesPsr4()['Hanafalah\\MicroTenant\\'])) {
-            $this->__is_multitenancy = true;
+            if (config('micro-tenant.tenancy.enabled')){
+                $this->__is_multitenancy = true;
+            }
         }
         return $this->__is_multitenancy;
     }

@@ -52,18 +52,6 @@ class InstallMakeCommand extends EnvironmentCommand
         ]);
 
         $this->info('✔️  Created migrations');
-
-        if (!$this->isMultitenancy()) {
-            $migrations = $this->canMigrate();
-
-            $this->callSilent('migrate', [
-                '--path' => $migrations
-            ]);
-
-            $this->info('✔️  App table migrated');
-        }
-
-
         $this->comment('hanafalah/laravel-support installed successfully.');
     }
 }
