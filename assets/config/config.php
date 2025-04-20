@@ -9,6 +9,7 @@ use Hanafalah\LaravelSupport\{
 };
 
 return [
+    "namespace"     => "Hanafalah\LaravelSupport",
     'libs'    => [
         'model' => 'Models',
         'contract' => 'Contracts'

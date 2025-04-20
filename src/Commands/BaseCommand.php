@@ -2,6 +2,7 @@
 
 namespace Hanafalah\LaravelSupport\Commands;
 
+use Hanafalah\LaravelPackageGenerator\Concerns\HasGenerator;
 use Hanafalah\LaravelSupport\{
     Commands\Concerns as CommandSupport,
     Concerns\Support as ConcernsSupport,
@@ -12,6 +13,7 @@ use Hanafalah\LaravelSupport\Concerns\Support\HasCall;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Filesystem\Filesystem;
 use Hanafalah\LaravelSupport\Supports\PathRegistry;
+use Illuminate\Support\Str;
 
 abstract class BaseCommand extends GeneratorCommand
 {
@@ -20,7 +22,7 @@ abstract class BaseCommand extends GeneratorCommand
     use Concerns\DatabaseConfiguration\HasModelConfiguration;
     use ConcernsSupport\HasRepository;
     use ConcernsSupport\HasArray;
-    use PromptLayout;
+    use HasGenerator;
     use HasCall;
 
     protected PathRegistry $__registry_path;
@@ -48,5 +50,16 @@ abstract class BaseCommand extends GeneratorCommand
     public function callCustomMethod()
     {
         return ['Model', 'Configuration'];
+    }
+
+    protected function getBasePathFromMain():string{
+        $this->__snake_class_basename ??= Str::snake($this->__class_basename,'-');
+        return dirname((new \ReflectionClass(app(config('app.contracts.'.$this->__class_basename))))->getFilename());
+    }
+
+    protected function getBaseModelPath(): string{
+        $base_main = $this->getBasePathFromMain();
+        $path = config($this->__snake_class_basename.'.libs.model');
+        return $base_main.'/'.$path;
     }
 }
