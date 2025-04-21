@@ -29,6 +29,9 @@ class LaravelSupport extends PackageManagement implements ContractsLaravelSuppor
 
     public function callRoutes(string $path)
     {
+        if (!is_dir($path)) {
+            mkdir($path, 0777, true);
+        }
         $routes = array_diff(scandir($path), ['.', '..']);
         foreach ($routes as $route) {
             if (is_file($path . '/' . $route)) include_once($path . '/' . $route);

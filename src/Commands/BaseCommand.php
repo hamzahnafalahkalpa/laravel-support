@@ -47,9 +47,19 @@ abstract class BaseCommand extends GeneratorCommand
         return function_exists('stub_path') ? stub_path() : base_path('stubs');
     }
 
+    public function __callLibBasePath(){
+        $method = $this->getCallMethod();
+        if (Str::startsWith($method,'getBase') && Str::endsWith($method, 'Path')) {
+            $lib = Str::between($method, 'getBase', 'Path');
+            $base_main = $this->getBasePathFromMain();
+            $path      = config($this->__snake_class_basename.'.libs.'.Str::lower($lib),$lib.'s');
+            return $base_main.'/'.$path;
+        }
+    }
+
     public function callCustomMethod()
     {
-        return ['Model', 'Configuration'];
+        return ['Model', 'Configuration', 'LibBasePath'];
     }
 
     protected function getBasePathFromMain():string{
@@ -57,9 +67,10 @@ abstract class BaseCommand extends GeneratorCommand
         return dirname((new \ReflectionClass(app(config('app.contracts.'.$this->__class_basename))))->getFilename());
     }
 
-    protected function getBaseModelPath(): string{
-        $base_main = $this->getBasePathFromMain();
-        $path = config($this->__snake_class_basename.'.libs.model');
-        return $base_main.'/'.$path;
-    }
+    // protected function getBaseModelPath(): string{
+    //     $base_main = $this->getBasePathFromMain();
+    //     $path = config($this->__snake_class_basename.'.libs.model','Models');
+    //     return $base_main.'/'.$path;
+    // }
+    
 }
