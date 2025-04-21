@@ -75,6 +75,14 @@ trait HasCallMethod
         
     }
 
+    protected function viewUsingRelation(): array{
+        return $this->{$this->__entity.'Model'}()->viewUsingRelation() ?? [];
+    }
+
+    protected function showUsingRelation(): array{
+        return $this->{$this->__entity.'Model'}()->showUsingRelation() ?? [];
+    }
+
     public function autolist(?string $response = 'list',?callable $callback = null): mixed{
         if (isset($callback)) $this->condition($callback);
         $reference_type = request()->search_reference_type ?? null;
