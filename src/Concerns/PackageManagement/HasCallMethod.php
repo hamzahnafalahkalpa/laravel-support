@@ -76,15 +76,17 @@ trait HasCallMethod
     }
 
     public function autolist(?string $response = 'list',?callable $callback = null): mixed{
+        if (isset($callback)) $this->condition($callback);
+        $reference_type = request()->search_reference_type ?? null;
         switch ($response) {
             case 'list':
-                return $this->{'view'.$this->__entity.'List'}($callback);
+                return $this->{'view'.$this->__entity.'List'}($reference_type);
             break;
             case 'paginate':
-                return $this->{'view'.$this->__entity.'Paginate'}($callback);
+                return $this->{'view'.$this->__entity.'Paginate'}($reference_type);
             break;
             case 'find':
-                return $this->{'find'.$this->__entity}($callback);
+                return $this->{'find'.$this->__entity}($reference_type);
             break;
         }
         abort(404);
