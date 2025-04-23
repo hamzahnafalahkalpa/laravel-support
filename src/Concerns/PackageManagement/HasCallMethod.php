@@ -143,7 +143,7 @@ trait HasCallMethod
         $snake_entity = Str::snake($this->__entity);
         $this->addSuffixCache($this->__cache['index'], $snake_entity."-index", 'paginate');
         return static::${$snake_entity.'_model'} = $this->cacheWhen(!$this->isSearch(), $this->__cache['index'], function () use ($paginate_dto) {
-            return $this->{Str::camel($this->__entity)}()->paginate(...$paginate_dto->toArray())->appends(request()->all());
+            return $this->{Str::camel($this->__entity)}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
         });
     }
 
@@ -154,7 +154,7 @@ trait HasCallMethod
     }
 
     public function generalPrepareViewList(? array $attributes = null): Collection{
-        return static::${Str::snake($this->__entity).'_model'} = $this->{Str::camel($this->__entity)}()->get();
+        return static::${Str::snake($this->__entity).'_model'} = $this->{Str::camel($this->__entity)}()->with($this->viewUsingRelation())->get();
     }
 
     public function generalViewList(): array{
