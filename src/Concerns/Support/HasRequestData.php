@@ -15,7 +15,6 @@ trait HasRequestData
         $excludes = $excludes ?? 'props';
         if (!is_array($excludes)) $excludes = [$excludes];
         $attributes ??= request()->all();
-        // $attributes ??= array_merge(request()->all(), request()->allFiles());
         return $this->mapToDTO($dto, $attributes, $excludes);
     }
 
@@ -23,6 +22,7 @@ trait HasRequestData
         if (!isset($attributes)) return null;
         $class            = $this->resolvedClass($dto);
         $parameters       = $this->getParameters($class);
+        $this->__dto = $dto;
         $parameterDetails = $this->getParameterDetails($parameters,$excludes);        
         
         $validAttributes = [];
@@ -84,6 +84,7 @@ trait HasRequestData
             }
 
             if (!$resolvedClass) throw new \Exception("Unable to determine the target class for {$dto}");
+
             $dto = $resolvedClass;
         }
         return new ReflectionClass(is_object($dto) ? $dto::class : $dto);
@@ -126,51 +127,56 @@ trait HasRequestData
     }
 
     private function DTOChecking($param,array $excludes = []): array{
-        $name = $param->getName();
-        $type = $param->getType() ?? null;
-        $typeName = null;
-        $isDTO = false;
-        if (isset($type) && method_exists($type, 'getTypes')) {
-            foreach ($type->getTypes() as $unionType) {
-                if (!$unionType->isBuiltin()) {
-                    $typeName = $unionType->getName();
-                    break;
+        try {
+            $name = $param->getName();
+            $type = $param->getType() ?? null;
+            $typeName = null;
+            $isDTO = false;
+            if (isset($type) && method_exists($type, 'getTypes')) {
+                foreach ($type->getTypes() as $unionType) {
+                    if (!$unionType->isBuiltin()) {
+                        $typeName = $unionType->getName();
+                        break;
+                    }
                 }
-            }
-        } else {
-            $typeName = $type->getName();
-        }
-
-        // Resolve jika typeName adalah contract
-        if ($typeName && Str::contains($typeName, '\\Contracts\\')) {
-            $binding = app()->getBindings()[$typeName];
-            $concrete = $binding['concrete'];
-
-            if ($concrete instanceof Closure) {
-                $parameters = (new ReflectionFunction($concrete))->getStaticVariables();
-                $resolvedClass = $parameters['bind'] ?? null;
             } else {
-                $resolvedClass = $concrete;
+                $typeName = $type->getName();
             }
-
-            $typeName = $resolvedClass;
-        }
-        if ($typeName == 'array'){
-        $attributes = $param->getAttributes();
-        foreach ($attributes as $attribute) {
-            if ($attribute->getName() == DataCollectionOf::class){
-            $isDTO = true;
-            foreach ($attribute->getArguments() as $argument) {
-                $typeName = $argument;
-                break;
+    
+            // Resolve jika typeName adalah contract
+            if ($typeName && Str::contains($typeName, '\\Contracts\\')) {
+                $binding = app()->getBindings()[$typeName];
+                $concrete = $binding['concrete'];
+                
+                if ($concrete instanceof Closure) {
+                    $parameters = (new ReflectionFunction($concrete))->getStaticVariables();
+                    $resolvedClass = $parameters['bind'] ?? null;
+                } else {
+                    $resolvedClass = $concrete;
+                }
+    
+                $typeName = $resolvedClass;
             }
-            break;
+            if ($typeName == 'array'){
+                $attributes = $param->getAttributes();
+                foreach ($attributes as $attribute) {
+                    if ($attribute->getName() == DataCollectionOf::class){
+                        $isDTO = true;
+                        foreach ($attribute->getArguments() as $argument) {
+                            $typeName = $argument;
+                            // $typeName = config('app.contracts.'.Str::afterLast($argument,'\\'));                            
+                            break;
+                        }
+                        break;
+                    }
+                }
+            }else{
+                $isDTO = $typeName && is_subclass_of($typeName, Data::class);
             }
+    
+            return compact('name', 'typeName', 'isDTO');
+        } catch (\Throwable $th) {
+            throw $th;
         }
-        }else{
-        $isDTO = $typeName && is_subclass_of($typeName, Data::class);
-        }
-
-        return compact('name', 'typeName', 'isDTO');
     }
 }

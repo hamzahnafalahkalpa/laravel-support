@@ -84,7 +84,7 @@ trait HasCallMethod
     }
 
     public function autolist(?string $response = 'list',?callable $callback = null): mixed{
-        if (isset($callback)) $this->condition($callback);
+        if (isset($callback)) $this->conditionals($callback);
         $reference_type = request()->search_reference_type ?? null;
         switch ($response) {
             case 'list':
