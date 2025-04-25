@@ -73,6 +73,9 @@ trait HasCallMethod
             return $this->generalDelete();
         }
         
+        if ($method !== 'store' && Str::startsWith($method, 'store'.$this->__entity)){
+            return $this->generalStore();
+        }
     }
 
     protected function viewUsingRelation(): array{
@@ -87,15 +90,9 @@ trait HasCallMethod
         if (isset($callback)) $this->conditionals($callback);
         $reference_type = request()->search_reference_type ?? null;
         switch ($response) {
-            case 'list':
-                return $this->{'view'.$this->__entity.'List'}($reference_type);
-            break;
-            case 'paginate':
-                return $this->{'view'.$this->__entity.'Paginate'}($reference_type);
-            break;
-            case 'find':
-                return $this->{'find'.$this->__entity}($reference_type);
-            break;
+            case 'list'     : return $this->{'view'.$this->__entity.'List'}($reference_type);break;
+            case 'paginate' : return $this->{'view'.$this->__entity.'Paginate'}($reference_type);break;
+            case 'find'     : return $this->{'find'.$this->__entity}($reference_type);break;
         }
         abort(404);
     }
@@ -160,6 +157,12 @@ trait HasCallMethod
     public function generalViewList(): array{
         return $this->viewEntityResource(function(){
             return $this->{'prepareView'.$this->__entity.'List'}();
+        });
+    }
+
+    public function generalStore(mixed $dto = null){
+        return $this->transaction(function () use ($dto) {
+            return $this->{'show'.$this->__entity}($this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))));
         });
     }
 
