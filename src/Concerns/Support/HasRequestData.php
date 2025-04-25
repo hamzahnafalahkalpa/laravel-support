@@ -9,8 +9,11 @@ use Illuminate\Support\Str;
 use ReflectionFunction;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 
+
 trait HasRequestData
 {
+    protected $__dto;
+
     public function requestDTO(object|string $dto, ?array $attributes = null, string|array|null $excludes = null): mixed{
         $excludes = $excludes ?? 'props';
         if (!is_array($excludes)) $excludes = [$excludes];
@@ -32,8 +35,11 @@ trait HasRequestData
         }
         
         $this->processProperties($validAttributes, $parameters, $props);
-        
-        $data = $dto::from($validAttributes);
+        try {
+            $data = $dto::from($validAttributes);
+        } catch (\Throwable $th) {
+            throw $th;
+        }
         if (method_exists($dto, 'after') && (new \ReflectionMethod($dto, 'after'))->isStatic()) {
             $data = $dto::after($data);
         }
@@ -41,7 +47,7 @@ trait HasRequestData
         return $data;
     }
 
-    private function processProperties(array &$validAttributes, array $parameters, ?array $props = []){
+    private function processProperties(array &$validAttributes, array $parameters, ?array $props = null){
         $prop = null;
         $prop_exists = false;
         foreach($parameters as $param){
@@ -111,10 +117,11 @@ trait HasRequestData
         if (array_key_exists($name, $attributes)) {
             if ($isDTO) {  
                 if (isset($attributes[$name])){
-                    if (is_array($attributes[$name]) && array_is_list($attributes[$name])){
+                    if (is_array($attributes[$name]) && array_is_list($attributes[$name]) && count($attributes[$name]) > 0){
                         foreach ($attributes[$name] as &$attribute_name) {          
                             $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
                         }
+                        // if (!is_array($typeName)) $attributes[$name] = app($typeName);
                     }else{
                         $attributes[$name] = $this->mapToDTO($typeName, $attributes[$name], $excludes);
                     }
@@ -127,56 +134,52 @@ trait HasRequestData
     }
 
     private function DTOChecking($param,array $excludes = []): array{
-        try {
-            $name = $param->getName();
-            $type = $param->getType() ?? null;
-            $typeName = null;
-            $isDTO = false;
-            if (isset($type) && method_exists($type, 'getTypes')) {
-                foreach ($type->getTypes() as $unionType) {
-                    if (!$unionType->isBuiltin()) {
-                        $typeName = $unionType->getName();
-                        break;
-                    }
+        $name = $param->getName();
+        $type = $param->getType() ?? null;
+        $typeName = null;
+        $isDTO = false;
+        if (isset($type) && method_exists($type, 'getTypes')) {
+            foreach ($type->getTypes() as $unionType) {
+                if (!$unionType->isBuiltin()) {
+                    $typeName = $unionType->getName();
+                    break;
                 }
-            } else {
-                $typeName = $type->getName();
             }
-    
-            // Resolve jika typeName adalah contract
-            if ($typeName && Str::contains($typeName, '\\Contracts\\')) {
-                $binding = app()->getBindings()[$typeName];
-                $concrete = $binding['concrete'];
-                
-                if ($concrete instanceof Closure) {
-                    $parameters = (new ReflectionFunction($concrete))->getStaticVariables();
-                    $resolvedClass = $parameters['bind'] ?? null;
-                } else {
-                    $resolvedClass = $concrete;
-                }
-    
-                $typeName = $resolvedClass;
-            }
-            if ($typeName == 'array'){
-                $attributes = $param->getAttributes();
-                foreach ($attributes as $attribute) {
-                    if ($attribute->getName() == DataCollectionOf::class){
-                        $isDTO = true;
-                        foreach ($attribute->getArguments() as $argument) {
-                            $typeName = $argument;
-                            // $typeName = config('app.contracts.'.Str::afterLast($argument,'\\'));                            
-                            break;
-                        }
-                        break;
-                    }
-                }
-            }else{
-                $isDTO = $typeName && is_subclass_of($typeName, Data::class);
-            }
-    
-            return compact('name', 'typeName', 'isDTO');
-        } catch (\Throwable $th) {
-            throw $th;
+        } else {
+            $typeName = $type->getName();
         }
+
+        // Resolve jika typeName adalah contract
+        if ($typeName && Str::contains($typeName, '\\Contracts\\')) {
+            $binding = app()->getBindings()[$typeName];
+            $concrete = $binding['concrete'];
+            
+            if ($concrete instanceof Closure) {
+                $parameters = (new ReflectionFunction($concrete))->getStaticVariables();
+                $resolvedClass = $parameters['bind'] ?? null;
+            } else {
+                $resolvedClass = $concrete;
+            }
+
+            $typeName = $resolvedClass;
+        }
+        if ($typeName == 'array'){
+            $attributes = $param->getAttributes();
+            foreach ($attributes as $attribute) {
+                if ($attribute->getName() == DataCollectionOf::class){
+                    $isDTO = true;
+                    foreach ($attribute->getArguments() as $argument) {
+                        $typeName = $argument;
+                        // $typeName = config('app.contracts.'.Str::afterLast($argument,'\\'));                            
+                        break;
+                    }
+                    break;
+                }
+            }
+        }else{
+            $isDTO = $typeName && is_subclass_of($typeName, Data::class);
+        }
+
+        return compact('name', 'typeName', 'isDTO');
     }
 }
