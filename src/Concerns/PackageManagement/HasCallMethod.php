@@ -4,6 +4,7 @@ namespace Hanafalah\LaravelSupport\Concerns\PackageManagement;
 
 use Hanafalah\LaravelSupport\Concerns\Support\HasCall;
 use Hanafalah\LaravelSupport\Contracts\Data\PaginateData;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -75,6 +76,10 @@ trait HasCallMethod
         
         if ($method !== 'store' && Str::startsWith($method, 'store'.$this->__entity)){
             return $this->generalStore();
+        }
+
+        if (Str::startsWith($method, Str::camel($this->__entity))){
+            return $this->generalSchemaModel();
         }
     }
 
@@ -179,5 +184,12 @@ trait HasCallMethod
         return $this->transaction(function () {
             return $this->{'prepareDelete'.$this->__entity}();
         });
+    }
+
+    public function generalSchemaModel(mixed $conditionals = null): Builder{
+        $this->booting();
+        return $this->{$this->__entity.'Model'}()->withParameters()
+                    ->conditionals($this->mergeCondition($conditionals ?? []))
+                    ->orderBy('name', 'asc');   
     }
 }

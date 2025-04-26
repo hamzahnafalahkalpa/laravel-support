@@ -118,12 +118,9 @@ trait HasRequestData
             if ($isDTO) {  
                 if (isset($attributes[$name])){
                     if (is_array($attributes[$name]) && array_is_list($attributes[$name]) && count($attributes[$name]) > 0){
-                        foreach ($attributes[$name] as &$attribute_name) {          
-                            $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
-                        }
-                        // if (!is_array($typeName)) $attributes[$name] = app($typeName);
+                        foreach ($attributes[$name] as &$attribute_name) $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
                     }else{
-                        $attributes[$name] = $this->mapToDTO($typeName, $attributes[$name], $excludes);
+                        $attributes[$name] = (count($attributes[$name]) == 0) ? [] : $this->mapToDTO($typeName, $attributes[$name], $excludes);
                     }
                 }
                 return $attributes[$name];
