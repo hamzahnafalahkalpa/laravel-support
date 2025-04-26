@@ -145,21 +145,6 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         }
     }
 
-    // /**
-    //  * Call the given schema with the given callback function.
-    //  *
-    //  * @param string $schema The schema to be called.
-    //  * @param callable $callback The callback function to be called.
-    //  * @return void
-    //  */
-    // protected function childSchema($schema, $callback){
-    //     $this->child(function ($parent) use ($schema, $callback) {
-    //         $schema = is_string($schema) ? app($schema) : $schema;
-    //         $schema->booting();
-    //         $callback($schema, $parent);
-    //     });
-    // }
-
     public function booting(): self{
         $this->instance  = new static;
         static::$__class = $this;
@@ -176,48 +161,6 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
      * @return mixed|null
      */
     public function callCustomMethod(): mixed{
-        return ['Model', 'Configuration', 'Method'];
+        return ['Model', 'Configuration', 'Method', 'SchemaEloquent'];
     }
-
-    // /**
-    //  * Forks the current instance of the PackageManagement class and applies the
-    //  * given callback to the forked instance.
-    //  *
-    //  * The callback will be called with the forked instance as the argument.
-    //  *
-    //  * After the callback is called, the forked instance will be reverted to the
-    //  * original instance.
-    //  *
-    //  * @param callable $callback The callback to call with the forked instance.
-    //  *
-    //  * @return self Returns the original instance.
-    //  */
-    // public function fork(callable $callback): self
-    // {
-    //     $this->escapingVariables(function ($class) use ($callback) {
-    //         $callback($class);
-    //     }, static::class);
-    //     return $this;
-    // }
-
-    // /**
-    //  * Forks the current instance of the PackageManagement class and applies the
-    //  * given callback to the forked instance.
-    //  *
-    //  * The callback will be called with the forked instance as the argument.
-    //  *
-    //  * After the callback is called, the forked instance will be reverted to the
-    //  * original instance.
-    //  *
-    //  * @param callable $callback The callback to call with the forked instance.
-    //  *
-    //  * @return self Returns the original instance.
-    //  */
-    // public function child(callable $callback): self
-    // {
-    //     $this->escapingVariables(function ($parent) use ($callback) {
-    //         $callback($parent);
-    //     }, self::$__class);
-    //     return $this;
-    // }
 }

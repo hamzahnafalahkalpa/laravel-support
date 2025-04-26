@@ -9,8 +9,6 @@ trait AttributeModifier
     // protected static bool $__with_props  = true;
     // protected static string $__prop_column = 'props';
     protected array $__attributes = [];
-    protected array $__guard = [];
-    protected array $__add = [];
 
     // /**
     //  * Filter the given attributes with the given add and guard keys.
@@ -37,43 +35,4 @@ trait AttributeModifier
     //     return (isset($attributes['parent']) && !empty($attributes['parent']));
     // }
 
-    // /**
-    //  * Calculates the difference of the keys of two arrays.
-    //  *
-    //  * @param array $adds The first array to compare keys.
-    //  * @param array $guards The second array to compare keys.
-    //  * @return array The array containing the keys from the first array that are not present in the second array.
-    //  */
-    // protected function createInit(?array $attributes, ?array $adds = null, ?array $guards = null): array
-    // {
-    //     $attributes ??= $this->__attributes;
-    //     $adds       ??= $this->__add;
-    //     $guards     ??= $this->__guard;
-    //     $adds = $this->mergeArray(
-    //         $this->mustArray($adds),
-    //         $this->mustArray($guards)
-    //     );
-    //     $adds   = $this->intersectKey($attributes, $adds);
-    //     $guards = $this->intersectKey($adds, $guards);
-    //     $adds   = $this->diffKey($adds, $guards);
-    //     if (static::$__with_props) {
-    //         $adds = $this->mergeArray($attributes[static::$__prop_column] ?? [], $adds);
-    //     }
-    //     return (count($guards) > 0) ? [$guards, $adds] : [$adds];
-    // }
-
-    // protected function getAdd(): array
-    // {
-    //     return $this->__add;
-    // }
-
-    // protected function getGuard(): array
-    // {
-    //     return $this->__guard;
-    // }
-
-    // protected function getAttributes(): array
-    // {
-    //     return $this->__attributes;
-    // }
 }
