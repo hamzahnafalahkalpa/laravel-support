@@ -17,22 +17,8 @@ use Hanafalah\LaravelSupport\Contracts\Supports\DataManagement;
 /** 
  * @method static self useSchema(string $className)
  * @method static mixed callCustomMethod()
- * @method static self add(? array $attributes=[])
- * @method static self adds(? array $attributes=[],array $parent_id=[])
- * @method static array outsideFilter(array $attributes, array ...$data)
- * @method static self beforeResolve(array $attributes, array $add, array $guard = [])
- * @method static childSchema($schema,$callback)
- * @method static self change(array $attributes=[])
- * @method static escapingVariables(callable $callback,...$args)
- * @method static self fork(callable $callback)
- * @method static self child(ca\llable $callback)
- * @method static array createInit(array $adds, array $attributes, $guards = []) 
- * @method static self pushMessage(string $message)
- * @method static array getAppModelConfig()
- * @method static self setAppModels(array $models = [])
  * @method static Model|null getModel(string $model_name = null)
  * @method static self setModel($model=null)
- * @method static bool isRecentlyCreated($model = null)
  */
 
 abstract class PackageManagement extends BasePackageManagement implements DataManagement
@@ -83,8 +69,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         }
     }
 
-    public function schemaContract(string $contract)
-    {
+    public function schemaContract(string $contract){
         $contract = Str::studly($contract);
         return app(config('app.contracts.' . $contract));
     }
@@ -105,8 +90,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         },$options);
     }
 
-    public function myModel(?Model $model = null)
-    {
+    public function myModel(?Model $model = null){
         $model = $this->model ??= $model;
         if (isset($model)) $this->setModel($model);
         return $model;
@@ -128,8 +112,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
      * @param string $className The class name to set.
      * @return self Returns the SetupManagement instance.
      */
-    public function useSchema(string $className): DataManagement
-    {
+    public function useSchema(string $className): DataManagement{
         $this->setClass($className);
         return $this;
     }
@@ -143,8 +126,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
      *
      * @return void
      */
-    public function flushTagsFrom(string|array $category, ?string $tags = null, ?string $suffix = null)
-    {
+    public function flushTagsFrom(string|array $category, ?string $tags = null, ?string $suffix = null){
         if (is_array($category)) {
             foreach ($category as $key => $cat) {
                 if (is_numeric($key)) {
@@ -163,24 +145,22 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         }
     }
 
-    /**
-     * Call the given schema with the given callback function.
-     *
-     * @param string $schema The schema to be called.
-     * @param callable $callback The callback function to be called.
-     * @return void
-     */
-    protected function childSchema($schema, $callback)
-    {
-        $this->child(function ($parent) use ($schema, $callback) {
-            $schema = is_string($schema) ? app($schema) : $schema;
-            $schema->booting();
-            $callback($schema, $parent);
-        });
-    }
+    // /**
+    //  * Call the given schema with the given callback function.
+    //  *
+    //  * @param string $schema The schema to be called.
+    //  * @param callable $callback The callback function to be called.
+    //  * @return void
+    //  */
+    // protected function childSchema($schema, $callback){
+    //     $this->child(function ($parent) use ($schema, $callback) {
+    //         $schema = is_string($schema) ? app($schema) : $schema;
+    //         $schema->booting();
+    //         $callback($schema, $parent);
+    //     });
+    // }
 
-    public function booting(): self
-    {
+    public function booting(): self{
         $this->instance  = new static;
         static::$__class = $this;
         static::$__model = $this->{$this->__entity . 'Model'}();
@@ -195,50 +175,49 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
      *
      * @return mixed|null
      */
-    public function callCustomMethod(): mixed
-    {
+    public function callCustomMethod(): mixed{
         return ['Model', 'Configuration', 'Method'];
     }
 
-    /**
-     * Forks the current instance of the PackageManagement class and applies the
-     * given callback to the forked instance.
-     *
-     * The callback will be called with the forked instance as the argument.
-     *
-     * After the callback is called, the forked instance will be reverted to the
-     * original instance.
-     *
-     * @param callable $callback The callback to call with the forked instance.
-     *
-     * @return self Returns the original instance.
-     */
-    public function fork(callable $callback): self
-    {
-        $this->escapingVariables(function ($class) use ($callback) {
-            $callback($class);
-        }, static::class);
-        return $this;
-    }
+    // /**
+    //  * Forks the current instance of the PackageManagement class and applies the
+    //  * given callback to the forked instance.
+    //  *
+    //  * The callback will be called with the forked instance as the argument.
+    //  *
+    //  * After the callback is called, the forked instance will be reverted to the
+    //  * original instance.
+    //  *
+    //  * @param callable $callback The callback to call with the forked instance.
+    //  *
+    //  * @return self Returns the original instance.
+    //  */
+    // public function fork(callable $callback): self
+    // {
+    //     $this->escapingVariables(function ($class) use ($callback) {
+    //         $callback($class);
+    //     }, static::class);
+    //     return $this;
+    // }
 
-    /**
-     * Forks the current instance of the PackageManagement class and applies the
-     * given callback to the forked instance.
-     *
-     * The callback will be called with the forked instance as the argument.
-     *
-     * After the callback is called, the forked instance will be reverted to the
-     * original instance.
-     *
-     * @param callable $callback The callback to call with the forked instance.
-     *
-     * @return self Returns the original instance.
-     */
-    public function child(callable $callback): self
-    {
-        $this->escapingVariables(function ($parent) use ($callback) {
-            $callback($parent);
-        }, self::$__class);
-        return $this;
-    }
+    // /**
+    //  * Forks the current instance of the PackageManagement class and applies the
+    //  * given callback to the forked instance.
+    //  *
+    //  * The callback will be called with the forked instance as the argument.
+    //  *
+    //  * After the callback is called, the forked instance will be reverted to the
+    //  * original instance.
+    //  *
+    //  * @param callable $callback The callback to call with the forked instance.
+    //  *
+    //  * @return self Returns the original instance.
+    //  */
+    // public function child(callable $callback): self
+    // {
+    //     $this->escapingVariables(function ($parent) use ($callback) {
+    //         $callback($parent);
+    //     }, self::$__class);
+    //     return $this;
+    // }
 }

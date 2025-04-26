@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Collection;
 trait ORMImpersonate
 {
 
-    private $__conditionals;
 
     private function attributeChecking(callable $callback, ?array $attributes = null)
     {
@@ -80,13 +79,6 @@ trait ORMImpersonate
         }, $attributes);
     }
 
-    public function mergeCondition(mixed $conditionals): array
-    {
-        $conditionals ??= [];
-        $conditionals = $this->mustArray($conditionals);
-        return $this->mergeArray($this->mustArray($this->__conditionals ?? []), $conditionals);
-    }
-
     public function get(mixed $conditionals = null): Collection
     {
         return $this->getModel(true)->conditionals($this->mergeCondition($conditionals))->get();
@@ -113,22 +105,6 @@ trait ORMImpersonate
     {
         $uuid ??= request()->uuid;
         return self::$__model = $this->getModel()->uuid($uuid, $uuid_name)->first();
-    }
-
-    /**
-     * Add conditionals to the query
-     *
-     * If the given argument is callable, it will be called with the query builder as argument.
-     * If the given argument is an array, it will be passed to the `where` method on the query builder.
-     * If the given argument is a string, it will be passed to the `whereRaw` method on the query builder.
-     *
-     * @param mixed $conditionals
-     * @return self
-     */
-    public function conditionals(mixed $conditionals): self
-    {
-        $this->__conditionals = $this->mergeCondition($conditionals ?? []);
-        return $this;
     }
 
     /**

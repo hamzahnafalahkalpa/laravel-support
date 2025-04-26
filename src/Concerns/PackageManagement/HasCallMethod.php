@@ -22,8 +22,7 @@ trait HasCallMethod
      *
      * @return mixed|null
      */
-    public function __callMethod()
-    {
+    public function __callMethod(){
         $method = $this->getCallMethod();
         $arguments = $this->getCallArguments() ?? [];
 
@@ -81,115 +80,5 @@ trait HasCallMethod
         if (Str::startsWith($method, Str::camel($this->__entity))){
             return $this->generalSchemaModel();
         }
-    }
-
-    protected function viewUsingRelation(): array{
-        return $this->{$this->__entity.'Model'}()->viewUsingRelation() ?? [];
-    }
-
-    protected function showUsingRelation(): array{
-        return $this->{$this->__entity.'Model'}()->showUsingRelation() ?? [];
-    }
-
-    public function autolist(?string $response = 'list',?callable $callback = null): mixed{
-        if (isset($callback)) $this->conditionals($callback);
-        $reference_type = request()->search_reference_type ?? null;
-        switch ($response) {
-            case 'list'     : return $this->{'view'.$this->__entity.'List'}($reference_type);break;
-            case 'paginate' : return $this->{'view'.$this->__entity.'Paginate'}($reference_type);break;
-            case 'find'     : return $this->{'find'.$this->__entity}($reference_type);break;
-        }
-        abort(404);
-    }
-
-    public function generalGetModelEntity(): mixed{
-        $entity = Str::snake($this->__entity);
-        return static::${$entity.'_model'};
-    }
-
-    public function generalPrepareFind(?callable $callback = null, ? array $attributes = null): Model{
-        $attributes ??= request()->all();
-        $model = $this->generalGetModelEntity()->conditionals(isset($callback),function($query) use ($callback){
-            $this->mergeCondition($callback($query));
-        })->with($this->showUsingRelation())->first();
-        return static::${Str::snake($this->__entity).'_model'} = $model;
-    }   
-
-    public function generalFind(? callable $callback = null): array{
-        return $this->showEntityResource(function() use ($callback){
-            return $this->{'prepareFind'.$this->__entity}($callback);
-        });
-    }
-
-    public function generalPrepareShow(? Model $model = null, ? array $attributes = null): Model{
-        $attributes ??= request()->all();
-        $model ??= (\method_exists($this, 'get'.$this->__entity)) ? $this->{'get'.$this->__entity}() : $this->generalGetModelEntity();
-        if (!isset($model)){
-            $id = $attributes['id'] ?? null;
-            if (!isset($id)) throw new \Exception('No id provided', 422);
-            $entity = Str::camel($this->__entity);
-            $model = $this->{$entity}()->with($this->showUsingRelation())->findOrFail($id);
-        }else{
-            $model->load($this->showUsingRelation());
-        }
-        return static::${Str::snake($this->__entity).'_model'} = $model;
-    }   
-
-    public function generalShow(? Model $model = null): array{
-        return $this->showEntityResource(function() use ($model){
-            return $this->{'prepareShow'.$this->__entity}($model);
-        });
-    }
-
-    public function generalPrepareViewPaginate(PaginateData $paginate_dto): LengthAwarePaginator{
-        $snake_entity = Str::snake($this->__entity);
-        $this->addSuffixCache($this->__cache['index'], $snake_entity."-index", 'paginate');
-        return static::${$snake_entity.'_model'} = $this->cacheWhen(!$this->isSearch(), $this->__cache['index'], function () use ($paginate_dto) {
-            return $this->{Str::camel($this->__entity)}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
-        });
-    }
-
-    public function generalViewPaginate(?PaginateData $paginate_dto = null): array{
-        return $this->viewEntityResource(function() use ($paginate_dto){
-            return $this->{"prepareView".$this->__entity."Paginate"}($paginate_dto ?? $this->requestDTO(PaginateData::class));
-        }, ['rows_per_page' => [50]]);
-    }
-
-    public function generalPrepareViewList(? array $attributes = null): Collection{
-        return static::${Str::snake($this->__entity).'_model'} = $this->{Str::camel($this->__entity)}()->with($this->viewUsingRelation())->get();
-    }
-
-    public function generalViewList(): array{
-        return $this->viewEntityResource(function(){
-            return $this->{'prepareView'.$this->__entity.'List'}();
-        });
-    }
-
-    public function generalStore(mixed $dto = null){
-        return $this->transaction(function () use ($dto) {
-            return $this->{'show'.$this->__entity}($this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))));
-        });
-    }
-
-    public function generalPrepareDelete(? array $attributes = null): bool{
-        $entity = Str::snake($this->__entity);
-        $attributes ??= \request()->all();
-        if (!$attributes['id']) throw new \Exception('No id provided', 422);
-        $result = $this->{$this->__entity.'Model'}()->findOrFail($attributes['id'])->delete();
-        $this->forgetTags($entity);
-        return $result;
-    }
-
-    public function generalDelete(): bool{
-        return $this->transaction(function () {
-            return $this->{'prepareDelete'.$this->__entity}();
-        });
-    }
-
-    public function generalSchemaModel(mixed $conditionals = null): Builder{
-        $this->booting();
-        return $this->{$this->__entity.'Model'}()->withParameters()
-                    ->conditionals($this->mergeCondition($conditionals ?? []))
-                    ->orderBy('name', 'asc');   
     }
 }
