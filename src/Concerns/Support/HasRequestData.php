@@ -116,18 +116,34 @@ trait HasRequestData
         if (array_key_exists($name, $attributes)) {
             if ($isDTO) {  
                 if (isset($attributes[$name])){
-                    if (is_array($attributes[$name]) && array_is_list($attributes[$name]) && count($attributes[$name]) > 0){
+                    $is_array_list = array_is_list($attributes[$name]);
+                    if (is_array($attributes[$name]) && $is_array_list && count($attributes[$name]) > 0){
                         foreach ($attributes[$name] as &$attribute_name) $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
                     }else{
-                        $attributes[$name] = (count($attributes[$name]) == 0) ? [] : $this->mapToDTO($typeName, $attributes[$name], $excludes);
+                        if (!$is_array_list){
+                            $attributes[$name] = (count($attributes[$name]) == 0) ? [] : $this->mapToDTO($typeName, $attributes[$name], $excludes);
+                        }else{
+                            if (is_string($paramDetail['defaultTypeName']) && is_string($typeName)){
+                                $app = app($typeName);
+                                $attributes[$name] = $app;
+                                if (method_exists($app,'after')){
+                                    $attributes[$name] = $app->after($attributes[$name]);
+                                }
+                            }else{
+                                $attributes[$name] = [];
+                            }
+                        }
                     }
                 }
                 return $attributes[$name];
             } else {
                 return $attributes[$name];
             }
+        }else{
+            return  ($paramDetail['defaultTypeName'] == 'array') ? [] : null;
         }
     }
+
 
     private function DTOChecking($param,array $excludes = []): array{
         $name = $param->getName();
@@ -159,6 +175,7 @@ trait HasRequestData
 
             $typeName = $resolvedClass;
         }
+        $defaultTypeName = $typeName;
         if ($typeName == 'array'){
             $attributes = $param->getAttributes();
             foreach ($attributes as $attribute) {
@@ -176,6 +193,6 @@ trait HasRequestData
             $isDTO = $typeName && is_subclass_of($typeName, Data::class);
         }
 
-        return compact('name', 'typeName', 'isDTO');
+        return compact('name', 'typeName', 'isDTO', 'defaultTypeName');
     }
 }

@@ -82,11 +82,13 @@ trait DataManagement
     }
 
     protected function viewUsingRelation(): array{
-        return $this->usingEntity()->viewUsingRelation() ?? [];
+        $model = $this->usingEntity();
+        return method_exists($model,'viewUsingRelation') ? $this->usingEntity()->viewUsingRelation() : [];
     }
 
     protected function showUsingRelation(): array{
-        return $this->usingEntity()->showUsingRelation() ?? [];
+        $model = $this->usingEntity();
+        return method_exists($model,'showUsingRelation') ? $this->usingEntity()->showUsingRelation() : [];
     }
 
     public function usingEntity(): Model{
