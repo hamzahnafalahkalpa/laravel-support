@@ -93,7 +93,7 @@ trait DataManagement
         return $this->{$this->__entity.'Model'}();
     }
 
-    public function staticEntity(?Model $model = null): mixed{
+    public function staticEntity(mixed $model = null): mixed{
         return static::${Str::snake($this->__entity).'_model'} = $model;
     }
 
