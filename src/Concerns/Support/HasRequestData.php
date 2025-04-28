@@ -24,6 +24,9 @@ trait HasRequestData
     private function mapToDTO(object|string $dto, mixed $attributes = null, ?array $excludes = []): ?Data{    
         if (!isset($attributes)) return null;
         $class            = $this->resolvedClass($dto);
+        if (method_exists($dto, 'before') && (new \ReflectionMethod($dto, 'before'))->isStatic()) {
+            $data = $dto::before($attributes);
+        }
         $parameters       = $this->getParameters($class);
         $this->__dto = $dto;
         $parameterDetails = $this->getParameterDetails($parameters,$excludes);        
@@ -35,11 +38,7 @@ trait HasRequestData
         }
         
         $this->processProperties($validAttributes, $parameters, $props);
-        try {
-            $data = $dto::from($validAttributes);
-        } catch (\Throwable $th) {
-            throw $th;
-        }
+        $data = $dto::from($validAttributes);
         if (method_exists($dto, 'after') && (new \ReflectionMethod($dto, 'after'))->isStatic()) {
             $data = $dto::after($data);
         }

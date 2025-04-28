@@ -27,57 +27,37 @@ trait DataManagement
     use ServiceProvider\HasConfiguration;
     use Package\HasCallMethod;
 
+    protected function methodHandler(string $method,array $methods){
+        $arguments = $this->getCallArguments() ?? [];
+        if (isset($methods[$method])){
+            return $this->{$methods[$method]}(...$arguments);
+        }
+        return null;
+    }
+
     public function __callSchemaEloquent(){
         $method = $this->getCallMethod();
-        $arguments = $this->getCallArguments() ?? [];
 
-        if ($method !== 'show' && Str::startsWith($method, 'show'.$this->__entity)){
-            return $this->generalShow(...$arguments);
-        }
+        $entity = $this->__entity;
 
-        if ($method !== 'prepareShow' && Str::startsWith($method, 'prepareShow'.$this->__entity)){
-            return $this->generalPrepareShow(...$arguments);
-        }
-
-        if ($method !== 'prepareView' && Str::startsWith($method, 'prepareView'.$this->__entity) && Str::endsWith($method,'Paginate')){
-            return $this->generalPrepareViewPaginate(...$arguments);
-        }
-
-        if ($method !== 'view' && Str::startsWith($method, 'view'.$this->__entity) && Str::endsWith($method,'Paginate')){
-            return $this->generalViewPaginate();
-        }
-
-        if ($method !== 'prepareView' && Str::startsWith($method, 'prepareView'.$this->__entity) && Str::endsWith($method,'List')){
-            return $this->generalPrepareViewList(...$arguments);
-        }
-
-        if ($method !== 'view' && Str::startsWith($method, 'view'.$this->__entity) && Str::endsWith($method,'List')){
-            return $this->generalViewList();
-        }
-
-        if ($method !== 'generalFind' && Str::startsWith($method, 'generalFind'.$this->__entity)){
-            return $this->generalPrepareFind(...$arguments);
-        }
-
-        if ($method == 'find'.$this->__entity){
-            return $this->generalFind(...$arguments);
-        }
-
-        if ($method !== 'prepareDelete' && Str::startsWith($method, 'prepareDelete'.$this->__entity)){
-            return $this->generalPrepareDelete(...$arguments);
-        }
-
-        if ($method !== 'delete' && Str::startsWith($method, 'delete'.$this->__entity)){
-            return $this->generalDelete();
-        }
-        
-        if ($method !== 'store' && Str::startsWith($method, 'store'.$this->__entity)){
-            return $this->generalStore();
-        }
-
-        if (Str::startsWith($method, Str::camel($this->__entity))){
-            return $this->generalSchemaModel();
-        }
+        $result = $this->methodHandler($method,[
+            "show$entity"                   => 'generalShow',
+            "prepareShow$entity"            => 'generalPrepareShow',
+            "view{$entity}Paginate"         => 'generalViewPaginate',
+            "prepareView{$entity}Paginate"  => 'generalPrepareViewPaginate',
+            "view{$entity}List"             => 'generalViewList',
+            "prepareView{$entity}List"      => 'generalPrepareViewList',
+            "find{$entity}"                 => 'generalFind',
+            "prepareFind{$entity}"          => 'generalPrepareFind',
+            "delete{$entity}"               => 'generalDelete',
+            "prepareDelete{$entity}"        => 'generalPrepareDelete',
+            "store{$entity}"                => 'generalStore',
+            "prepareStore{$entity}"         => 'generalPrepareStore',
+            "update{$entity}"               => 'generalPrepareUpdate',
+            "prepareUpdate{$entity}"        => 'generalUpdate',
+            Str::camel($entity)             => 'generalSchemaModel',
+        ]);
+        if (isset($result)) return $result;
     }
 
     /**
@@ -102,12 +82,33 @@ trait DataManagement
     }
 
     protected function viewUsingRelation(): array{
-        return $this->{$this->__entity.'Model'}()->viewUsingRelation() ?? [];
+        return $this->usingEntity()->viewUsingRelation() ?? [];
     }
 
     protected function showUsingRelation(): array{
-        return $this->{$this->__entity.'Model'}()->showUsingRelation() ?? [];
+        return $this->usingEntity()->showUsingRelation() ?? [];
     }
+
+    public function usingEntity(): Model{
+        return $this->{$this->__entity.'Model'}();
+    }
+
+    public function staticEntity(?Model $model = null): mixed{
+        return static::${Str::snake($this->__entity).'_model'} = $model;
+    }
+
+    public function viewEntityResource(callable $callback,array $options = []): array{
+        return $this->transforming($this->usingEntity()->getViewResource(),function() use ($callback){
+            return $callback();
+        },$options);
+    }
+
+    public function showEntityResource(callable $callback,array $options = []): array{
+        return $this->transforming($this->usingEntity()->getShowResource(),function() use ($callback){
+            return $callback();
+        },$options);
+    }
+
 
     public function autolist(?string $response = 'list',?callable $callback = null): mixed{
         if (isset($callback)) $this->conditionals($callback);
@@ -130,7 +131,7 @@ trait DataManagement
         $model = $this->generalGetModelEntity()->conditionals(isset($callback),function($query) use ($callback){
             $this->mergeCondition($callback($query));
         })->with($this->showUsingRelation())->first();
-        return static::${Str::snake($this->__entity).'_model'} = $model;
+        return $this->staticEntity($model);
     }   
 
     public function generalFind(? callable $callback = null): array{
@@ -150,7 +151,7 @@ trait DataManagement
         }else{
             $model->load($this->showUsingRelation());
         }
-        return static::${Str::snake($this->__entity).'_model'} = $model;
+        return $this->staticEntity($model);
     }   
 
     public function generalShow(? Model $model = null): array{
@@ -174,7 +175,8 @@ trait DataManagement
     }
 
     public function generalPrepareViewList(? array $attributes = null): Collection{
-        return static::${Str::snake($this->__entity).'_model'} = $this->{Str::camel($this->__entity)}()->with($this->viewUsingRelation())->get();
+        $models = $this->{Str::camel($this->__entity)}()->with($this->viewUsingRelation())->get();
+        return $this->staticEntity($models);
     }
 
     public function generalViewList(): array{
@@ -183,9 +185,39 @@ trait DataManagement
         });
     }
 
+    public function generalPrepareStore(mixed $dto = null): Model{
+        if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->__entity}Data",null));
+        $model = $this->usingEntity()->updateOrCreate([
+            'id' => $dto->id ?? null
+        ], [
+            'name' => $dto->name
+        ]);
+        $this->fillingProps($model,$dto->props);
+        $model->save();
+        return $this->staticEntity($model);
+    }
+
     public function generalStore(mixed $dto = null){
         return $this->transaction(function () use ($dto) {
             return $this->{'show'.$this->__entity}($this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))));
+        });
+    }
+
+    public function generalPrepareUpdate(mixed $dto): Model{
+        if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->__entity}UpdateData",null));
+        $model = $this->usingEntity()->updateOrCreate([
+            'id' => $dto->id
+        ], [
+            'name' => $dto->name
+        ]);
+        $this->fillingProps($model,$dto->props);
+        $model->save();
+        return $this->staticEntity($model);
+    }
+
+    public function generalUpdate(mixed $dto = null){
+        return $this->transaction(function () use ($dto) {
+            return $this->{'update'.$this->__entity}($this->{'prepareUpdate'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}UpdateData",null))));
         });
     }
 
@@ -193,7 +225,7 @@ trait DataManagement
         $entity = Str::snake($this->__entity);
         $attributes ??= \request()->all();
         if (!$attributes['id']) throw new \Exception('No id provided', 422);
-        $result = $this->{$this->__entity.'Model'}()->findOrFail($attributes['id'])->delete();
+        $result = $this->usingEntity()->findOrFail($attributes['id'])->delete();
         $this->forgetTags($entity);
         return $result;
     }
@@ -206,7 +238,7 @@ trait DataManagement
 
     public function generalSchemaModel(mixed $conditionals = null): Builder{
         $this->booting();
-        $model = $this->{$this->__entity.'Model'}();
+        $model = $this->usingEntity();
         
         $fillable = $model->getFillable();
         return $model->withParameters()

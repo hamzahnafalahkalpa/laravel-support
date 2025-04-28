@@ -74,22 +74,6 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         return app(config('app.contracts.' . $contract));
     }
 
-    public function usingEntity(): Model{
-        return $this->{$this->__entity.'Model'}();
-    }
-
-    public function viewEntityResource(callable $callback,array $options = []): array{
-        return $this->transforming($this->usingEntity()->getViewResource(),function() use ($callback){
-            return $callback();
-        },$options);
-    }
-
-    public function showEntityResource(callable $callback,array $options = []): array{
-        return $this->transforming($this->usingEntity()->getShowResource(),function() use ($callback){
-            return $callback();
-        },$options);
-    }
-
     public function myModel(?Model $model = null){
         $model = $this->model ??= $model;
         if (isset($model)) $this->setModel($model);

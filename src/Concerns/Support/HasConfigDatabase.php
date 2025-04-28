@@ -414,7 +414,7 @@ trait HasConfigDatabase
      */
     public function hasManyModel($related, $foreignKey = null, $localKey = null)
     {
-        return $this->hasMany($this->{$related . 'ModelInstance'}(), $foreignKey ?? $this->getForeignKey(), $localKey);
+    return $this->hasMany($this->{$related . 'ModelInstance'}(), $foreignKey ?? $this->getForeignKey(), $localKey);
     }
 
     // /**
