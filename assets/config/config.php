@@ -12,7 +12,12 @@ return [
     "namespace"     => "Hanafalah\LaravelSupport",
     'libs'    => [
         'model' => 'Models',
-        'contract' => 'Contracts'
+        'contract' => 'Contracts',
+        'schema' => 'Schemas',
+        'database' => 'Database',
+        'data' => 'Data',
+        'resource' => 'Resources',
+        'migration' => '../assets/database/migrations'
     ],
     'config'    => [
         'path'  => config_path()
@@ -49,8 +54,6 @@ return [
     'app' => [
         'contracts'     => [
             //ADD YOUR CONTRACTS HERE
-            // 'response'         => Contracts\Response::class,
-            // 'laravel_support'  => Contracts\LaravelSupport::class
         ],
     ],
     'database'      => [
@@ -60,16 +63,6 @@ return [
             ]
         ],
         'models'  => [
-            // 'Activity'          => Models\Activity\Activity::class,
-            // 'ActivityStatus'    => Models\Activity\ActivityStatus::class,
-            // 'LogHistory'        => Models\LogHistory\LogHistory::class,
-            // 'ModelHasRelation'  => Models\Relation\ModelHasRelation::class,
-            // 'PayloadMonitoring' => Models\PayloadMonitoring\PayloadMonitoring::class,
-            // 'ModelHasPhone'     => Models\Phone\ModelHasPhone::class,
-            // 'Encoding'          => Models\Encoding\Encoding::class,
-            // 'ModelHasEncoding'  => Models\Encoding\ModelHasEncoding::class,
-            // 'ModelHasPhone'     => Models\Phone\ModelHasPhone::class,
-            // 'ReportSummary'     => Models\ReportSummary\ReportSummary::class
         ]
     ],
     'class_discovering' => [
