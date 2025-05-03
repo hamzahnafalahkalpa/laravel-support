@@ -37,8 +37,8 @@ return new class extends Migration
                 $table->json('props')->nullable();
                 $table->timestamps();
 
-                $table->index(['reference_type', 'reference_id']);
-                $table->index(['activity_flag', 'reference_type', 'reference_id']);
+                $table->index(['reference_type', 'reference_id'],'act_ref');
+                $table->index(['activity_flag', 'reference_type', 'reference_id'],'act_flag_ref');
             });
         }
     }
