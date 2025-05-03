@@ -26,6 +26,10 @@ class InstallMakeCommand extends EnvironmentCommand
     {
         $provider = 'Hanafalah\LaravelSupport\LaravelSupportServiceProvider';
 
+        $this->call('stub:install');
+        $this->call('module-encoding:install');
+        $this->call('generator:install');
+
         $this->comment('Installing Support...');
         $this->callSilent('vendor:publish', [
             '--provider' => $provider,
