@@ -80,7 +80,7 @@ abstract class BaseServiceProvider extends ServiceProvider
         }
 
         $this->registerProvider(function () use ($packages, $config_name) {
-            if (isset($packages)) {
+            if (isset($packages) && count($packages) > 0) {
                 foreach ($packages as $key => $package) {
                     $provider = $this->replacement($package['provider']);
                     $this->app->register($provider);
