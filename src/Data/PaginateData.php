@@ -11,7 +11,7 @@ class PaginateData extends Data implements DataPaginateData
 {
     #[MapInputName('per_page')]
     #[MapName('perPage')]
-    public ?int $perPage = 50;
+    public ?int $perPage = 10;
 
     #[MapInputName('columns')]
     #[MapName('columns')]
