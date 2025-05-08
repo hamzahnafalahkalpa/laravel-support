@@ -23,11 +23,11 @@ trait HasRequestData
 
     private function mapToDTO(object|string $dto, mixed $attributes = null, ?array $excludes = []): ?Data{    
         if (!isset($attributes)) return null;
-        $class            = $this->resolvedClass($dto);
+        $class       = $this->resolvedClass($dto);
         if (method_exists($dto, 'before') && (new \ReflectionMethod($dto, 'before'))->isStatic()) {
             $data = $dto::before($attributes);
         }
-        $parameters       = $this->getParameters($class);
+        $parameters  = $this->getParameters($class);
         $this->__dto = $dto;
         $parameterDetails = $this->getParameterDetails($parameters,$excludes);        
         
@@ -119,7 +119,7 @@ trait HasRequestData
                     $is_array_list = array_is_list($attributes[$name]);
 
                     if (is_array($attributes[$name]) && $is_array_list && count($attributes[$name]) > 0){
-                        foreach ($attributes[$name] as &$attribute_name) $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);
+                        foreach ($attributes[$name] as &$attribute_name) $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);                        
                     }else{
                         if (!$is_array_list){
                             $attributes[$name] = (count($attributes[$name]) == 0) ? [] : $this->mapToDTO($typeName, $attributes[$name], $excludes);
@@ -136,6 +136,7 @@ trait HasRequestData
                         }
                     }
                 }
+
                 return $attributes[$name];
             } else {
                 return $attributes[$name];
