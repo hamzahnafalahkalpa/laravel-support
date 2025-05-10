@@ -136,9 +136,11 @@ trait DataManagement
         return $this->staticEntity($model);
     }   
 
-    public function generalFind(? callable $callback = null): array{
-        return $this->showEntityResource(function() use ($callback){
-            return $this->{'prepareFind'.$this->__entity}($callback);
+    public function generalFind(? callable $callback = null): ?array{
+        $model = $this->{'prepareFind'.$this->__entity}($callback);
+        if (!isset($model)) return null;
+        return $this->showEntityResource(function() use ($model){
+            return $model;
         });
     }
 
