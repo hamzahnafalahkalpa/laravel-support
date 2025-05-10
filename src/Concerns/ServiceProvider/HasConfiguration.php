@@ -166,6 +166,7 @@ trait HasConfiguration
     {
         $this->setLocalConfigName($config_name)
             ->setConfig($config_name, $this->__local_config);
+        config([$config_name.'.module_path' => $this->dir()]);
         return $this;
     }
 

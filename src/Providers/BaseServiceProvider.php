@@ -688,6 +688,21 @@ abstract class BaseServiceProvider extends ServiceProvider
 
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::NAMESPACE->value);
+        
+        $publish_groups = [];
+        foreach (static::$publishGroups as $key => $group) {
+            $publish_groups[$key] ??= [];
+            foreach ($group as $key_item => $item) {
+                if (isset(static::$publishes[$this::class][$key_item])) {
+                    $publish_groups[$key][$key_item] = static::$publishes[$this::class][$key_item];
+                }
+            }
+        }
+
+        config([
+            $this->__local_config_name.'.publishes' => static::$publishes[$this::class],
+            $this->__local_config_name.'.group_publishes' => $publish_groups
+        ]);
         return $this;
     }
 

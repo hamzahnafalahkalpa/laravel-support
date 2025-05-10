@@ -8,7 +8,6 @@ use Hanafalah\LaravelSupport\{
     Concerns\Support as ConcernsSupport,
     Concerns
 };
-use Hanafalah\LaravelSupport\Concerns\Commands\PromptLayout;
 use Hanafalah\LaravelSupport\Concerns\Support\HasCall;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Filesystem\Filesystem;
