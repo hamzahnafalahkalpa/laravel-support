@@ -4,7 +4,11 @@ use Illuminate\Support\Str;
 
 if (! function_exists('support_config_path')) {
     function support_config_path(?string $path = null) {
-        return config('laravel-support.config.path').($path ? '/' . $path : '');
+        if (config('laravel-support') == null){
+            return base_path().($path ? '/' . $path : '');
+        }else{
+            return config('laravel-support.config.path').($path ? '/' . $path : '');
+        }
     }
 }
 

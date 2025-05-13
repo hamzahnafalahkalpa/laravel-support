@@ -677,6 +677,9 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     public function registerNamespace(?callable $callback = null): self
     {
+        if(class_basename($this) == "KlinikStarterpackServiceProvider"){
+            // dd($this->getConfigFullPath(),support_config_path($this->__lower_package_name . '.php'));
+        }
         $this->publishes([
             $this->getConfigFullPath() => support_config_path($this->__lower_package_name . '.php'),
         ], 'config');
