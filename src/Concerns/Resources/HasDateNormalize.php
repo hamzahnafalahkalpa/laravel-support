@@ -38,8 +38,10 @@ trait HasDateNormalize
                 $source_part = &$source->{$part};
             } elseif (\is_array($source)) {
                 $source_part = &$source[$part];
+            }else{
+                $source_part = null;
             }
-            if (isset($source[$part])) {
+            if (isset($source_part)) {
                 $this->accessDataRecursive($source_part, $pathParts);
             }
         }
