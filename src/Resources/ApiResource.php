@@ -49,3 +49,4 @@ class ApiResource extends JsonResource
         return  $diff == [] ? null : $diff;
     }
 }
+
