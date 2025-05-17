@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
 use Hanafalah\LaravelSupport\Concerns\Support\Macroable;
 use Hanafalah\LaravelSupport\Contracts\Supports\DataManagement;
+use stdClass;
 
 /** 
  * @method static self useSchema(string $className)
@@ -55,16 +56,22 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         $this->__schema_contracts = config('app.contracts', []);
     }
 
-    protected function fillingProps(Model &$model, mixed $props = [], ?array $onlies = []){
+    protected function fillingProps(object &$model, mixed $props = [], ?array $onlies = []){
         $props ??= [];
         foreach ($props as $key => $prop) {
             if ($key == 'props'){
                 $this->fillingProps($model, $prop);
             }else{
-                if (count($onlies) > 0 && in_array($key, $onlies)){
-                    $model->{$key} = $prop;
+                
+                if (is_object($prop)){
+                    $model->{$key} = new stdClass();
+                    $this->fillingProps($model->{$key}, $prop->toArray());
                 }else{
-                    $model->{$key} = $prop;
+                    if (count($onlies) > 0 && in_array($key, $onlies)){
+                        $model->{$key} = $prop;
+                    }else{
+                        $model->{$key} = $prop;
+                    }
                 }
             }
         }

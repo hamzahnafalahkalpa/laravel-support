@@ -53,8 +53,8 @@ trait DataManagement
             "prepareDelete{$entity}"        => 'generalPrepareDelete',
             "store{$entity}"                => 'generalStore',
             "prepareStore{$entity}"         => 'generalPrepareStore',
-            "update{$entity}"               => 'generalPrepareUpdate',
-            "prepareUpdate{$entity}"        => 'generalUpdate',
+            "update{$entity}"               => 'generalUpdate',
+            "prepareUpdate{$entity}"        => 'generalPrepareUpdate',
             Str::camel($entity)             => 'generalSchemaModel',
         ]);
         if (isset($result)) return $result;
@@ -221,7 +221,7 @@ trait DataManagement
 
     public function generalUpdate(mixed $dto = null){
         return $this->transaction(function () use ($dto) {
-            return $this->{'update'.$this->__entity}($this->{'prepareUpdate'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}UpdateData",null))));
+            return $this->{'show'.$this->__entity}($this->{'prepareUpdate'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}UpdateData",null))));
         });
     }
 
