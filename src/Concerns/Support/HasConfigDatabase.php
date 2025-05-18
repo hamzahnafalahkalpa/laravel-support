@@ -20,7 +20,6 @@ trait HasConfigDatabase
         static::$config_client_timezone = config('app.client_timezone', config('app.timezone'));
         static::$timezones = config('app.timezones', []);
         $this->mergeCasts($this->casts ?? []);
-
         if (isset($this->list) || isset($this->show)) {
             $this->mergeFillable($this->mergeArray($this->list ?? [], $this->show ?? []));
         }
