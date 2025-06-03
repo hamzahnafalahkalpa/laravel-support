@@ -21,11 +21,11 @@ trait HasRequestData
         return $this->mapToDTO($dto, $attributes, $excludes);
     }
 
-    private function mapToDTO(object|string $dto, mixed $attributes = null, ?array $excludes = []): ?Data{    
+    private function mapToDTO(object|string $dto, mixed $attributes = null, ?array $excludes = [], object|string $parent_dto = null): ?Data{    
         if (!isset($attributes)) return null;
         $class       = $this->resolvedClass($dto);
         if (method_exists($dto, 'before') && (new \ReflectionMethod($dto, 'before'))->isStatic()) {
-            $data = $dto::before($attributes);
+            $data = $dto::before($attributes, $parent_dto);
         }
         $parameters  = $this->getParameters($class);
         $this->__dto = $dto;
@@ -118,17 +118,18 @@ trait HasRequestData
                 if (isset($attributes[$name])){
                     $is_array_list = array_is_list($attributes[$name]);
 
+                    $parent_dto = $this->__dto;
                     if (is_array($attributes[$name]) && $is_array_list && count($attributes[$name]) > 0){
-                        foreach ($attributes[$name] as &$attribute_name) $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes);                        
+                        foreach ($attributes[$name] as &$attribute_name) $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes, $parent_dto);                        
                     }else{
                         if (!$is_array_list){
-                            $attributes[$name] = (count($attributes[$name]) == 0) ? [] : $this->mapToDTO($typeName, $attributes[$name], $excludes);
+                            $attributes[$name] = (count($attributes[$name]) == 0) ? [] : $this->mapToDTO($typeName, $attributes[$name], $excludes, $parent_dto);
                         }else{
                             if ($paramDetail['defaultTypeName'] !== 'array' && is_string($typeName)){
                                 $app               = app($typeName);
                                 $attributes[$name] = $app;
                                 if (method_exists($app,'after')){
-                                    $attributes[$name] = $app->after($attributes[$name]);
+                                    $attributes[$name] = $app->after($attributes[$name], $parent_dto);
                                 }
                             }else{
                                 $attributes[$name] = [];
