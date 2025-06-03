@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest as Request;
 use Illuminate\Validation\Rule;
 use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
 use Hanafalah\LaravelSupport\Concerns\Support\HasRequestData;
+use Hanafalah\ModuleUser\Models\User\User;
 use Illuminate\Support\Str;
 
 class FormRequest extends Request
