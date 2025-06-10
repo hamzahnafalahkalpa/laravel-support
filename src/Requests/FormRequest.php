@@ -7,11 +7,35 @@ use Illuminate\Foundation\Http\FormRequest as Request;
 use Illuminate\Validation\Rule;
 use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
 use Hanafalah\LaravelSupport\Concerns\Support\HasRequestData;
+use Hanafalah\ModuleUser\Models\User\User;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class FormRequest extends Request
 {
     use HasModelConfiguration, HasRequestData;
+
+    public function gate(?string $type = null){
+        $type ??= $this->getRequestName();
+    }
+
+    private function getRequestName(): string{
+        $class = class_basename($this);
+        switch (true) {
+            case Str::startsWith($class, 'View'):
+                return 'index';
+            break;
+            case Str::startsWith($class, 'Store'):
+                return 'store';
+            break;
+            case Str::startsWith($class, 'Update'):
+                return 'update';
+            break;
+            case Str::startsWith($class, 'Delete'):
+                return 'destroy';
+            break;
+        }
+    }
 
     public function callCustomMethod(): array
     {

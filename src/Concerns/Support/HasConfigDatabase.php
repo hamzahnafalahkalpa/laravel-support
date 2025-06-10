@@ -20,7 +20,6 @@ trait HasConfigDatabase
         static::$config_client_timezone = config('app.client_timezone', config('app.timezone'));
         static::$timezones = config('app.timezones', []);
         $this->mergeCasts($this->casts ?? []);
-
         if (isset($this->list) || isset($this->show)) {
             $this->mergeFillable($this->mergeArray($this->list ?? [], $this->show ?? []));
         }
@@ -36,14 +35,24 @@ trait HasConfigDatabase
         return $this->list;
     }
 
-    public function toShowApi()
-    {
-        return $this->getAttributes();
+    public function getViewResource(){
+        return null;
     }
 
-    public function toViewApi()
-    {
-        return $this->getAttributes();
+    public function getShowResource(){
+        return null;
+    }
+
+    public function toViewApi(){
+        return ($this->getViewResource() !== null)
+            ? new ($this->getViewResource())($this)
+            : $this->toArray();
+    }
+
+    public function toShowApi(){
+        return ($this->getShowResource() !== null)
+            ? new ($this->getShowResource())($this)
+            : $this->toArray();
     }
 
     /**
@@ -312,11 +321,26 @@ trait HasConfigDatabase
      * @param  string|null  $relation
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<TRelatedModel, $this>
      */
-    public function belongsToModel($related, $foreignKey = null, $ownerKey = null, $relation = null)
-    {
+    public function belongsToModel($related, $foreignKey = null, $ownerKey = null, $relation = null){
         $instance = $this->{$related . 'ModelInstance'}();
         $model    = app($instance);
         return $this->belongsTo($instance, $foreignKey ?? $model->getForeignKey(), $ownerKey, $relation);
+    }
+
+    /**
+     * Define an inverse one-to-one or many JSON relationship.
+     *
+     * @template TRelatedModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param class-string<TRelatedModel> $related
+     * @param string|array $foreignKey
+     * @param string|array $ownerKey
+     * @param string $relation
+     * @return \Staudenmeir\EloquentJsonRelations\Relations\BelongsToJson<TRelatedModel, $this>
+     */
+    public function belongsToJsonModel($related, $foreignKey, $ownerKey = null, $relation = null){
+        $related = $this->{$related . 'ModelInstance'}();
+        return $this->belongsToJson($related, $foreignKey, $ownerKey, $relation);
     }
 
     /**
@@ -330,7 +354,7 @@ trait HasConfigDatabase
      * @param string|null $relatedKey
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<TRelatedModel, $this>
      */
-    public function belongsToManyModel($related, $table = null, $foreignKey = null, $relatedKey = null)
+    public function belongsToManyModel($related, $table = null, $foreignPivotKey = null, $relatedPivotKey = null, $parentKey = null, $relatedKey = null, $relation = null)
     {
         $instance = $this->{$related . 'ModelInstance'}();
         $model = app($instance);
@@ -344,8 +368,9 @@ trait HasConfigDatabase
         return $this->belongsToMany(
             $instance,
             $table ?? $this->getBelongsToManyTable($related),
-            $foreignKey ?? $this->getForeignKey(),
-            $relatedKey ?? $model->getForeignKey()
+            $foreignPivotKey ?? $this->getForeignKey(),
+            $relatedPivotKey ?? $model->getForeignKey(),
+            $parentKey, $relatedKey, $relation
         );
     }
 
@@ -398,7 +423,7 @@ trait HasConfigDatabase
      */
     public function hasManyModel($related, $foreignKey = null, $localKey = null)
     {
-        return $this->hasMany($this->{$related . 'ModelInstance'}(), $foreignKey ?? $this->getForeignKey(), $localKey);
+    return $this->hasMany($this->{$related . 'ModelInstance'}(), $foreignKey ?? $this->getForeignKey(), $localKey);
     }
 
     // /**

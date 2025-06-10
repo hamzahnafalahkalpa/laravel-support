@@ -35,7 +35,7 @@ return new class extends Migration {
                 $table->softDeletes();
 
                 $table->index(['model_type', 'model_id'], 'phn_model');
-                $table->unique(['model_type', 'model_id', 'phone']);
+                $table->unique(['model_type', 'model_id', 'phone'],'phn_unique');
             });
         }
     }

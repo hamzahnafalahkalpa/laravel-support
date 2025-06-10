@@ -68,7 +68,7 @@ abstract class BaseServiceProvider extends ServiceProvider
         return $this->__events;
     }
 
-    protected function bootedRegisters(Model $model, string $config_name, ?string $migration_path = null): self
+    protected function bootedRegisters(array $packages, string $config_name, ?string $migration_path = null): self
     {
         if (isset($migration_path)) {
             if (isset($this->__config[$config_name]['libs']) && isset($this->__config[$config_name]['libs']['migration'])) {
@@ -79,9 +79,8 @@ abstract class BaseServiceProvider extends ServiceProvider
             }
         }
 
-        $this->registerProvider(function () use ($model, $config_name) {
-            $packages = $model->packages;
-            if (isset($packages)) {
+        $this->registerProvider(function () use ($packages, $config_name) {
+            if (isset($packages) && count($packages) > 0) {
                 foreach ($packages as $key => $package) {
                     $provider = $this->replacement($package['provider']);
                     $this->app->register($provider);
@@ -120,7 +119,7 @@ abstract class BaseServiceProvider extends ServiceProvider
     {
         $this->registerConfig(function () use ($config_name, $additional_config_path) {
             if (isset($additional_config_path)) {
-                $configs = array_diff(scandir($additional_config_path), ['.', '..', 'config.php']);
+                $configs = array_values(array_diff(scandir($additional_config_path), ['.', '..', 'config.php']));
                 foreach ($configs as $config) {
                     $path = $additional_config_path . '/' . $config;
                     if (is_file($path)) {
@@ -137,8 +136,8 @@ abstract class BaseServiceProvider extends ServiceProvider
                     $this->overrideConfig($key, $package['config'] ?? config($key));
                 }
             }
-            $laravel_encodings = config()->get('laravel-support.encodings') ?? [];
-            config()->set('laravel-support.encodings', $this->mergeArray(
+            $laravel_encodings = config()->get('module-encoding.encodings') ?? [];
+            config()->set('module-encoding.encodings', $this->mergeArray(
                 $laravel_encodings,
                 config()->get("$config_name.encodings") ?? []
             ));
@@ -171,6 +170,9 @@ abstract class BaseServiceProvider extends ServiceProvider
         } else {
             $config_root = implode('.', $config_root);
             config()->set($config_root, $value);
+        }
+        if ($key == 'contextual_bindings') {
+            $this->contextualBindings($value);
         }
     }
 
@@ -231,6 +233,7 @@ abstract class BaseServiceProvider extends ServiceProvider
             ->setLowerPackageName($this->__class_basename);
 
         $this->registerConfig();
+
         $this->addDataToConfig('app','contract');
         $this->autoBinds();
 
@@ -408,9 +411,34 @@ abstract class BaseServiceProvider extends ServiceProvider
                     return $bind($app);
                 }
                 if (is_object($bind)) return $bind;
-                if (is_string($bind)) return new $bind($app);
+                if (is_string($bind)) return new $bind;
             });
         }
+    }
+
+    protected function contextualBindings(callable|array $binds): self{
+        if (\is_callable($binds)) {
+            $binds = $binds();
+        }
+        if (isset($binds) && is_array($binds)){
+            foreach ($binds as $key => $bind) {
+                if (!isset($bind['from']) || !isset($bind['give'])) {
+                    if (count($bind) == 2){
+                        list($from,$give) = $bind;
+                    }else{
+                        continue;
+                    }
+                }else{
+                    $from = $bind['from'];
+                    $give  = $bind['give'];
+                }
+
+                $this->app->when($from)
+                    ->needs($key)
+                    ->give($give);
+            }
+        }
+        return $this;
     }
 
     /**
@@ -568,10 +596,9 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function registerModel(?callable $callback = null): self
     {
-        if ($this->isExistsDatabaseModel()) {
-            $this->callMeBack($callback);
-            $this->addDataToConfig('database','model');
-        }
+        if (config()->get('database.models') == null) config()->set('database.models',[]);
+        $this->callMeBack($callback);
+        $this->addDataToConfig('database','model');
         $this->setFinishedRegister(ProviderRegisterMethod::MODEL->value);
         return $this;
     }
@@ -588,9 +615,11 @@ abstract class BaseServiceProvider extends ServiceProvider
                         ? $this->basePath() 
                         : $this->dir();
             $path     = $path.$config['libs'][$type];
+
             if (is_dir($path)){
-                $files = File::allFiles($path);
+                $files   = File::allFiles($path);
                 $new_map = [];
+
                 foreach ($files as $file) {
                     $relativePath = $file->getRelativePathname();
                     $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
@@ -602,42 +631,14 @@ abstract class BaseServiceProvider extends ServiceProvider
         $morphMaps = $this->mergeArray($morphMaps, $package_morph ?? []);
         config([$config_type => $morphMaps]);
         config([$this->__lower_package_name.'.'.$config_type => $package_morph ?? []]);
-        Relation::morphMap($morphMaps);
+        if ($type == 'model') Relation::morphMap($morphMaps);
     }
 
-    /**
-     * Register deferred providers based on the given model.
-     *
-     * @param Model $model The model instance to check and register providers for.
-     */
-    // public function deferredProviders(Model $model)
-    // {
-    //     $this->app->register($this->replacement($model->app['provider']));
-    //     $this->app->register($this->replacement($model->group['provider']));
-    // }
-
-    /**
-     * Replaces multiple backslashes with a single backslash in the given string.
-     *
-     * @param string $value The string to process.
-     * @return string The processed string with reduced backslashes.
-     */
-    private function replacement(string $value)
-    {
+    private function replacement(string $value){
         return preg_replace('/\\\\+/', '\\', $value);
     }
 
-    /**
-     * Registers the configuration for the package.
-     *
-     * This method merges and sets the local configuration for the package
-     * identified by the lower package name. An optional callback can be executed.
-     *
-     * @param callable|null $callback The callback to be executed.
-     * @return self The current instance of the class.
-     */
-    public function registerConfig(?callable $callback = null): self
-    {        
+    public function registerConfig(?callable $callback = null): self{        
         if (isset($this->__lower_package_name)) {
             $this->mergeConfigWith($this->__lower_package_name)
                 ->setLocalConfig($this->__lower_package_name);
@@ -664,23 +665,9 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function registerDatabase(?callable $callback = null): self
     {
-        // if ($this->isExistsDatabaseModel()) {
-        //     $this->setAppModels($this->__config[$this->__lower_package_name]['database']['models']);
-        // }
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::DATABASE->value);
         return $this;
-    }
-
-    /**
-     * Checks if database models exist for the package.
-     *
-     * @return bool True if database models exist, false otherwise.
-     */
-    private function isExistsDatabaseModel(): bool
-    {
-        $config = $this->__config[$this->__lower_package_name];
-        return isset($config['database']) && isset($config['database']['models']);
     }
 
     /**
@@ -690,19 +677,35 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     public function registerNamespace(?callable $callback = null): self
     {
-
+        if(class_basename($this) == "KlinikStarterpackServiceProvider"){
+            // dd($this->getConfigFullPath(),support_config_path($this->__lower_package_name . '.php'));
+        }
         $this->publishes([
-            $this->getConfigFullPath() => config_path($this->__lower_package_name . '.php'),
+            $this->getConfigFullPath() => support_config_path($this->__lower_package_name . '.php'),
         ], 'config');
 
         $this->publishes([
-            $this->getAssetPath('stubs') => base_path('Stubs/' . $this->__class_basename . 'Stubs'),
+            $this->getAssetPath('stubs') => base_path('stubs/' . $this->__class_basename . 'Stubs'),
         ], 'stubs');
-
         $this->publishes($this->scanForPublishMigration($this->__migration_path, $this->__target_migration_path), 'migrations');
 
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::NAMESPACE->value);
+        
+        $publish_groups = [];
+        foreach (static::$publishGroups as $key => $group) {
+            $publish_groups[$key] ??= [];
+            foreach ($group as $key_item => $item) {
+                if (isset(static::$publishes[$this::class][$key_item])) {
+                    $publish_groups[$key][$key_item] = static::$publishes[$this::class][$key_item];
+                }
+            }
+        }
+
+        config([
+            $this->__local_config_name.'.publishes' => static::$publishes[$this::class],
+            $this->__local_config_name.'.group_publishes' => $publish_groups
+        ]);
         return $this;
     }
 

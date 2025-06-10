@@ -46,6 +46,7 @@ trait HasMigrationConfiguration
      */
     protected function setMigrationBasePath(string $path): self
     {
+        if ($this::class == 'Hanafalah\ModuleUser\Commands\InstallMakeCommand') dd($path,$this->dir());
         $path = $this->makeRealPath($path, $this->dir());
         $this->__migration_base_path = $this->dir() . $path;
         return $this;
@@ -105,7 +106,7 @@ trait HasMigrationConfiguration
         $scan_migrations = scandir($path);
         foreach ($scan_migrations as $file) {
             if ($file == '.' || $file == '..' || $this->isDir($path . '/' . $file)) continue;
-            $publish[$path . '/' . $file] = $this->migrationPath($target_path . '\\' . $file);
+            $publish[$path . '/' . $file] = $this->migrationPath($target_path . '/' . $file);
         }
         return $publish;
     }

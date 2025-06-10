@@ -35,8 +35,8 @@ class ReportSummary extends BaseModel
         'date'       => 'immutable_date'
     ];
 
-    public function toViewApi()
+    public function getViewResource()
     {
-        return new ViewReportSummary($this);
+        return ViewReportSummary::class;
     }
 }

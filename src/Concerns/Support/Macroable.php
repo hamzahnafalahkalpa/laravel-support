@@ -1,13 +1,10 @@
 <?php
+namespace Hanafalah\LaravelSupport\Concerns\Support;
 
-namespace Hanafalah\LaravelSupport\Models;
+use Illuminate\Support\Traits\Macroable as TraitsMacroable;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Traits\Macroable;
-
-abstract class AbstractModel extends Model
-{
-    use Macroable {
+trait Macroable{
+    use TraitsMacroable {
         __call as macroCall;
         __callStatic as macroCallStatic;
     }
@@ -29,18 +26,4 @@ abstract class AbstractModel extends Model
 
         return parent::__callStatic($method, $parameters);
     }
-
-    /**
-     * Logs the histories.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\MorphMany The morphMany relationship with LogHistory.
-     */
-    public function logHistories()
-    {
-        return $this->morphMany($this->LogHistoryModel(), "reference");
-    }
-
-    abstract public function parent();
-
-    abstract public function child();
 }

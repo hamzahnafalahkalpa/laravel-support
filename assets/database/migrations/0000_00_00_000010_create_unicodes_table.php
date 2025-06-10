@@ -31,6 +31,9 @@ return new class extends Migration
                 $table->string('unicode_type', 50)->nullable(false);
                 $table->unsignedInteger('flag')->nullable(false);
                 $table->string('name', 100)->nullable(false);
+                $table->json('props')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
             });
         }
     }

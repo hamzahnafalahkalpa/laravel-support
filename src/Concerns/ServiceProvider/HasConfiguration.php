@@ -119,9 +119,9 @@ trait HasConfiguration
         $this->mergeConfigFrom($base_path, $alias);
         $this->initConfig();
 
-        $general_contracts = config('app.contracts', []);
-        $local_contracts   = config($alias . '.contracts', []);
-        config(['app.contracts' => $this->mergeArray($general_contracts, $local_contracts)]);
+        // $general_contracts = config('app.contracts', []);
+        // $local_contracts   = config($alias . '.contracts', []);
+        // config(['app.contracts' => $this->mergeArray($general_contracts, $local_contracts)]);
         return $this;
     }
 
@@ -166,6 +166,7 @@ trait HasConfiguration
     {
         $this->setLocalConfigName($config_name)
             ->setConfig($config_name, $this->__local_config);
+        config([$config_name.'.module_path' => $this->dir()]);
         return $this;
     }
 

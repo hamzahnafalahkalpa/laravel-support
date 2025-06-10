@@ -9,9 +9,13 @@ use Illuminate\Database\Eloquent\{
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Hanafalah\ApiHelper\Facades\ApiAccess;
-use Hanafalah\LaravelPermission\Resources\Permission\ViewPermission;
 use Hanafalah\LaravelSupport\Facades\Response;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
+use ReflectionNamedType;
+use ReflectionClass;
 
 trait HasResponse
 {
@@ -37,18 +41,16 @@ trait HasResponse
     public function resultResponse(): array
     {
         $success = $this->__response_code < 400;
-
-        $this->__response = [
+        if ($success) $this->renderAclResponse();
+        $this->__response = array_merge([
+            'data' => $this->__response_result,
             'meta' => [
                 'code'     => $this->__response_code,
                 'success'  => $success,
                 'messages' => $this->mustArray($this->__response_messages),
             ],
-            'data' => $this->__response_result,
-        ];
-        if ($success) {
-            $this->renderAclResponse();
-        }
+            'acl' => $this->__response['acl'] ?? null
+        ]);
         return $this->__response;
     }
 
@@ -58,49 +60,110 @@ trait HasResponse
         $route_name = $route ? $route->getName() : null;
         if (Auth::check()) {
             $user = $this->prepareUser();
+            $role = $user->userReference->role;
+            request()->merge([
+                'role_id' => isset($role) ? $role->getKey() : null,
+                'is_show_in_acl' => true
+            ]);
             $permission = app(config('database.models.Permission'));
-
             if (isset($route_name) && \is_subclass_of($permission, Model::class)) {
-                $permission = $permission->where("alias", $route_name)->first();
-                if (!isset($permission) && Response::getAclPermission() !== null) {
-                    $permission = Response::getAclPermission();
+                $route_permission = $permission->with(['recursiveModules','childs' => function($query){
+                                                    $query->asPermission()->showInAcl()
+                                                         ->checkAccess(request()->role_id);
+                                                }])
+                                               ->where("alias", $route_name)
+                                               ->showInAcl()
+                                               ->checkAccess(request()->role_id)
+                                               ->first();
+                if (!isset($route_permission) && Response::getAclPermission() !== null) {
+                    $route_permission = Response::getAclPermission();
                 }
-                if (isset($permission)) {
-                    $permission->load(['childs' => fn($q) => $q->showInAcl()]);
-                    $role = $user->userReference->role;
-                    if (isset($role)) {
-                        $permissions = $this->getNextPermission($role, $permission);
-                        if (isset($permissions) && count($permissions) > 0) {
-                            $ids = array_column($permission->childs->toArray(), 'id');
-                            foreach ($permissions as $role_permission) {
-                                $key = array_search($role_permission->getKey(), $ids);
-                                if ($key !== false) $permission->childs[$key]->access = true;
+                if (isset($route_permission)) {
+                    $this->recursiveModules($route_permission->recursiveModules);
+                    $childs = $route_permission->childs()->asPermission()->showInData()->get();
+                    (isset($this->__response_result['data']))
+                        ? $data = &$this->__response_result['data']
+                        : $data = &$this->__response_result;
+                    (is_array($data))
+                        ? $datas = &$data
+                        : $datas = [&$data];
+                    
+                    [$controllerClass, $methodName, $methodType] = $this->checkingMethod();
+                    
+                    if (isset($childs) && count($childs) > 0) {
+                        foreach ($datas as &$data) {
+                            request()->merge(['id' => $data['id']]);
+                            $data['accessibility'] = [];
+                            foreach ($childs as &$child) {
+                                $child->access = $this->getCurrentFormRequestInstance($child->alias) ?? true;
+                                $data['accessibility'][Str::afterLast($child->alias, '.')] = $child->access;
                             }
                         }
-                        $this->__response['acl'] = $permission->toViewApi()->resolve();
+                    }else{
+                        if ($methodType !== 'DELETE'){
+                            if (array_is_list($datas)) {
+                                foreach ($datas as &$data) {
+                                    $data['accessibility'] = null;
+                                } 
+                            }else{
+                                $datas['accessibility'] = null;
+                            }
+                        }
                     }
                 }
+            }
+            $this->__response['acl'] = isset($route_permission) ? $route_permission->toViewApi()->resolve() : null;
+        }
+    }
+
+    private function recursiveModules(&$permissions){
+        foreach ($permissions as &$permission) {
+            //ACCESS GATE HERE
+            $permission->load(['childs' => function($query){
+                $query->showInAcl()->asPermission();
+            }]);
+            if (isset($permission->recursiveModules) && count($permission->recursiveModules) > 0) {
+                $this->recursiveModules($permission->recursiveModules);
             }
         }
     }
 
-    private function getNextPermission($role, $permission)
+    private function checkingMethod(?string $alias = null){
+        $route = isset($alias) ? Route::getRoutes()->getByName($alias) : Route::getCurrentRoute();
+        if (!$route) return null;
+
+        $action = $route->getActionName(); 
+        if (!str_contains($action, '@')) return null;
+        return [...explode('@', $action),...$route->methods()];
+    }
+
+    private function getCurrentFormRequestInstance(?string $alias = null): mixed
     {
-        $role->load([
-            'permissions' => function ($query) use ($permission) {
-                $query->showInAcl()->parentId($permission->getKey());
+        [$controllerClass, $methodName, $methodType] = $this->checkingMethod($alias);
+        $reflection = new ReflectionClass($controllerClass);
+        if (!$reflection->hasMethod($methodName)) return null;
+
+        $method = $reflection->getMethod($methodName);
+        $params = $method->getParameters();
+        foreach ($params as $param) {
+            $type = $param->getType();
+            if ($type instanceof ReflectionNamedType && is_subclass_of($type->getName(), FormRequest::class)) {
+                try {
+                    app($type->getName());
+                    return true;
+                } catch (\Throwable $th) {
+                    return false;
+                }
             }
-        ]);
-        return $role->permissions;
+        }
+        return false;
     }
 
     private function prepareUser()
     {
         $user           = $this->UserModel()->find(ApiAccess::getUser()->getKey());
         $user_reference = &$user->userReference;
-        $role_id        = $user_reference->role_id;
-        $role           = $user_reference->roles()->where('role_id', $role_id)->first();
-        $user_reference->setRelation('role', $role);
+        $user_reference->setRelation('role', $user_reference->role);
         return $user;
     }
 

@@ -11,10 +11,14 @@ trait HasCache
     use Conditionable;
     protected array $__cache;
 
+    protected function isUsingCache(): bool{
+        return false;
+    }
+
     protected function cacheWhen(bool $condition, array $cache, callable $callback)
     {
         //SEMENTARA AUTO FALSE DULU
-        return $this->when(config('laravel-support.cache.enabled', true) && $condition, function () use ($cache, $callback) {
+        return $this->when(config('laravel-support.cache.enabled', true) && $this->isUsingCache() && $condition, function () use ($cache, $callback) {
             return $this->setCache($cache, function () use ($callback) {
                 return $callback();
             });
@@ -64,7 +68,7 @@ trait HasCache
         return $this->cacheDriver(function($cache_driver) use ($tags){
             if ($cache_driver === 'redis') {
                 $tags = $this->mustArray($tags);
-                // return Cache::tags($tags)->flush();
+                return Cache::tags($tags)->flush();
             }
             return null;
         });

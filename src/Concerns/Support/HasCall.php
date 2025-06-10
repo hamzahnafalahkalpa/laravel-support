@@ -7,6 +7,9 @@ use Hanafalah\LaravelSupport\Supports\PackageManagement;
 
 trait HasCall
 {
+    // use Macroable;
+
+
     private $__call_method, $__call_arguments;
     protected $__custom_method_lists = [];
     /**
@@ -20,9 +23,11 @@ trait HasCall
     public function __call($method, $arguments = [])
     {
         return $this->setCallMethod($method)
-            ->setCallArguments($arguments)
-            ->callMethod();
+                    ->setCallArguments($arguments)
+                    ->callMethod();
     }
+
+    
 
     /**
      * Set the call method.

@@ -97,12 +97,9 @@ trait HasRepository
      * @param string $path The path of the directory to create.
      * @return bool True if the directory has been created successfully, false otherwise.
      */
-    protected function makeDir(string $path): bool
-    {
-        if (!$this->isDir($path)) {
-            return \mkdir($path, 0777, true);
-        }
-        return true;
+    protected function makeDir(string $relative_path): string{
+        if (!$this->isDir($relative_path)) mkdir($relative_path, 0777, true);
+        return $relative_path;
     }
 
     /**

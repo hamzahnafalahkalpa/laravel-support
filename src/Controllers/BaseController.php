@@ -12,8 +12,6 @@ use Hanafalah\LaravelSupport\Concerns\Support\{
     HasResponse
 };
 
-use function Aws\is_associative;
-
 class BaseController extends Controller
 {
     use HasRequest,
