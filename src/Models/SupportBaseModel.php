@@ -7,6 +7,7 @@ use Hanafalah\LaravelHasProps\Concerns as PropsConcerns;
 use Hanafalah\LaravelHasProps\Concerns\HasConfigProps;
 use Illuminate\Support\Str;
 use Hanafalah\LaravelHasProps\Models\Scopes\HasCurrentScope;
+use Hanafalah\LaravelSupport\Supports\Builder;
 
 class SupportBaseModel extends AbstractModel
 {
@@ -52,6 +53,11 @@ class SupportBaseModel extends AbstractModel
         });
     }
 
+    public function newEloquentBuilder($query): Builder
+    {
+        return new Builder($query);
+    }
+
     protected function casts()
     {
         if ($this->timestamps) {
@@ -66,26 +72,6 @@ class SupportBaseModel extends AbstractModel
     public function getObserverExceptions(): array
     {
         return [];
-    }
-
-    public function getViewResource(){
-        return null;
-    }
-
-    public function getShowResource(){
-        return null;
-    }
-
-    public function toViewApi(){
-        return ($this->getViewResource() !== null)
-            ? new ($this->getViewResource())($this)
-            : $this->toArray();
-    }
-
-    public function toShowApi(){
-        return ($this->getShowResource() !== null)
-            ? new ($this->getShowResource())($this)
-            : $this->toArray();
     }
 
     //MUTATOR SECTION

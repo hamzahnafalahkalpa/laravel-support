@@ -35,14 +35,24 @@ trait HasConfigDatabase
         return $this->list;
     }
 
-    public function toShowApi()
-    {
-        return $this->getAttributes();
+    public function getViewResource(){
+        return null;
     }
 
-    public function toViewApi()
-    {
-        return $this->getAttributes();
+    public function getShowResource(){
+        return null;
+    }
+
+    public function toViewApi(){
+        return ($this->getViewResource() !== null)
+            ? new ($this->getViewResource())($this)
+            : $this->toArray();
+    }
+
+    public function toShowApi(){
+        return ($this->getShowResource() !== null)
+            ? new ($this->getShowResource())($this)
+            : $this->toArray();
     }
 
     /**

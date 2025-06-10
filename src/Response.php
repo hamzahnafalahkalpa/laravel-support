@@ -4,13 +4,13 @@ namespace Hanafalah\LaravelSupport;
 
 use Closure;
 use Exception;
-use Illuminate\Container\Container;
 use Hanafalah\LaravelSupport\Concerns;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Support\Facades\Request;
 use Hanafalah\ApiHelper\Exceptions\UnauthorizedAccess;
 use Hanafalah\LaravelSupport\Contracts\Response as ContractsResponse;
 use Hanafalah\LaravelSupport\Supports\PackageManagement;
+use Illuminate\Support\Facades\Auth;
 
 class Response extends PackageManagement implements ContractsResponse
 {
@@ -25,6 +25,7 @@ class Response extends PackageManagement implements ContractsResponse
     {
         return $this->sendResponse($result, $code ?? $this->getResponseCode() ?? 200, $message ?? $this->getResponseMessages() ?? 'Success.');
     }
+
 
     public function setAclPermission(string $alias)
     {
@@ -69,14 +70,18 @@ class Response extends PackageManagement implements ContractsResponse
                         break;
                     case $e instanceof \Illuminate\Auth\AuthenticationException:
                         $code = 401;
-                        break;
+                    break;
                     case $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException:
                         $code = 404;
-                        break;
+                        if (!Auth::check()){
+                            $code = 401;
+                            $err = 'Unauthorized';
+                        }
+                    break;
                     case $e instanceof \Firebase\JWT\ExpiredException:
                     case $e instanceof UnauthorizedAccess:
                         $code = 401;
-                        break;
+                    break;
                 }
                 return $this->sendResponse(null, $code ?? 403, $err);
             });
