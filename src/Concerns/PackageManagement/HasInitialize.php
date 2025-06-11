@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 
 trait HasInitialize
 {
-    private ?Model $__initialize_model;
+    private mixed $__initialize_model;
 
     private string $__ending_event, $__ended_event;
     protected string $__entity = '';
@@ -55,6 +55,7 @@ trait HasInitialize
 
         $model_name = Str::lower($this->__entity);
         $this->{$model_name} = $model;
+        $this->__initialize_model ??= null;
         if (isset($this->{$model_name})) $this->__initialize_model = &$this->{$model_name};
 
         event(new Events\EventInitialized($this));
