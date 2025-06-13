@@ -412,7 +412,7 @@ abstract class BaseServiceProvider extends ServiceProvider
                 }
                 if (is_object($bind)) return $bind;
                 if (is_string($bind)) return new $bind;
-            });
+            });            
         }
     }
 
