@@ -41,6 +41,7 @@ trait DataManagement
         $entity = $this->__entity;
 
         $result = $this->methodHandler($method,[
+            "export"                        => 'generalExport',
             "show$entity"                   => 'generalShow',
             "prepareShow$entity"            => 'generalPrepareShow',
             "view{$entity}Paginate"         => 'generalViewPaginate',
@@ -121,6 +122,13 @@ trait DataManagement
             case 'find'     : return $this->{'find'.$this->__entity}($reference_type);break;
         }
         abort(404);
+    }
+
+    public function generalExport(string $type): mixed{
+        if (!isset($this->__config_name)) throw new \Exception('No config name provided', 422);
+        $type = Str::studly($type);
+        $export_class = config($this->__config_name.'.exports.'.$type,null);
+        return new $export_class($this);
     }
 
     public function generalGetModelEntity(): mixed{
