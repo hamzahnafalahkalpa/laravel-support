@@ -225,7 +225,7 @@ abstract class BaseServiceProvider extends ServiceProvider
      *
      * @return self
      */
-    protected function registerMainClass(mixed $main_class): self
+    protected function registerMainClass(mixed $main_class, ?bool $autobinds = true): self
     {
         $this->__main_class         = $main_class;
         $this->__finished_register  = [];
@@ -235,7 +235,7 @@ abstract class BaseServiceProvider extends ServiceProvider
         $this->registerConfig();
 
         $this->addDataToConfig('app','contract');
-        $this->autoBinds();
+        if ($autobinds) $this->autoBinds();
 
         if (\method_exists('events', $main_class)) {
             //GET EVENTS DATA
@@ -394,6 +394,7 @@ abstract class BaseServiceProvider extends ServiceProvider
         
         foreach ($contracts as $contract) {
             $target_contract = Str::replace($contract_name.'\\','',$contract);
+            
             if (\class_exists($target_contract)) {
                 $this->binds([$contract => $target_contract]);
             }
@@ -643,11 +644,11 @@ abstract class BaseServiceProvider extends ServiceProvider
             $this->mergeConfigWith($this->__lower_package_name)
                 ->setLocalConfig($this->__lower_package_name);
         }
-        // if (isset($this->__config[$this->__lower_package_name]['contracts'])) {
-        //     $general_contracts = config('app.contracts', []);
-        //     $contracts = $this->__config[$this->__lower_package_name]['contracts'];
-        //     config(['app.contracts' => $this->mergeArray($general_contracts, $contracts)]);
-        // }
+        if (isset($this->__config[$this->__lower_package_name]['app']['contracts'])) {
+            $general_contracts = config('app.contracts', []);
+            $contracts = $this->__config[$this->__lower_package_name]['app']['contracts'];
+            config(['app.contracts' => $this->mergeArray($general_contracts, $contracts)]);
+        }
 
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::CONFIG->value);

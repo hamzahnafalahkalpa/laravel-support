@@ -152,13 +152,17 @@ trait DataManagement
         });
     }
 
+    public function camelEntity(): string{
+        return Str::camel($this->__entity);
+    }
+
     public function generalPrepareShow(? Model $model = null, ? array $attributes = null): Model{
         $attributes ??= request()->all();
         $model ??= (\method_exists($this, 'get'.$this->__entity)) ? $this->{'get'.$this->__entity}() : $this->generalGetModelEntity();
         if (!isset($model)){
             $id = $attributes['id'] ?? null;
             if (!isset($id)) throw new \Exception('No id provided', 422);
-            $entity = Str::camel($this->__entity);
+            $entity = $this->camelEntity();
             $model = $this->{$entity}()->with($this->showUsingRelation())->findOrFail($id);
         }else{
             $model->load($this->showUsingRelation());
@@ -176,7 +180,7 @@ trait DataManagement
         $snake_entity = Str::snake($this->__entity);
         $this->addSuffixCache($this->__cache['index'], $snake_entity."-index", 'paginate');
         return static::${$snake_entity.'_model'} = $this->cacheWhen(!$this->isSearch(), $this->__cache['index'], function () use ($paginate_dto) {
-            return $this->{Str::camel($this->__entity)}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
+            return $this->{$this->camelEntity()}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
         });
     }
 
@@ -187,7 +191,7 @@ trait DataManagement
     }
 
     public function generalPrepareViewList(? array $attributes = null): Collection{
-        $models = $this->{Str::camel($this->__entity)}()->with($this->viewUsingRelation())->get();
+        $models = $this->{$this->camelEntity()}()->with($this->viewUsingRelation())->get();
         return $this->staticEntity($models);
     }
 
