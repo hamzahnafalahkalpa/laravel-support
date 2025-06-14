@@ -92,7 +92,7 @@ trait HasResponse
                     
                     if (isset($childs) && count($childs) > 0) {
                         foreach ($datas as &$data) {
-                            request()->merge(['id' => $data['id']]);
+                            request()->merge(['id' => $data['id'] ?? null]);
                             $data['accessibility'] = [];
                             foreach ($childs as &$child) {
                                 $child->access = $this->getCurrentFormRequestInstance($child->alias) ?? true;
