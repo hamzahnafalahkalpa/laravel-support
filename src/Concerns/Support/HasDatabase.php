@@ -170,7 +170,7 @@ trait HasDatabase
    * @param callable $callback The callback function to be executed when the validation is true.
    * @return mixed|null The result of the validation or null if the validation fails.
    */
-  public function relationValidation($relationName, $callback)
+  public function relationValidation($relationName, mixed $callback, mixed $catch = null)
   {
     $validation = $this->relationLoaded($relationName);
     if ($validation && isset($this->{$relationName})) {
@@ -181,7 +181,11 @@ trait HasDatabase
       }
       return $callback();
     } else {
-      return (Str::plural($relationName) == $relationName) ? [] : null;
+      if (isset($catch)){
+        return is_callable($catch) ? $catch() : $catch;
+      }else{
+        return (Str::plural($relationName) == $relationName) ? [] : null;
+      }
     }
 
     $validation = $this->relationLoaded($relationName);

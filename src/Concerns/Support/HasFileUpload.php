@@ -29,10 +29,10 @@ trait HasFileUpload{
 
     public function getFile(){
         $attribute = $this->getFileNameAttribute();
-        if (is_callable($attribute)){
+        if (is_callable($attribute) && !is_string($attribute)){
             return $attribute($this);
         }else{
-            return $this->{$attribute};
+            return $this->{$attribute} ?? null;
         }
     }
 
