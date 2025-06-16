@@ -89,7 +89,6 @@ trait HasResponse
                         : $datas = [&$data];
                     
                     [$controllerClass, $methodName, $methodType] = $this->checkingMethod();
-                    
                     if (isset($childs) && count($childs) > 0) {
                         foreach ($datas as &$data) {
                             request()->merge(['id' => $data['id'] ?? null]);
@@ -100,6 +99,7 @@ trait HasResponse
                             }
                         }
                     }else{
+
                         if ($methodType !== 'DELETE'){
                             if (array_is_list($datas)) {
                                 foreach ($datas as &$data) {
@@ -135,14 +135,16 @@ trait HasResponse
         $action = $route->getActionName(); 
         if (!str_contains($action, '@')) return null;
         return [...explode('@', $action),...$route->methods()];
-    }
 
+    }
     private function getCurrentFormRequestInstance(?string $alias = null): mixed
     {
         [$controllerClass, $methodName, $methodType] = $this->checkingMethod($alias);
+        if (!class_exists($controllerClass)) return null;
+        
         $reflection = new ReflectionClass($controllerClass);
         if (!$reflection->hasMethod($methodName)) return null;
-
+        
         $method = $reflection->getMethod($methodName);
         $params = $method->getParameters();
         foreach ($params as $param) {
