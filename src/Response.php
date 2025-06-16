@@ -73,10 +73,10 @@ class Response extends PackageManagement implements ContractsResponse
                     break;
                     case $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException:
                         $code = 404;
-                        if (!Auth::check()){
-                            $code = 401;
-                            $err = 'Unauthorized';
-                        }
+                        // if (!Auth::check()){
+                        //     $code = 401;
+                        //     $err = 'Unauthorized';
+                        // }
                     break;
                     case $e instanceof \Firebase\JWT\ExpiredException:
                     case $e instanceof UnauthorizedAccess:
