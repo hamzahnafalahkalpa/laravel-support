@@ -7,11 +7,12 @@ use Hanafalah\LaravelHasProps\Concerns as PropsConcerns;
 use Hanafalah\LaravelHasProps\Concerns\HasConfigProps;
 use Illuminate\Support\Str;
 use Hanafalah\LaravelHasProps\Models\Scopes\HasCurrentScope;
+use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
 use Hanafalah\LaravelSupport\Supports\Builder;
 
 class SupportBaseModel extends AbstractModel
 {
-    use HasConfigProps;
+    use HasConfigProps, HasCache;
     use SupportConcerns\Support\HasDatabase;
     use SupportConcerns\DatabaseConfiguration\HasModelConfiguration;
     use SupportConcerns\Support\HasConfigDatabase;
@@ -40,17 +41,29 @@ class SupportBaseModel extends AbstractModel
             }
         });
         static::created(function ($query) {
+            static::clearCacheModel($query);
             static::withoutEvents(function () use ($query) {
                 PropsConcerns\HasCurrent::setOld($query);
             });
         });
         static::updated(function ($query) {
+            static::clearCacheModel($query);
             static::withoutEvents(function () use ($query) {
                 if (!$query->wasRecentlyCreated && $query->isDirty('current')) PropsConcerns\HasCurrent::setOld($query);
             });
         });
         static::deleting(function ($query) {
         });
+    }
+
+    private static function clearCacheModel($query){
+        $morph = Str::snake($query->getMorphClass());
+        $cacheDriver = config('cache.default');
+        if ($cacheDriver === 'redis') {
+            $query->forgetTags($morph);
+        } else {
+            $query->forgetKey($morph);
+        }
     }
 
     public function newEloquentBuilder($query): Builder
