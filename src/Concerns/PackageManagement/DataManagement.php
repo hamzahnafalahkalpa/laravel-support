@@ -53,7 +53,9 @@ trait DataManagement
             "delete{$entity}"               => 'generalDelete',
             "prepareDelete{$entity}"        => 'generalPrepareDelete',
             "store{$entity}"                => 'generalStore',
+            "storeMultiple{$entity}"        => 'generalStoreMultiple',
             "prepareStore{$entity}"         => 'generalPrepareStore',
+            "prepareStoreMultiple{$entity}" => 'generalPrepareStoreMultiple',
             "update{$entity}"               => 'generalUpdate',
             "prepareUpdate{$entity}"        => 'generalPrepareUpdate',
             Str::camel($entity)             => 'generalSchemaModel',
@@ -97,7 +99,7 @@ trait DataManagement
     }
 
     public function staticEntity(mixed $model = null): mixed{
-        return static::${Str::snake($this->__entity).'_model'} = $model;
+        return static::${$this->snakeEntity().'_model'} = $model;
     }
 
     public function viewEntityResource(callable $callback,array $options = []): array{
@@ -132,7 +134,7 @@ trait DataManagement
     }
 
     public function generalGetModelEntity(): mixed{
-        $entity = Str::snake($this->__entity);
+        $entity = $this->snakeEntity();
         return static::${$entity.'_model'};
     }
 
@@ -156,14 +158,24 @@ trait DataManagement
         return Str::camel($this->__entity);
     }
 
+    public function snakeEntity(): string{
+        return Str::snake($this->__entity);
+    }
+
+    public function forgetTagsEntity(?string $entity = null): void{
+        $this->forgetTags($entity ?? $this->snakeEntity());
+    }
+
     public function generalPrepareShow(? Model $model = null, ? array $attributes = null): Model{
         $attributes ??= request()->all();
         $model ??= (\method_exists($this, 'get'.$this->__entity)) ? $this->{'get'.$this->__entity}() : $this->generalGetModelEntity();
         if (!isset($model)){
-            $id = $attributes['id'] ?? null;
-            if (!isset($id)) throw new \Exception('No id provided', 422);
-            $entity = $this->camelEntity();
-            $model = $this->{$entity}()->with($this->showUsingRelation())->findOrFail($id);
+            $valid = $attributes['id'] ?? $attributes['uuid'] ?? null;
+            if (!isset($valid)) throw new \Exception('No id or uuid provided', 422);
+            $model = $this->{$this->camelEntity()}->with($this->showUsingRelation())
+                          ->when(isset($attributes['id']),fn($query)   => $query->where('id', $attributes['id']))
+                          ->when(isset($attributes['uuid']),fn($query) => $query->where('uuid', $attributes['uuid']))
+                          ->firstOrFail();
         }else{
             $model->load($this->showUsingRelation());
         }
@@ -177,7 +189,7 @@ trait DataManagement
     }
 
     public function generalPrepareViewPaginate(PaginateData $paginate_dto): LengthAwarePaginator{
-        $snake_entity = Str::snake($this->__entity);
+        $snake_entity = $this->snakeEntity();
         $this->addSuffixCache($this->__cache['index'], $snake_entity."-index", 'paginate');
         return static::${$snake_entity.'_model'} = $this->cacheWhen(!$this->isSearch(), $this->__cache['index'], function () use ($paginate_dto) {
             return $this->{$this->camelEntity()}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
@@ -213,9 +225,23 @@ trait DataManagement
         return $this->staticEntity($model);
     }
 
-    public function generalStore(mixed $dto = null){
+    public function generalPrepareStoreMultiple(array $datas): Collection{
+        $collection = new Collection();
+        foreach ($datas as $data) {
+            $collection->push($this->generalPrepareStore($this->requestDTO(config("app.contracts.{$this->__entity}Data",$data))));
+        }
+        return $collection;
+    }
+
+    public function generalStore(mixed $dto = null): array{
         return $this->transaction(function () use ($dto) {
             return $this->{'show'.$this->__entity}($this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))));
+        });
+    }
+
+    public function generalStoreMultiple(array $datas){
+        return $this->transaction(function () use ($datas) {
+            return $this->{'show'.$this->__entity}($this->{'prepareStoreMultiple'.$this->__entity}($datas));
         });
     }
 
@@ -238,11 +264,11 @@ trait DataManagement
     }
 
     public function generalPrepareDelete(? array $attributes = null): bool{
-        $entity = Str::snake($this->__entity);
+        $entity = $this->snakeEntity();
         $attributes ??= \request()->all();
         if (!$attributes['id']) throw new \Exception('No id provided', 422);
         $result = $this->usingEntity()->findOrFail($attributes['id'])->delete();
-        $this->forgetTags($entity);
+        $this->forgetTagsEntity($entity);
         return $result;
     }
 

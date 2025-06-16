@@ -62,7 +62,6 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
             if ($key == 'props'){
                 $this->fillingProps($model, $prop);
             }else{
-                
                 if (is_object($prop)){
                     $model->{$key} = new stdClass();
                     $this->fillingProps($model->{$key}, $prop->toArray());

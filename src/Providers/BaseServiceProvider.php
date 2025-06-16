@@ -68,6 +68,11 @@ abstract class BaseServiceProvider extends ServiceProvider
         return $this->__events;
     }
 
+    public function setLocale(?string $lang = null): self{
+        app()->setLocale($lang ?? 'en');
+        return $this;
+    }
+
     protected function bootedRegisters(array $packages, string $config_name, ?string $migration_path = null): self
     {
         if (isset($migration_path)) {

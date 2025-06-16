@@ -158,7 +158,7 @@ trait HasArray
    * @param array &$array The array to remove the element from.
    * @return mixed The removed element.
    */
-  public function shift(array &$array)
+  public function arrayShift(array &$array)
   {
     return array_shift($array);
   }
