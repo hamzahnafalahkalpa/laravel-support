@@ -172,7 +172,7 @@ trait DataManagement
         if (!isset($model)){
             $valid = $attributes['id'] ?? $attributes['uuid'] ?? null;
             if (!isset($valid)) throw new \Exception('No id or uuid provided', 422);
-            $model = $this->{$this->camelEntity()}->with($this->showUsingRelation())
+            $model = $this->{$this->camelEntity()}()->with($this->showUsingRelation())
                           ->when(isset($attributes['id']),fn($query)   => $query->where('id', $attributes['id']))
                           ->when(isset($attributes['uuid']),fn($query) => $query->where('uuid', $attributes['uuid']))
                           ->firstOrFail();
