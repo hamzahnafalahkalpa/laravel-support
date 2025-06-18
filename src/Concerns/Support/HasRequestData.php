@@ -14,6 +14,10 @@ trait HasRequestData
 {
     protected $__dto;
 
+    public static function newStatic(): self{
+        return new static();
+    }
+
     public function requestDTO(object|string $dto, ?array $attributes = null, string|array|null $excludes = null): mixed{
         $excludes = $excludes ?? 'props';
         if (!is_array($excludes)) $excludes = [$excludes];

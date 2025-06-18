@@ -283,7 +283,7 @@ trait DataManagement
         $model = $this->usingEntity();
         
         $fillable = $model->getFillable();
-        return $model->withParameters()
+        return $model->withParameters($this->getParamLogic())
                     ->conditionals($this->mergeCondition($conditionals ?? []))
                     ->when(!$this->__order_by_created_at, function ($query) use ($fillable) {
                         $query->when(in_array('name', $fillable), function ($query) {
