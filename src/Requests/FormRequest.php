@@ -8,6 +8,7 @@ use Illuminate\Validation\Rule;
 use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
 use Hanafalah\LaravelSupport\Concerns\Support\HasRequestData;
 use Hanafalah\ModuleUser\Models\User\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
@@ -15,8 +16,31 @@ class FormRequest extends Request
 {
     use HasModelConfiguration, HasRequestData;
 
+    public $global_user;
+    public $global_employee;
+    public $global_user_reference;
+    public $global_workspace;
+
     public function gate(?string $type = null){
         $type ??= $this->getRequestName();
+    }
+
+    public function userAttempt(){
+        $user = Auth::user();
+        $this->global_user = $user;
+        if (isset($user)){
+            $user->load([
+                'userReference' => function($query){
+                    $query->with('role')->where('reference_type', config('module-user.reference'));
+                }
+            ]);
+            $user_reference = $user->userReference;
+            $this->global_user_reference = &$user_reference;
+            
+            if (isset($user_reference) && $user_reference->reference_type == 'Employee'){
+                $this->global_employee = $user_reference->reference;
+            }
+        }
     }
 
     private function getRequestName(): string{
@@ -76,6 +100,10 @@ class FormRequest extends Request
             }
         }
         return $attributes;
+    }
+
+    public function usingEntity(?string $model = null): Model{
+        return $this->configModel($model ?? $this->__entity);
     }
 
     private function configModel(string|object $model): Model
