@@ -40,7 +40,6 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
 
     public $initialized = false;
     public $instance;
-    public static $param_logic = 'and';
     protected array $__resources = [];
     protected array $__schema_contracts = [];
 
@@ -85,16 +84,6 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
         $model = $this->model ??= $model;
         if (isset($model)) $this->setModel($model);
         return $model;
-    }
-
-    public function setParamLogic(string $logic): self
-    {
-        static::$param_logic = $logic;
-        return $this;
-    }
-
-    public function getParamLogic(): string{
-        return static::$param_logic;
     }
 
     /**

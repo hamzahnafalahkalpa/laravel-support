@@ -69,6 +69,10 @@ trait HasResponse
             if (isset($route_name) && \is_subclass_of($permission, Model::class)) {
                 $route_permission = $permission->with(['recursiveModules','childs' => function($query){
                                                     $query->asPermission()->showInAcl()
+                                                         ->where(function($query){
+                                                            $query->whereNull('props->show_in_data')
+                                                                  ->orWhere('props->show_in_data',false);
+                                                         })
                                                          ->checkAccess(request()->role_id);
                                                 }])
                                                ->where("alias", $route_name)
@@ -99,7 +103,6 @@ trait HasResponse
                             }
                         }
                     }else{
-
                         if ($methodType !== 'DELETE'){
                             if (array_is_list($datas)) {
                                 foreach ($datas as &$data) {

@@ -9,7 +9,7 @@ use Hanafalah\LaravelSupport\{
     Concerns\PackageManagement as Package
 };
 use Hanafalah\LaravelSupport\Concerns\Support\RequestManipulation;
-use Hanafalah\LaravelSupport\Data\PaginateData;
+use Hanafalah\LaravelSupport\Contracts\Data\PaginateData;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +20,7 @@ trait DataManagement
 {
     private $__conditionals;
     protected mixed $__order_by_created_at = 'desc'; //asc, desc, false
+    public static $param_logic = 'and';
 
     use RequestManipulation;
     use Support\HasRepository;
@@ -280,8 +281,8 @@ trait DataManagement
 
     public function generalSchemaModel(mixed $conditionals = null): Builder{
         $this->booting();
+        $this->setParamLogic();
         $model = $this->usingEntity();
-        
         $fillable = $model->getFillable();
         return $model->withParameters($this->getParamLogic())
                     ->conditionals($this->mergeCondition($conditionals ?? []))
@@ -296,5 +297,24 @@ trait DataManagement
                     })->when(is_array($this->__order_by_created_at), function ($query) {
                         $query->orderBy(...$this->__order_by_created_at);
                     });
+    }
+
+    public function setParamLogic(string $logic = 'and', bool $search_value = true, ?array $optionals = []): self
+    {
+        static::$param_logic = $logic;
+        if ($search_value && isset(request()->search_value)){
+            $model_casts = array_keys($this->usingEntity()->getCasts());
+            $searches = [];
+            foreach ($model_casts as $cast) {
+                $searches['search_'.$cast] = request()->search_value;
+            }
+            $searches['search_value'] = null;
+            request()->merge($searches,...$optionals);
+        }
+        return $this;
+    }
+
+    public function getParamLogic(): string{
+        return static::$param_logic;
     }
 }
