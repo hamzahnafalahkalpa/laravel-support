@@ -27,13 +27,25 @@ return new class extends Migration
         $table_name = $this->__table->getTable();
         if (!$this->isTableExists()) {
             Schema::create($table_name, function (Blueprint $table) {
-                $table->id();
-                $table->string('unicode_type', 50)->nullable(false);
-                $table->unsignedInteger('flag')->nullable(false);
+                $table->ulid('id')->primary();
+                $table->string('flag',100)->nullable(false);
+                $table->string('label',100)->nullable(true);
                 $table->string('name', 100)->nullable(false);
+                $table->string('status', 100)->nullable(true);
+                $table->unsignedInteger('ordering')->nullable();
                 $table->json('props')->nullable();
                 $table->timestamps();
                 $table->softDeletes();
+
+                $table->index(["flag"], "unicode_flag");
+                $table->index(['flag','label'], "ucd_lbl_flag");
+
+            });
+
+            Schema::table($table_name, function (Blueprint $table) {
+                $table->foreignIdFor($this->__table, 'parent_id')
+                    ->nullable()->after($this->__table->getKeyName())
+                    ->index()->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             });
         }
     }
