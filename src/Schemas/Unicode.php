@@ -39,18 +39,31 @@ class Unicode extends PackageManagement implements ContractsUnicode
         }
         $unicode = $this->usingEntity()->updateOrCreate(...$create);
         if (isset($unicode_dto->childs) && count($unicode_dto->childs) > 0){
+            $ordering = 1;
             foreach ($unicode_dto->childs as $child){
                 $child->parent_id = $unicode->getKey();
                 $child->flag      = $unicode->flag;
+                $child->ordering ??= $ordering++;
                 $this->prepareStoreUnicode($child);
             }
         }
-
-        $this->forgetTags('unicode');
+        $this->fillingProps($unicode, $unicode_dto->props);
+        $unicode->save();
         return static::$unicode_model = $unicode;
     }
 
     public function unicode(mixed $conditionals = null): Builder{
-        return $this->generalSchemaModel()->whereNull('parent_id');
+        return parent::generalSchemaModel()->whereNull('parent_id');
+    }
+
+    //OVERIDING DATA MANAGEMENT
+    public function generalPrepareStore(mixed $dto = null): Model{
+        if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->__entity}Data",null));
+        $model = $this->prepareStoreUnicode($dto);
+        return $this->staticEntity($model);
+    }
+
+    public function generalSchemaModel(mixed $conditionals = null): Builder{
+        return $this->unicode($conditionals);
     }
 }
