@@ -328,7 +328,7 @@ trait HasDatabase
   public function scopeFlagIn($builder, $flags, $flagName = 'flag')
   {
     if (!is_array($flags)) $flags = [$flags];
-    return $builder->whereIn($flagName, $flags);
+    return $builder->withoutGlobalScope('flag')->whereIn($flagName, $flags);
   }
 
   /**
