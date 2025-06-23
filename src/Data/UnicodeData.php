@@ -20,7 +20,7 @@ class UnicodeData extends Data implements DataUnicodeData{
 
     #[MapInputName('name')]
     #[MapName('name')]
-    public string $name;
+    public ?string $name = null;
     
     #[MapInputName('flag')]
     #[MapName('flag')]
@@ -50,6 +50,7 @@ class UnicodeData extends Data implements DataUnicodeData{
     #[MapInputName('props')]
     #[MapName('props')]
     public ?array $props = [];
+
 
     public static function before(array &$attributes){
         if (isset($attributes['childs'])){
