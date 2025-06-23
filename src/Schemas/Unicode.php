@@ -32,12 +32,12 @@ class Unicode extends PackageManagement implements ContractsUnicode
             'ordering' => $unicode_dto->ordering ?? 1,
         ];
         if (isset($unicode_dto->id)){
-            $guard = ['id' => $unicode_dto->id];
+            $guard  = ['id' => $unicode_dto->id];
             $create = [$guard,$add];
         }else{
             $create = [$add];
         }
-        $unicode = $this->usingEntity()->updateOrCreate(...$create);
+        $unicode = $this->usingEntity()->firstOrCreate(...$create);
         if (isset($unicode_dto->childs) && count($unicode_dto->childs) > 0){
             $ordering = 1;
             foreach ($unicode_dto->childs as $child){
@@ -47,6 +47,15 @@ class Unicode extends PackageManagement implements ContractsUnicode
                 $this->prepareStoreUnicode($child);
             }
         }
+
+        if (isset($unicode_dto->service)){
+            $service         = $unicode->service;
+            $service->price  = $unicode_dto?->service?->price ?? null;
+            $service->cogs   = $unicode_dto?->service?->cogs ?? null;
+            $service->margin = $unicode_dto?->service?->margin ?? null;
+            $service->save();
+        }
+
         $this->fillingProps($unicode, $unicode_dto->props);
         $unicode->save();
         return static::$unicode_model = $unicode;

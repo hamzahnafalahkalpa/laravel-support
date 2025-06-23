@@ -7,6 +7,7 @@ use Spatie\LaravelData\Data as SpatieData;
 use Hanafalah\LaravelSupport\Concerns\Support\HasArray;
 use Hanafalah\LaravelSupport\Concerns\Support\HasConfigDatabase;
 use Hanafalah\LaravelSupport\Concerns\Support\HasRequestData;
+use Illuminate\Database\Eloquent\Model;
 
 class Data extends SpatieData
 {
@@ -31,5 +32,10 @@ class Data extends SpatieData
     public function callCustomMethod(): array
     {
         return ['Model'];
+    }
+
+    protected function fillMissingFromModel(self $data, Model $model, array $attributes): self{
+        foreach ($attributes as $field) if (blank($data->{$field})) $data->{$field} ??= $model->{$field};
+        return $data;
     }
 }

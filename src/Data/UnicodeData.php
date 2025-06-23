@@ -4,6 +4,7 @@ namespace Hanafalah\LaravelSupport\Data;
 
 use Hanafalah\LaravelSupport\Supports\Data;
 use Hanafalah\LaravelSupport\Contracts\Data\UnicodeData as DataUnicodeData;
+use Hanafalah\ModuleService\Contracts\Data\ServiceData;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\MapName;
@@ -37,6 +38,10 @@ class UnicodeData extends Data implements DataUnicodeData{
     #[MapName('status')]
     public ?string $status = null;
     
+    #[MapName('service')]
+    #[MapInputName('service')]
+    public ?ServiceData $service = null;
+
     #[MapInputName('childs')]
     #[MapName('childs')]
     #[DataCollectionOf(self::class)]
