@@ -62,7 +62,9 @@ class Unicode extends PackageManagement implements ContractsUnicode
     }
 
     public function unicode(mixed $conditionals = null): Builder{
-        return parent::generalSchemaModel()->whereNull('parent_id');
+        return parent::generalSchemaModel($conditionals)->when(isset(request()->flag),function($query){
+            return $query->flagIn(request()->flag);
+        })->whereNull('parent_id');
     }
 
     //OVERIDING DATA MANAGEMENT
