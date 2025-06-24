@@ -97,14 +97,25 @@ trait HasConfigDatabase
                                 $query_field = str_replace('props->', '', $query_field);
                                 $query_field = str_replace('->', '.', $query_field);
                                 $query_field = DB::raw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(props, "$.' . $query_field . '")))');
+                            }else{
+                                $query_field = DB::raw('LOWER(' . $query_field . ')');
                             }
-                            $parameter   = Str::lower($parameter);
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                $query->whereLike($query_field, "%$parameter%")
-                                    ->orWhereLike($query_field, "$parameter%")
-                                    ->orWhereLike($query_field, "%$parameter")
-                                    ->orWhere($query_field, $parameter);
-                            }, $operator);
+                            if (is_array($parameter)){
+                                foreach ($parameter as &$param) {
+                                    $param = Str::lower($param);
+                                }
+                                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                                    $query->whereIn($query_field, $parameter);
+                                }, $operator);
+                            }else{
+                                $parameter = Str::lower($parameter);
+                                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                                    $query->whereLike($query_field, "%$parameter%")
+                                        ->orWhereLike($query_field, "$parameter%")
+                                        ->orWhereLike($query_field, "%$parameter")
+                                        ->orWhere($query_field, $parameter);
+                                }, $operator);
+                            }
                             break;
                         case 'array':
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
