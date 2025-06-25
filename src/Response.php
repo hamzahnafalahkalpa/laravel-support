@@ -47,7 +47,7 @@ class Response extends PackageManagement implements ContractsResponse
     public function respondHandle($request, Closure $next)
     {
         $response = $next($request);
-        if ($response->getStatusCode() < 400) {
+        if ($response->getStatusCode() < 400  && $this->hasAppCode()) {
             if (Request::wantsJson() && !is_array($response)) {
                 return $this->response($response->original);
             }
@@ -55,10 +55,13 @@ class Response extends PackageManagement implements ContractsResponse
         return $response;
     }
 
+    private function hasAppCode(): bool{
+        return request()->headers->get('appcode') !== null;
+    }
 
     public function exceptionRespond(Exceptions $exceptions): void
     {
-        if (Request::wantsJson()) {
+        if (Request::wantsJson() && $this->hasAppCode()) {
             $exceptions->render(function (Exception $e) {
                 $this->catch($e);
                 $err = $e->getMessage();

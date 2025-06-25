@@ -12,7 +12,7 @@ trait HasCache
     protected array $__cache;
 
     protected function isUsingCache(): bool{
-        return false;
+        return true;
     }
 
     protected function cacheWhen(bool $condition, array $cache, callable $callback)
