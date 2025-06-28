@@ -2,6 +2,7 @@
 
 namespace Hanafalah\LaravelSupport\Supports;
 
+use Carbon\CarbonTimeZone;
 use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Traits\ForwardsCalls;
@@ -13,6 +14,7 @@ use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
 use Hanafalah\LaravelSupport\Concerns\Support\Macroable;
 use Hanafalah\LaravelSupport\Contracts\Supports\DataManagement;
+use Illuminate\Support\Carbon;
 use stdClass;
 
 /** 
@@ -58,10 +60,14 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
     protected function fillingProps(object &$model, mixed $props = [], ?array $onlies = []){
         $props ??= [];
         foreach ($props as $key => $prop) {
+            if ($prop instanceof Carbon) {
+                $model->{$key} = $prop->toDateTimeString();
+                continue;
+            }
             if ($key == 'props'){
                 $this->fillingProps($model, $prop);
             }else{
-                if (is_object($prop)){
+                if (is_object($prop) && method_exists($prop, 'toArray')){
                     $model->{$key} = new stdClass();
                     $this->fillingProps($model->{$key}, $prop->toArray());
                 }else{

@@ -100,7 +100,7 @@ trait HasModelConfiguration
      *
      * @return Model|null The model instance or the model from the configuration.
      */
-    public function getModel(bool $new = false, string $model_name = null): ?Model
+    public function getModel(bool $new = false, ?string $model_name = null): ?Model
     {
         if (count(static::$__models_config) == 0) $this->getAppModelConfig();
         return (isset($model_name))

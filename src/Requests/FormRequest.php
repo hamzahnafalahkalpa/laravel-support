@@ -68,6 +68,8 @@ class FormRequest extends Request
 
     public function __construct()
     {
+        config(['micro-tenant.use-db-name' => false]);
+
         parent::__construct();
         if (request()->route()) {
             $parameters = request()->route()->parameters();

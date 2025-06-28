@@ -38,4 +38,9 @@ class Data extends SpatieData
         foreach ($attributes as $field) if (blank($data->{$field})) $data->{$field} ??= $model->{$field};
         return $data;
     }
+
+    public static function before(array &$attributes){
+
+    }
+
 }

@@ -80,7 +80,9 @@ trait HasConfigDatabase
         if (count($parameters) == 0) return $builder;
 
         return $builder->where(function ($query) use ($parameters, $operator) {
-
+            $connection_name = $this->getConnectionName();
+            $connection      = config('database.connections.' . ($connection_name ?? config('database.default')));
+            $db_driver       = $connection['driver'];
             foreach ($parameters as $key => $parameter) {
                 if ($parameter == '') continue;
                 $field = Str::after($key, 'search_');
@@ -95,8 +97,21 @@ trait HasConfigDatabase
                         case 'text':
                             if (!in_array($query_field, $this->getFillable())) {
                                 $query_field = str_replace('props->', '', $query_field);
-                                $query_field = str_replace('->', '.', $query_field);
-                                $query_field = DB::raw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(props, "$.' . $query_field . '")))');
+                                switch ($db_driver) {
+                                    case 'pgsql':
+                                        $query_fields = explode('->', $query_field);
+                                        $query_field = array_map(function($item) {
+                                            return "'".$item."'";
+                                        }, $query_fields);
+                                        $query_field = implode('->', $query_field);
+                                        $query_field = preg_replace('/->(?=[^>]*$)/', '->>', $query_field);
+                                        $query_field = DB::raw("LOWER(props->".$query_field .")");
+                                    break;
+                                    default:
+                                        $query_field = str_replace('->', '.', $query_field);
+                                        $query_field = DB::raw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(props, "$.' . $query_field . '")))');
+                                    break;
+                                }
                             }else{
                                 $query_field = DB::raw('LOWER(' . $query_field . ')');
                             }

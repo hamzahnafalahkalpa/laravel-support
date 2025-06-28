@@ -84,7 +84,7 @@ trait HasArray
    * @param int|null $length The length of the slice to extract. If not provided, the rest of the array is extracted.
    * @return array The extracted slice.
    */
-  public function slice(array $array, int $offset, int $length = null): array
+  public function slice(array $array, int $offset, ?int $length = null): array
   {
     return array_slice($array, $offset, $length, true);
   }

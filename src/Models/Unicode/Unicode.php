@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Unicode extends BaseModel
 {
-    use HasUlids, HasProps, SoftDeletes, HasService, HasPriceComponent;
+    use HasUlids, HasProps, SoftDeletes, 
+        HasService, HasPriceComponent;
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -26,19 +27,6 @@ class Unicode extends BaseModel
         });
         static::creating(function ($query) {
             $query->flag ??= (new static)->getMorphClass();
-        });
-        static::created(function ($query) {
-            if ($query->isUsingService()){
-                $parent    = $query->parent;
-                $parent_id = null;
-                if (isset($parent)) $parent_id = $parent->service->getKey();
-                $query->service()->updateOrCreate([
-                    'parent_id' => $parent_id,
-                    'name'      => $query->name,
-                ], [
-                    'status' => 'ACTIVE'
-                ]);
-            }
         });
     }
 
