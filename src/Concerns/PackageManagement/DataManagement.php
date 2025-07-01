@@ -118,6 +118,11 @@ trait DataManagement
 
     public function autolist(?string $response = 'list',?callable $callback = null): mixed{
         if (isset($callback)) $this->conditionals($callback);
+        if (isset(request()->search_except_id)){
+            $this->conditionals(function($query){
+                $query->where('id','!=',request()->search_except_id);
+            });
+        }
         $reference_type = request()->search_reference_type ?? null;
         switch ($response) {
             case 'list'     : return $this->{'view'.$this->__entity.'List'}($reference_type);break;

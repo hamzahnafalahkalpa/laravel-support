@@ -25,6 +25,22 @@ class FormRequest extends Request
         $type ??= $this->getRequestName();
     }
 
+    protected function validationRules()
+    {
+        return $this->dbValidation();
+    }
+    
+    private function dbValidation(){
+        if (config('micro-tenant') !== null) {
+            config(['micro-tenant.use-db-name' => false]);
+            $validation = parent::validationRules();
+            config(['micro-tenant.use-db-name' => true]);
+            return $validation;
+        }else{
+            return parent::validationRules();
+        }
+    }
+
     public function userAttempt(){
         $user = Auth::user();
         $this->global_user = $user;
@@ -68,8 +84,6 @@ class FormRequest extends Request
 
     public function __construct()
     {
-        config(['micro-tenant.use-db-name' => false]);
-
         parent::__construct();
         if (request()->route()) {
             $parameters = request()->route()->parameters();

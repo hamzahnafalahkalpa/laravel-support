@@ -24,16 +24,16 @@ class ViewUnicode extends ApiResource
       'ordering'  => $this->ordering,
       'status'    => $this->status,
       'service'   => $this->relationValidation('service', function () {
-          return $this->service->toViewApi();
+          return $this->service->toViewApi()->resolve();
       }),
       'childs' => $this->relationValidation('childs',function(){
           return $this->childs->transform(function($child){
-              return $child->toViewApi();
+              return $child->toViewApi()->resolve();
           });
       }),
       'tariff_components' => $this->relationValidation('tariffComponents', function () {
           return $this->tariffComponents->transform(function ($tariffComponent) {
-              return $tariffComponent->toViewApi();
+              return $tariffComponent->toViewApi()->resolve();
           });
       })
     ];

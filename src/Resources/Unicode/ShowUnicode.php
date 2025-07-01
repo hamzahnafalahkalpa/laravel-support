@@ -17,7 +17,7 @@ class ShowUnicode extends ViewUnicode
   {
     $arr = [
       'service' => $this->relationValidation('service', function () {
-        return $this->service->toShowApi();
+        return $this->service->toShowApi()->resolve();
       })
     ];
     $arr = $this->mergeArray(parent::toArray($request),$arr);
