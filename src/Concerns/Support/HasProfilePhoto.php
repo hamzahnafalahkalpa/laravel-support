@@ -21,7 +21,7 @@ trait HasProfilePhoto{
         return 'profile';
     }
 
-    public function setProfilePhoto(string|UploadedFile|null $photo = null, ?string $path = null, string $filename = null): ?string{
+    public function setProfilePhoto(string|UploadedFile|null $photo = null, ?string $path = null, ?string $filename = null): ?string{
         $path ??= 'PROFILES';
         return $this->setupFile($photo,$path,$filename);
     }

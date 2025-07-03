@@ -12,7 +12,8 @@ trait HasFileUpload{
     protected $__filesystem_disk = 'public';
 
     public function driver(): string{
-        return config('app.impersonate.storage.disk',$this->__filesystem_disk);
+        return config('filesystems.default',$this->__filesystem_disk);
+        // return config('app.impersonate.storage.disk',$this->__filesystem_disk);
     }
 
     public function storagePath(string $path = ''){        
@@ -85,7 +86,8 @@ trait HasFileUpload{
     public function setupFile(string|UploadedFile|null $file = null, ?string $path = null, ?string $filename = null): ?string{
         $current    = $this->getFile() ?? null;
         $file_path  = $this->getFilePath($path);
-        $disk       = $this->__filesystem_disk ?? $this->driver();
+        // $disk       = $this->__filesystem_disk ?? $this->driver();
+        $disk       = $this->driver();
         if ($file instanceof UploadedFile) {
             $filename ??= Str::orderedUuid();
             $ext        = $file->getClientOriginalExtension();
