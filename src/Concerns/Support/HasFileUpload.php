@@ -12,7 +12,7 @@ trait HasFileUpload{
     protected $__filesystem_disk = 'public';
 
     public function driver(): string{
-        return config('app.impersonate.storage.driver',$this->__filesystem_disk);
+        return config('app.impersonate.storage.disk',$this->__filesystem_disk);
     }
 
     public function storagePath(string $path = ''){        
@@ -53,14 +53,14 @@ trait HasFileUpload{
     public function getStorageFile(? string $path = null){
         if (!$this->getFile()) abort(404);
         
-        $disk     = $this->__filesystem_disk ?? $this->driver();
+        $disk     = $this->driver();
         $filePath = $this->getFilePath($path) . '/' . $this->getFile();
         if (!Storage::disk($disk)->exists($filePath))  abort(404);
         return response()->file(Storage::disk($disk)->path($filePath));
     }
 
     public function getFullUrl(?string $path = null): string{
-        return Storage::disk($this->__filesystem_disk ?? $this->driver())->url($this->getFilePath() . '/' . $path ?? $this->getFile());
+        return Storage::disk($this->driver())->url($this->getFilePath() . '/' . $path ?? $this->getFile());
     }
 
     public function setupFiles(array $files, ?string $path = null): array{
