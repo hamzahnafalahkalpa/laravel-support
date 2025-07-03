@@ -241,7 +241,9 @@ trait DataManagement
 
     public function generalStore(mixed $dto = null): array{
         return $this->transaction(function () use ($dto) {
-            return $this->{'show'.$this->__entity}($this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))));
+            return $this->{'show'.$this->__entity}(
+                $this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))) //RETURN MODEL
+            );
         });
     }
 

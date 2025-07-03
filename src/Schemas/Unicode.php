@@ -25,11 +25,11 @@ class Unicode extends PackageManagement implements ContractsUnicode
     public function prepareStoreUnicode(UnicodeData $unicode_dto): Model{            
         $add = [
             'parent_id' => $unicode_dto->parent_id ?? null,
-            'name' => $unicode_dto->name,
-            'flag' => $unicode_dto->flag,
-            'label' => $unicode_dto->label,
-            'status' => $unicode_dto->status,
-            'ordering' => $unicode_dto->ordering ?? 1,
+            'name'      => $unicode_dto->name,
+            'flag'      => $unicode_dto->flag,
+            'label'     => $unicode_dto->label,
+            'status'    => $unicode_dto->status,
+            'ordering'  => $unicode_dto->ordering ?? 1,
         ];
         if (isset($unicode_dto->id)){
             $guard  = ['id' => $unicode_dto->id];
@@ -58,6 +58,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
 
         $this->fillingProps($unicode, $unicode_dto->props);
         $unicode->save();
+        $this->forgetTags('unicode');
         return static::$unicode_model = $unicode;
     }
 
