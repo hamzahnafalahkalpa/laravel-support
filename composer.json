@@ -7,7 +7,7 @@
             "Hanafalah\\LaravelSupport\\": "src/"
         },
         "files": [
-            "src/helpers.php"
+            "src/helper.php"
         ]
     },
     "authors": [
