@@ -22,9 +22,9 @@
         "stancl/jobpipeline": "^1.6.2",
         "stichoza/google-translate-php": "^5.2",
         "hanafalah/laravel-package-generator": "dev-main",
-        "hanafalah/laravel-stub": "^1.0",
+        "hanafalah/laravel-stub": "dev-main",
         "hanafalah/module-encoding": "dev-main",
-        "hanafalah/laravel-has-props": "^1.0",
+        "hanafalah/laravel-has-props": "dev-main",
         "hanafalah/module-service": "dev-main",
         "spatie/laravel-medialibrary": "^11.12"
     },
