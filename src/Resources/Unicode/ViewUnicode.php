@@ -35,7 +35,9 @@ class ViewUnicode extends ApiResource
           return $this->tariffComponents->transform(function ($tariffComponent) {
               return $tariffComponent->toViewApi()->resolve();
           });
-      })
+      }),
+      'created_at' => $this->created_at,
+      'updated_at' => $this->updated_at
     ];
     return $arr;
   }
