@@ -86,7 +86,7 @@ class ActivityStatus extends BaseModel
         $relation    = Relation::morphMap()[$activity->reference_type];
         $messageCode = $messageCode ?? $activity->activity_flag . '_' . $this->status;
         $model       = new $relation;
-        return $model::$activityList[$messageCode];
+        return $model->activityList[$messageCode];
     }
     //END MUTATOR SECTION
 

@@ -45,7 +45,7 @@ class Unicode extends BaseModel
     public function showUsingRelation():array {
         $relation = ['childs'];
         if ($this->isUsingService()){
-            $relation[] = 'service.priceComponents.tariffComponent';
+            $relation[] = 'service.servicePrices.tariffComponent';
         }
         return $relation;
     }

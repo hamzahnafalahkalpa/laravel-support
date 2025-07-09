@@ -18,6 +18,6 @@ use Hanafalah\LaravelSupport\Contracts\Supports\DataManagement;
  * @method array viewUnicodeList()
  * @method LengthAwarePaginator prepareViewUnicodePaginate(PaginateData $paginate_dto)
  * @method array viewUnicodePaginate(?PaginateData $paginate_dto = null)
- * @method array storeUnicode(?UnicodeData $Unicode_dto = null)
+ * @method array storeUnicode(?UnicodeData $unicode_dto = null)
  */
 interface Unicode extends DataManagement {}
