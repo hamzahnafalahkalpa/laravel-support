@@ -28,12 +28,12 @@ class ViewUnicode extends ApiResource
       }),
       'childs' => $this->relationValidation('childs',function(){
           return $this->childs->transform(function($child){
-              return $child->toViewApi()->resolve();
+              return $child->toViewApi();
           });
       }),
       'tariff_components' => $this->relationValidation('tariffComponents', function () {
           return $this->tariffComponents->transform(function ($tariffComponent) {
-              return $tariffComponent->toViewApi()->resolve();
+              return $tariffComponent->toViewApi();
           });
       }),
       'created_at' => $this->created_at,
