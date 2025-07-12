@@ -8,7 +8,12 @@ use Hanafalah\LaravelSupport\Models\{
 
 class PayloadMonitoring extends BaseModel
 {
+    public $incrementing = false;
+    protected $keyType = 'string';
+    protected $primaryKey = 'string';
+
     protected $fillable = [
+        'id',
         'url',
         'start_at',
         'end_at',
