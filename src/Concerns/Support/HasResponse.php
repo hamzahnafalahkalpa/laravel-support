@@ -92,7 +92,6 @@ trait HasResponse
                     (array_is_list($data))
                         ? $datas = &$data
                         : $datas = [&$data];
-                    
                     [$controllerClass, $methodName, $methodType] = $this->checkingMethod();
                     if (isset($childs) && count($childs) > 0) {
                         foreach ($datas as &$data) {
@@ -122,6 +121,7 @@ trait HasResponse
 
     private function recursiveModules(&$permissions){
         foreach ($permissions as &$permission) {
+            $permission->access = $this->getCurrentFormRequestInstance($permission->alias) ?? true;
             //ACCESS GATE HERE
             $permission->load(['childs' => function($query){
                 $query->showInAcl()->asPermission();
@@ -148,7 +148,7 @@ trait HasResponse
         
         $reflection = new ReflectionClass($controllerClass);
         if (!$reflection->hasMethod($methodName)) return null;
-        
+
         $method = $reflection->getMethod($methodName);
         $params = $method->getParameters();
         foreach ($params as $param) {
