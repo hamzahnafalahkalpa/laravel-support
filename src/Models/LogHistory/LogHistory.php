@@ -3,9 +3,12 @@
 namespace Hanafalah\LaravelSupport\Models\LogHistory;
 
 use Hanafalah\LaravelSupport\Models;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 
 class LogHistory extends Models\BaseModel
 {
+  use HasUlids;
+
   const ACTION_INSERT      = "INSERT";
   const ACTION_UPDATE      = "UPDATE";
   const ACTION_DELETE      = "DELETE";
