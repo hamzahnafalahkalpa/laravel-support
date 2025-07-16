@@ -194,12 +194,20 @@ trait DataManagement
         });
     }
 
+    private function preparePaginateBuilder(PaginateData $paginate_dto): LengthAwarePaginator{
+            return $this->{$this->camelEntity()}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
+    }
+
     public function generalPrepareViewPaginate(PaginateData $paginate_dto): LengthAwarePaginator{
         $snake_entity = $this->snakeEntity();
-        $this->addSuffixCache($this->__cache['index'], $snake_entity."-index", 'paginate');
-        return static::${$snake_entity.'_model'} = $this->cacheWhen(!$this->isSearch(), $this->__cache['index'], function () use ($paginate_dto) {
-            return $this->{$this->camelEntity()}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
-        });
+        if (isset($this->__cache['index'])){
+            $this->addSuffixCache($this->__cache['index'], $snake_entity."-index", 'paginate');
+            return static::${$snake_entity.'_model'} = $this->cacheWhen(!$this->isSearch(), $this->__cache['index'], function () use ($paginate_dto) {
+                return $this->preparePaginateBuilder($paginate_dto);
+            });
+        }else{
+            return $this->preparePaginateBuilder($paginate_dto);
+        }
     }
 
     public function generalViewPaginate(?PaginateData $paginate_dto = null): array{
