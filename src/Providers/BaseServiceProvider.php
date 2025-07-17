@@ -127,7 +127,13 @@ abstract class BaseServiceProvider extends ServiceProvider
                 $configs = array_values(array_diff(scandir($additional_config_path), ['.', '..', 'config.php']));
                 foreach ($configs as $config) {
                     $path = $additional_config_path . '/' . $config;
+                    if (!Str::startsWith($path, base_path())) {
+                        $path = base_path($path);
+                    }
                     if (is_file($path)) {
+                        if (!Str::startsWith($path, base_path())) {
+                            $path = base_path($path);
+                        }
                         $content = include $path;
                         $this->overrideConfig(Str::replace('.php', '', $config), $content);
                     }
