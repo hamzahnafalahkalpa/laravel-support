@@ -114,9 +114,7 @@ trait HasConfiguration
     public function mergeConfigWith(string $alias, ?string $path = null, ?string $base_path = null): self
     {
         $base_path ??= $this->getConfigFullPath($path);
-        if (!Str::startsWith($base_path, base_path())) {
-            $base_path = base_path($base_path);
-        }
+        $this->basePathResolver($base_path);
         $local_config = include $base_path;
         $this->injectLocalConfig($alias, $local_config);
         $this->mergeConfigFrom($base_path, $alias);

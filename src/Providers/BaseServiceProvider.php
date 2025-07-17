@@ -396,10 +396,8 @@ abstract class BaseServiceProvider extends ServiceProvider
     protected function autoBinds(): self{
         $contracts     = config($this->__lower_package_name . '.app.contracts', []);
         $contract_name = config($this->__lower_package_name . '.libs.contract', 'Contracts');
-        
         foreach ($contracts as $contract) {
             $target_contract = Str::replace($contract_name.'\\','',$contract);
-            
             if (\class_exists($target_contract)) {
                 $this->binds([$contract => $target_contract]);
             }
@@ -621,14 +619,13 @@ abstract class BaseServiceProvider extends ServiceProvider
                         ? $this->basePath() 
                         : $this->dir();
             $path     = $path.$config['libs'][$type];
-
             if (is_dir($path)){
                 $files   = File::allFiles($path);
                 $new_map = [];
 
                 foreach ($files as $file) {
                     $relativePath = $file->getRelativePathname();
-                    $className = $prefix.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
+                    $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
                     $new_map[class_basename($className)] = $className;
                 }
             }
