@@ -22,6 +22,10 @@ class Unicode extends PackageManagement implements ContractsUnicode
         ]
     ];
 
+    protected function isIdAsPrimaryValidation(): bool{
+        return false;
+    }
+
     public function prepareStoreUnicode(UnicodeData $unicode_dto): Model{            
         $add = [
             'parent_id' => $unicode_dto->parent_id ?? null,
@@ -31,13 +35,19 @@ class Unicode extends PackageManagement implements ContractsUnicode
             'status'    => $unicode_dto->status,
             'ordering'  => $unicode_dto->ordering ?? 1,
         ];
-        if (isset($unicode_dto->id)){
-            $guard  = ['id' => $unicode_dto->id];
-            $create = [$guard,$add];
+        if ($this->isIdAsPrimaryValidation()){
+            $unicode = $this->usingEntity()->updateOrCreate([
+                'id' => $unicode_dto->id ?? null
+            ],$add);
         }else{
-            $create = [$add];
+            if (isset($unicode_dto->id)){
+                $guard  = ['id' => $unicode_dto->id];
+                $create = [$guard,$add];
+            }else{
+                $create = [$add];
+            }
+            $unicode = $this->usingEntity()->firstOrCreate(...$create);
         }
-        $unicode = $this->usingEntity()->firstOrCreate(...$create);
         if (isset($unicode_dto->childs) && count($unicode_dto->childs) > 0){
             $ordering = 1;
             foreach ($unicode_dto->childs as $child){
