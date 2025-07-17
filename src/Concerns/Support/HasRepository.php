@@ -3,6 +3,7 @@
 namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 use Hanafalah\LaravelSupport\Exceptions;
+use Illuminate\Support\Str;
 
 trait HasRepository
 {
@@ -31,6 +32,20 @@ trait HasRepository
     {
         $this->__file_repository = app($repository);
         return $this;
+    }
+
+
+    protected function resolveSeparator(string &$path){
+        $path = Str::replace('\\','/',$path);
+        $path = Str::replace('/',DIRECTORY_SEPARATOR,$path);
+    }
+
+
+    public function basePathResolver(string &$path){
+        $this->resolveSeparator($path);
+        if (!Str::startsWith($path, base_path())) {
+            $path = base_path($path);
+        }
     }
 
     /**
