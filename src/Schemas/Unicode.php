@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 class Unicode extends PackageManagement implements ContractsUnicode
 {
     protected string $__entity = 'Unicode';
-    public static $unicode_model;
+    public $unicode_model;
     protected mixed $__order_by_created_at = ['ordering','asc']; //asc, desc, false
 
     protected array $__cache = [
@@ -69,7 +69,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
         $this->fillingProps($unicode, $unicode_dto->props);
         $unicode->save();
         $this->forgetTags('unicode');
-        return static::$unicode_model = $unicode;
+        return $this->unicode_model = $unicode;
     }
 
     public function unicode(mixed $conditionals = null): Builder{

@@ -14,7 +14,7 @@ use Hanafalah\LaravelSupport\Supports\PackageManagement;
 class ModelHasRelation extends PackageManagement implements ContractsModelHasRelation
 {
     protected string $__entity = 'ModelHasRelation';
-    public static $model_has_relation_model;
+    public $model_has_relation_model;
     //protected mixed $__order_by_created_at = false; //asc, desc, false
 
     protected array $__cache = [
@@ -42,6 +42,6 @@ class ModelHasRelation extends PackageManagement implements ContractsModelHasRel
         $model_has_relation = $this->usingEntity()->updateOrCreate(...$create);
         $this->fillingProps($model_has_relation,$model_has_relation_dto->props);
         $model_has_relation->save();
-        return static::$model_has_relation_model = $model_has_relation;
+        return $this->model_has_relation_model = $model_has_relation;
     }
 }
