@@ -82,7 +82,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
     public function generalPrepareStore(mixed $dto = null): Model{
         if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->__entity}Data",null));
         $model = $this->prepareStoreUnicode($dto);
-        return $this->staticEntity($model);
+        return $this->entityData($model);
     }
 
     public function generalSchemaModel(mixed $conditionals = null): Builder{

@@ -7,9 +7,7 @@ use Illuminate\Foundation\Http\FormRequest as Request;
 use Illuminate\Validation\Rule;
 use Hanafalah\LaravelSupport\Concerns\DatabaseConfiguration\HasModelConfiguration;
 use Hanafalah\LaravelSupport\Concerns\Support\HasRequestData;
-use Hanafalah\ModuleUser\Models\User\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class FormRequest extends Request
@@ -61,10 +59,7 @@ class FormRequest extends Request
 
     private function getRequestName(): string{
         $class = class_basename($this);
-        switch (true) {
-            case Str::startsWith($class, 'View'):
-                return 'index';
-            break;
+        switch (true) {            
             case Str::startsWith($class, 'Store'):
                 return 'store';
             break;
@@ -74,16 +69,18 @@ class FormRequest extends Request
             case Str::startsWith($class, 'Delete'):
                 return 'destroy';
             break;
+            case Str::startsWith($class, 'View'):
+            default:
+                return 'index';
+            break;
         }
     }
 
-    public function callCustomMethod(): array
-    {
+    public function callCustomMethod(): array{
         return ['Model'];
     }
 
-    public function __construct()
-    {
+    public function __construct(){
         parent::__construct();
         if (request()->route()) {
             $parameters = request()->route()->parameters();
@@ -105,8 +102,7 @@ class FormRequest extends Request
         return 'regex:/^(\d+(\.\d{1,' . $length . '})?|(\.\d{1,' . $length . '})?)$/';
     }
 
-    private function requestResolver($attributes): array
-    {
+    private function requestResolver($attributes): array{
         foreach ($attributes as $key => &$attribute) {
             if (is_array($attribute)) {
                 $attribute = $this->requestResolver($attribute);
@@ -122,8 +118,7 @@ class FormRequest extends Request
         return $this->configModel($model ?? $this->__entity);
     }
 
-    private function configModel(string|object $model): Model
-    {
+    private function configModel(string|object $model): Model{
         if (is_object($model)) return $model;
         return app(config('database.models.' . $model));
     }
