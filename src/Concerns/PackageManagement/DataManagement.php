@@ -179,6 +179,7 @@ trait DataManagement
             $valid = $attributes['id'] ?? $attributes['uuid'] ?? null;
             if (!isset($valid)) throw new \Exception('No id or uuid provided', 422);
             $model = $this->{$this->camelEntity()}()
+                          ->with($this->showUsingRelation())
                           ->when(isset($attributes['id']),fn($query)   => $query->where('id', $attributes['id']))
                           ->when(isset($attributes['uuid']),fn($query) => $query->where('uuid', $attributes['uuid']))
                           ->firstOrFail();
@@ -249,9 +250,13 @@ trait DataManagement
 
     public function generalStore(mixed $dto = null): array{
         return $this->transaction(function () use ($dto) {
-            return $this->{'show'.$this->__entity}(
-                $this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))) //RETURN MODEL
-            );
+            try {
+                $model = $this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))); //RETURN MODEL
+            } catch (\Throwable $th) {
+                dd($th);
+                throw $th;
+            }
+            return $this->{'show'.$this->__entity}($model);
         });
     }
 
