@@ -131,12 +131,12 @@ trait HasConfigDatabase
                                         ->orWhere($query_field, $parameter);
                                 }, $operator);
                             }
-                            break;
+                        break;
                         case 'array':
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $query->whereJsonContains($query_field, $parameter);
                             }, $operator);
-                            break;
+                        break;
                         case 'datetime':
                         case 'date':
                             if (!is_array($parameter)) {
@@ -161,7 +161,7 @@ trait HasConfigDatabase
                                     }
                                 }
                             }, $operator);
-                            break;
+                        break;
                         case 'immutable_date':
                             if (!is_array($parameter)) {
                                 if (Str::contains($parameter, ' - ')) {
@@ -177,7 +177,7 @@ trait HasConfigDatabase
                                     $query->where($query_field, $parameters);
                                 }
                             }, $operator);
-                            break;
+                        break;
                         case 'immutable_datetime':
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 if (is_array($parameter)) {
@@ -186,16 +186,20 @@ trait HasConfigDatabase
                                     $query->where($query_field, $parameter);
                                 }
                             }, $operator);
-                            break;
+                        break;
+                        case 'boolean':
+                            $query->whereNested(function ($query) use ($query_field, $parameter) {
+                                $query->where($query_field, (bool)$parameter);
+                            }, $operator);
+                        break;
                         case 'integer':
                         case 'float':
                         case 'double':
-                        case 'boolean':
                         default:
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $query->where($query_field, $parameter);
                             }, $operator);
-                            break;
+                        break;
                     }
                 } else {
                     if (in_array($query_field, $this->getFillable())) {

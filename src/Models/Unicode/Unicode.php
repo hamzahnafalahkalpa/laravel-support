@@ -19,8 +19,13 @@ class Unicode extends BaseModel
     protected $primaryKey = 'id';
     protected $list = ['id', 'parent_id', 'name', 'flag', 'label', 'ordering', 'props'];
 
-    protected static function booted(): void
-    {
+    protected $casts = [
+        'name'   => 'string',
+        'flag'   => 'string',
+        'label'  => 'string'
+    ];
+
+    protected static function booted(): void{
         parent::booted();
         static::addGlobalScope('flag',function($query){
             $query->where('flag',(new static)->getMorphClass());

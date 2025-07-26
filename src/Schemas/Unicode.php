@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 class Unicode extends PackageManagement implements ContractsUnicode
 {
     protected string $__entity = 'Unicode';
-    public static $unicode_model;
+    public $unicode_model;
     protected mixed $__order_by_created_at = ['ordering','asc']; //asc, desc, false
 
     protected array $__cache = [
@@ -22,6 +22,10 @@ class Unicode extends PackageManagement implements ContractsUnicode
         ]
     ];
 
+    protected function isIdAsPrimaryValidation(): bool{
+        return false;
+    }
+
     public function prepareStoreUnicode(UnicodeData $unicode_dto): Model{            
         $add = [
             'parent_id' => $unicode_dto->parent_id ?? null,
@@ -31,13 +35,19 @@ class Unicode extends PackageManagement implements ContractsUnicode
             'status'    => $unicode_dto->status,
             'ordering'  => $unicode_dto->ordering ?? 1,
         ];
-        if (isset($unicode_dto->id)){
-            $guard  = ['id' => $unicode_dto->id];
-            $create = [$guard,$add];
+        if ($this->isIdAsPrimaryValidation()){
+            $unicode = $this->usingEntity()->updateOrCreate([
+                'id' => $unicode_dto->id ?? null
+            ],$add);
         }else{
-            $create = [$add];
+            if (isset($unicode_dto->id)){
+                $guard  = ['id' => $unicode_dto->id];
+                $create = [$guard,$add];
+            }else{
+                $create = [$add];
+            }
+            $unicode = $this->usingEntity()->firstOrCreate(...$create);
         }
-        $unicode = $this->usingEntity()->firstOrCreate(...$create);
         if (isset($unicode_dto->childs) && count($unicode_dto->childs) > 0){
             $ordering = 1;
             foreach ($unicode_dto->childs as $child){
@@ -59,7 +69,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
         $this->fillingProps($unicode, $unicode_dto->props);
         $unicode->save();
         $this->forgetTags('unicode');
-        return static::$unicode_model = $unicode;
+        return $this->unicode_model = $unicode;
     }
 
     public function unicode(mixed $conditionals = null): Builder{
@@ -72,7 +82,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
     public function generalPrepareStore(mixed $dto = null): Model{
         if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->__entity}Data",null));
         $model = $this->prepareStoreUnicode($dto);
-        return $this->staticEntity($model);
+        return $this->entityData($model);
     }
 
     public function generalSchemaModel(mixed $conditionals = null): Builder{

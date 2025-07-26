@@ -14,7 +14,7 @@ class ReportSummary extends Supports\PackageManagement implements SchemaReportSu
 {
     protected string $__entity = 'ReportSummary';
 
-    public static $report_summary;
+    public $report_summary;
 
     protected array $__resources = [
         'view' => ViewReportSummary::class,
@@ -36,7 +36,7 @@ class ReportSummary extends Supports\PackageManagement implements SchemaReportSu
         $attributes ??= request()->all();
 
         $paginate_options = compact('perPage', 'columns', 'pageName', 'page', 'total');
-        return static::$report_summary = $this->commonPaginate($paginate_options);
+        return $this->report_summary = $this->commonPaginate($paginate_options);
     }
 
 

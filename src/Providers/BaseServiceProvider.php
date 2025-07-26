@@ -4,7 +4,6 @@ namespace Hanafalah\LaravelSupport\Providers;
 
 use Exception;
 use Illuminate\Contracts\Container\Container;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\{
     Facades\Config,
@@ -77,7 +76,7 @@ abstract class BaseServiceProvider extends ServiceProvider
     {
         if (isset($migration_path)) {
             if (isset($this->__config[$config_name]['libs']) && isset($this->__config[$config_name]['libs']['migration'])) {
-                $migration_path = $this->dir() . '/../' . $this->__config[$config_name]['libs']['migration'];
+                $migration_path = $this->dir() .DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.$this->__config[$config_name]['libs']['migration'];
                 $this->overrideDatabasePath($migration_path);
             } else {
                 new Exception('Migration path not found');
@@ -126,7 +125,8 @@ abstract class BaseServiceProvider extends ServiceProvider
             if (isset($additional_config_path)) {
                 $configs = array_values(array_diff(scandir($additional_config_path), ['.', '..', 'config.php']));
                 foreach ($configs as $config) {
-                    $path = $additional_config_path . '/' . $config;
+                    $path = $additional_config_path . DIRECTORY_SEPARATOR . $config;
+                    $this->basePathResolver($path);
                     if (is_file($path)) {
                         $content = include $path;
                         $this->overrideConfig(Str::replace('.php', '', $config), $content);
@@ -396,10 +396,8 @@ abstract class BaseServiceProvider extends ServiceProvider
     protected function autoBinds(): self{
         $contracts     = config($this->__lower_package_name . '.app.contracts', []);
         $contract_name = config($this->__lower_package_name . '.libs.contract', 'Contracts');
-        
         foreach ($contracts as $contract) {
             $target_contract = Str::replace($contract_name.'\\','',$contract);
-            
             if (\class_exists($target_contract)) {
                 $this->binds([$contract => $target_contract]);
             }
@@ -510,7 +508,7 @@ abstract class BaseServiceProvider extends ServiceProvider
     {
         $paths = [];
         foreach (Config::get('view.paths') as $path)
-            if (is_dir($path . '/' . $lowerClassName)) $paths[] = $path . '/' . $lowerClassName;
+            if (is_dir($path . DIRECTORY_SEPARATOR . $lowerClassName)) $paths[] = $path . DIRECTORY_SEPARATOR . $lowerClassName;
         return $paths;
     }
 
@@ -621,7 +619,6 @@ abstract class BaseServiceProvider extends ServiceProvider
                         ? $this->basePath() 
                         : $this->dir();
             $path     = $path.$config['libs'][$type];
-
             if (is_dir($path)){
                 $files   = File::allFiles($path);
                 $new_map = [];
@@ -691,7 +688,7 @@ abstract class BaseServiceProvider extends ServiceProvider
         ], 'config');
 
         $this->publishes([
-            $this->getAssetPath('stubs') => base_path('stubs/' . $this->__class_basename . 'Stubs'),
+            $this->getAssetPath('stubs') => base_path('stubs'.DIRECTORY_SEPARATOR.$this->__class_basename . 'Stubs'),
         ], 'stubs');
         $this->publishes($this->scanForPublishMigration($this->__migration_path, $this->__target_migration_path), 'migrations');
 

@@ -19,7 +19,7 @@ interface DataManagement
     public function conditionals(mixed $conditionals): self;
     public function mergeCondition(mixed $conditionals): array;
     public function usingEntity(): Model;
-    public function staticEntity(mixed $model = null): mixed;
+    public function entityData(mixed $model = null): mixed;
     public function viewEntityResource(callable $callback,array $options = []): array;
     public function showEntityResource(callable $callback,array $options = []): array;
     public function autolist(?string $response = 'list',?callable $callback = null): mixed;
