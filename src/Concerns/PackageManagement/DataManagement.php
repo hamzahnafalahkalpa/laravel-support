@@ -253,7 +253,6 @@ trait DataManagement
             try {
                 $model = $this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))); //RETURN MODEL
             } catch (\Throwable $th) {
-                dd($th);
                 throw $th;
             }
             return $this->{'show'.$this->__entity}($model);
