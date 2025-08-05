@@ -146,7 +146,7 @@ trait DataManagement
 
     public function generalPrepareFind(?callable $callback = null, ? array $attributes = null): Model{
         $attributes ??= request()->all();
-        $model = $this->generalGetModelEntity()->conditionals(isset($callback),function($query) use ($callback){
+        $model = $this->{$this->camelEntity()}()->conditionals(isset($callback),function($query) use ($callback){
             $this->mergeCondition($callback($query));
         })->with($this->showUsingRelation())->first();
         return $this->entityData($model);
