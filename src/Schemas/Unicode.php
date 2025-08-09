@@ -59,11 +59,10 @@ class Unicode extends PackageManagement implements ContractsUnicode
         }
 
         if (isset($unicode_dto->service)){
-            $service         = $unicode->service;
-            $service->price  = $unicode_dto?->service?->price ?? null;
-            $service->cogs   = $unicode_dto?->service?->cogs ?? null;
-            $service->margin = $unicode_dto?->service?->margin ?? null;
-            $service->save();
+            $service_dto = &$unicode_dto->service;
+            $service_dto->reference_id ??= $unicode->getKey();
+            $service = $this->schemaContract('Service')->prepareStoreService($service_dto);
+            $unicode_dto->props['prop_service'] = $service->toViewApi()->resolve();
         }
 
         $this->fillingProps($unicode, $unicode_dto->props);
