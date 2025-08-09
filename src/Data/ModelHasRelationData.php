@@ -15,7 +15,7 @@ class ModelHasRelationData extends Data implements DataModelHasRelationData
 
     #[MapInputName('model_type')]
     #[MapName('model_type')]
-    public string $model_type;
+    public ?string $model_type = null;
 
     #[MapInputName('model_id')]
     #[MapName('model_id')]
@@ -23,7 +23,7 @@ class ModelHasRelationData extends Data implements DataModelHasRelationData
 
     #[MapInputName('relation_type')]
     #[MapName('relation_type')]
-    public string $relation_type;
+    public ?string $relation_type = null;
 
     #[MapInputName('relation_id')]
     #[MapName('relation_id')]
@@ -36,9 +36,6 @@ class ModelHasRelationData extends Data implements DataModelHasRelationData
     public static function after(self $data): self{
         $new = self::new();
         $props = &$data->props;
-
-        $model = $new->{$data->model_type.'Model'}()->findOrFail($data->model_id);
-        $props['prop_model'] = $model->toViewApi()->resolve();
 
         $relation = $new->{$data->relation_type.'Model'}()->findOrFail($data->relation_id);
         $props['prop_relation'] = $relation->toViewApi()->resolve();

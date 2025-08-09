@@ -27,10 +27,10 @@ class ModelHasRelation extends PackageManagement implements ContractsModelHasRel
 
     public function prepareStoreModelHasRelation(ModelHasRelationData $model_has_relation_dto): Model{
         $add = [
-            'model_type' => $model_has_relation_dto->model_type,
-            'model_id'   => $model_has_relation_dto->model_id,
-            'reference_type' => $model_has_relation_dto->reference_type,
-            'reference_id'   => $model_has_relation_dto->reference_id
+            'model_type'    => $model_has_relation_dto->model_type,
+            'model_id'      => $model_has_relation_dto->model_id,
+            'relation_type' => $model_has_relation_dto->relation_type,
+            'relation_id'   => $model_has_relation_dto->relation_id
         ];
         if (isset($model_has_relation_dto->id)){
             $guard  = ['id' => $model_has_relation_dto->id];

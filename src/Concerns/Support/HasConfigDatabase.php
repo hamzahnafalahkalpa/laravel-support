@@ -49,6 +49,20 @@ trait HasConfigDatabase
             : $this->toArray();
     }
 
+    public function toViewApiExcepts(...$excepts): array{
+        $excepts = $this->mustArray($excepts);
+        $viewApi = $this->toViewAPi();
+        if (!is_array($viewApi)) $viewApi = $viewApi->resolve();
+        return array_diff_key($viewApi, array_flip($excepts));
+    }
+
+    public function toViewApiOnlies(...$onlies): array{
+        $onlies = $this->mustArray($onlies);
+        $viewApi = $this->toViewApi();
+        if (!is_array($viewApi)) $viewApi = $viewApi->resolve();
+        return array_intersect_key($viewApi, array_flip($onlies));
+    }
+
     public function toShowApi(){
         return ($this->getShowResource() !== null)
             ? new ($this->getShowResource())($this)

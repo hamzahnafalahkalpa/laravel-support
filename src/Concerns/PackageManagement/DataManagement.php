@@ -146,7 +146,7 @@ trait DataManagement
 
     public function generalPrepareFind(?callable $callback = null, ? array $attributes = null): Model{
         $attributes ??= request()->all();
-        $model = $this->generalGetModelEntity()->conditionals(isset($callback),function($query) use ($callback){
+        $model = $this->{$this->camelEntity()}()->conditionals(isset($callback),function($query) use ($callback){
             $this->mergeCondition($callback($query));
         })->with($this->showUsingRelation())->first();
         return $this->entityData($model);
@@ -253,6 +253,7 @@ trait DataManagement
             try {
                 $model = $this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))); //RETURN MODEL
             } catch (\Throwable $th) {
+                dd($th->getMessage(),$this->__entity);
                 throw $th;
             }
             return $this->{'show'.$this->__entity}($model);
