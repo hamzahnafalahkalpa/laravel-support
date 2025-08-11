@@ -121,7 +121,9 @@ trait HasResponse
 
     private function recursiveModules(&$permissions){
         foreach ($permissions as &$permission) {
-            $permission->access = $this->getCurrentFormRequestInstance($permission->alias) ?? true;
+            if ($permission->access){
+                $permission->access = $this->getCurrentFormRequestInstance($permission->alias) ?? true;
+            }
             //ACCESS GATE HERE
             $permission->load(['childs' => function($query){
                 $query->showInAcl()->asPermission();
