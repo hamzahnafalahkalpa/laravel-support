@@ -49,18 +49,33 @@ trait HasConfigDatabase
             : $this->toArray();
     }
 
-    public function toViewApiExcepts(...$excepts): array{
-        $excepts = $this->mustArray($excepts);
+    public function toViewApiExcepts(...$excludes): array{
+        $excludes = $this->mustArray($excludes);
         $viewApi = $this->toViewAPi();
         if (!is_array($viewApi)) $viewApi = $viewApi->resolve();
-        return array_diff_key($viewApi, array_flip($excepts));
+        return $this->propExcludes($viewApi, array_flip($excludes));
     }
 
     public function toViewApiOnlies(...$onlies): array{
         $onlies = $this->mustArray($onlies);
         $viewApi = $this->toViewApi();
         if (!is_array($viewApi)) $viewApi = $viewApi->resolve();
-        return array_intersect_key($viewApi, array_flip($onlies));
+        return $this->propOnlies($viewApi,...$onlies);
+    }
+
+    public function propOnlies(?array $prop_attrs = [],...$onlies): array{
+        return array_intersect_key($prop_attrs ?? [], array_flip($onlies ?? []));
+    }
+
+    public function propExcludes(?array $prop_attrs = [],...$excludes): array{
+        return array_diff_key($prop_attrs ?? [], array_flip($excludes ?? []));
+    }
+
+    public function propNil(?array $prop_attrs = [],...$excludes): array{
+        foreach($excludes as $key){            
+            $prop_attrs[$key] = ($key == Str::plural($key)) ? [] : null;
+        }
+        return $prop_attrs;
     }
 
     public function toShowApi(){
