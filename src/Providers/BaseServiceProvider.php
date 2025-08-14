@@ -83,7 +83,7 @@ abstract class BaseServiceProvider extends ServiceProvider
             }
         }
 
-        $this->registerProvider(function () use ($packages, $config_name) {
+        $this->registerProvider(function () use ($packages, $config_name) {            
             if (isset($packages) && count($packages) > 0) {
                 foreach ($packages as $key => $package) {
                     $provider = $this->replacement($package['provider']);
@@ -241,7 +241,7 @@ abstract class BaseServiceProvider extends ServiceProvider
 
         $this->addDataToConfig('app','contract');
         if ($autobinds) $this->autoBinds();
-
+        
         if (\method_exists('events', $main_class)) {
             //GET EVENTS DATA
             $main_class = app($main_class);
