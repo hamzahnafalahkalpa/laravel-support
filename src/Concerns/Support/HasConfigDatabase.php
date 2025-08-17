@@ -53,7 +53,7 @@ trait HasConfigDatabase
         $excludes = $this->mustArray($excludes);
         $viewApi = $this->toViewAPi();
         if (!is_array($viewApi)) $viewApi = $viewApi->resolve();
-        return $this->propExcludes($viewApi, array_flip($excludes));
+        return $this->propExcludes($viewApi,...$excludes);
     }
 
     public function toViewApiOnlies(...$onlies): array{
