@@ -63,15 +63,18 @@ trait HasConfigDatabase
         return $this->propOnlies($viewApi,...$onlies);
     }
 
-    public function propOnlies(?array $prop_attrs = [],...$onlies): array{
+    public function propOnlies(mixed $prop_attrs = [],...$onlies): array{
+        if (!is_array($prop_attrs) && isset($prop_attrs)) $prop_attrs = $prop_attrs->resolve();
         return array_intersect_key($prop_attrs ?? [], array_flip($onlies ?? []));
     }
 
-    public function propExcludes(?array $prop_attrs = [],...$excludes): array{
+    public function propExcludes(mixed $prop_attrs = [],...$excludes): array{
+        if (!is_array($prop_attrs) && isset($prop_attrs)) $prop_attrs = $prop_attrs->resolve();
         return array_diff_key($prop_attrs ?? [], array_flip($excludes ?? []));
     }
 
-    public function propNil(?array $prop_attrs = [],...$excludes): array{
+    public function propNil(mixed $prop_attrs = [],...$excludes): array{
+        if (!is_array($prop_attrs) && isset($prop_attrs)) $prop_attrs = $prop_attrs->resolve();
         foreach($excludes as $key){            
             $prop_attrs[$key] = ($key == Str::plural($key)) ? [] : null;
         }

@@ -5,6 +5,7 @@ namespace Hanafalah\LaravelSupport\Models\Activity;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Hanafalah\LaravelHasProps\Concerns\HasProps;
 use Hanafalah\LaravelSupport\Models\BaseModel;
+use Illuminate\Support\Str;
 
 class Activity extends BaseModel
 {
@@ -44,7 +45,7 @@ class Activity extends BaseModel
       //FOR PROPS
       if (\method_exists($reference, 'getDataColumn')) {
         $prop_activity = $reference->prop_activity ?? [];
-        $prop_activity[$q->activity_flag] = $q->flag;
+        $prop_activity[Str::snake($q->activity_flag)] = $q->flag;
         $reference->setAttribute('prop_activity', (object) $prop_activity);
         $reference->save();
       }
