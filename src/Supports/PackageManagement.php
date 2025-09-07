@@ -60,7 +60,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
     protected function fillingProps(object &$model, mixed $props = [], ?array $onlies = []){
         $props ??= [];
         foreach ($props as $key => $prop) {
-            if (method_exists($model, $key)) continue;
+            if (str_contains($key, 'search_') || method_exists($model, $key)) continue;
             if ($prop instanceof Carbon) {
                 $model->{$key} = $prop->toDateTimeString();
                 continue;

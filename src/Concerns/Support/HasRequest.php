@@ -114,7 +114,15 @@ trait HasRequest
       $result = true;
     } catch (\Throwable $e) {
       foreach ($user_connections as $connection_name) {
-        DB::connection($connection_name)->rollBack();
+        try {
+            DB::connection($connection_name)->rollBack();
+        } catch (\Throwable $ex) {
+            // kalau sudah aborted, rollback bisa gagal → biarin aja
+        }
+
+        // reset connection supaya status "aborted" hilang
+        DB::purge($connection_name);
+        DB::reconnect($connection_name);
       }
 
       LaravelSupport::catch($e);

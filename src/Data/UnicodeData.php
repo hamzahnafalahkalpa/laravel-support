@@ -42,6 +42,14 @@ class UnicodeData extends Data implements DataUnicodeData{
     #[MapInputName('service')]
     public ?ServiceData $service = null;
 
+    #[MapInputName('reference_type')]
+    #[MapName('reference_type')]
+    public ?string $reference_type = null;
+
+    #[MapInputName('reference_id')]
+    #[MapName('reference_id')]
+    public mixed $reference_id = null;
+
     #[MapInputName('childs')]
     #[MapName('childs')]
     #[DataCollectionOf(self::class)]

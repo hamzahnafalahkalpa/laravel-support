@@ -122,8 +122,9 @@ trait HasRequestData
                     if (is_array($attributes[$name]) && $is_array_list && count($attributes[$name]) > 0){
                         foreach ($attributes[$name] as &$attribute_name) $attribute_name = $this->mapToDTO($typeName, $attribute_name, $excludes, $parent_dto);                        
                     }else{
+                        $default = $paramDetail['defaultTypeName'] == 'array' && $paramDetail['name'] == Str::plural($paramDetail['name']) ? [] : null;
                         if (!$is_array_list){
-                            $attributes[$name] = (count($attributes[$name]) == 0) ? [] : $this->mapToDTO($typeName, $attributes[$name], $excludes, $parent_dto);
+                            $attributes[$name] = (count($attributes[$name]) == 0) ? $default : $this->mapToDTO($typeName, $attributes[$name], $excludes, $parent_dto);
                         }else{
                             if ($paramDetail['defaultTypeName'] !== 'array' && is_string($typeName)){
                                 $app               = app($typeName);
@@ -132,7 +133,7 @@ trait HasRequestData
                                     $attributes[$name] = $app->after($attributes[$name], $parent_dto);
                                 }
                             }else{
-                                $attributes[$name] = [];
+                                $attributes[$name] = $default;
                             }
                         }
                     }
@@ -143,7 +144,7 @@ trait HasRequestData
                 return $attributes[$name];
             }
         }else{
-            return  ($paramDetail['defaultTypeName'] == 'array') ? [] : null;
+            return  ($paramDetail['defaultTypeName'] == 'array' && $paramDetail['name'] == Str::plural($paramDetail['name'])) ? [] : null;
         }
     }
 

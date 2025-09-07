@@ -23,6 +23,9 @@ class ViewUnicode extends ApiResource
       'label'     => $this->label,
       'ordering'  => $this->ordering,
       'status'    => $this->status,
+      'reference' => $this->relationValidation('reference', function () {
+          return $this->reference->toViewApi()->resolve();
+      }),
       'service'   => $this->relationValidation('service', function () {
           return $this->service->toViewApi()->resolve();
       }),

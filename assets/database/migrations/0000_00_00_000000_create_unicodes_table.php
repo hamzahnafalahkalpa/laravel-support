@@ -32,6 +32,8 @@ return new class extends Migration
                 $table->string('label',100)->nullable(true);
                 $table->string('name', 100)->nullable(false);
                 $table->string('status', 100)->nullable(true);
+                $table->string('reference_type', 50)->nullable(true);
+                $table->string('reference_id', 36)->nullable(true);
                 $table->unsignedInteger('ordering')->nullable();
                 $table->json('props')->nullable();
                 $table->timestamps();

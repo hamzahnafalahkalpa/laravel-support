@@ -17,7 +17,7 @@ class Unicode extends BaseModel
     public $incrementing = false;
     protected $keyType = 'string';
     protected $primaryKey = 'id';
-    protected $list = ['id', 'parent_id', 'name', 'flag', 'label', 'ordering', 'props'];
+    protected $list = ['id', 'parent_id', 'name', 'flag', 'label', 'reference_type', 'reference_id', 'ordering', 'props'];
 
     protected $casts = [
         'name'   => 'string',
@@ -40,7 +40,7 @@ class Unicode extends BaseModel
     }
 
     public function viewUsingRelation():array {
-        $relation = ['childs'];
+        $relation = ['childs','reference'];
         if ($this->isUsingService()){
             $relation[] = 'service';
         }
@@ -48,7 +48,7 @@ class Unicode extends BaseModel
     }
 
     public function showUsingRelation():array {
-        $relation = ['childs'];
+        $relation = ['childs','reference'];
         if ($this->isUsingService()){
             $relation[] = 'service.servicePrices.tariffComponent';
         }
@@ -67,4 +67,6 @@ class Unicode extends BaseModel
         if ($this->isUsingService()) $builder->with('service');
         return $builder;
     }    
+
+    public function reference(){return $this->morphTo();}
 }

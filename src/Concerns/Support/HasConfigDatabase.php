@@ -122,7 +122,6 @@ trait HasConfigDatabase
                 $query_field = (method_exists($this, 'getPropsQuery'))
                     ? $this->getPropsQuery()[$field] ?? $field
                     : $field;
-
                 if (isset($casts[$field])) {
                     switch ($casts[$field]) {
                         case 'string':
@@ -234,11 +233,11 @@ trait HasConfigDatabase
                         break;
                     }
                 } else {
-                    if (in_array($query_field, $this->getFillable())) {
-                        $query->whereNested(function ($query) use ($query_field, $parameter) {
-                            $query->where($query_field, $parameter);
-                        }, $operator);
-                    }
+                    // if (in_array($query_field, $this->getFillable())) {
+                    //     $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    //         $query->where($query_field, $parameter);
+                    //     }, $operator);
+                    // }
                 }
             }
         });

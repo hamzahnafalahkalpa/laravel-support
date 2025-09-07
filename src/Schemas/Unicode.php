@@ -36,7 +36,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
             'ordering'  => $unicode_dto->ordering ?? 1,
         ];
         if ($this->isIdAsPrimaryValidation()){
-            $unicode = $this->usingEntity()->updateOrCreate([
+            $unicode = $this->usingEntity()->withoutGlobalScopes()->updateOrCreate([
                 'id' => $unicode_dto->id ?? null
             ],$add);
         }else{
@@ -46,7 +46,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
             }else{
                 $create = [$add];
             }
-            $unicode = $this->usingEntity()->firstOrCreate(...$create);
+            $unicode = $this->usingEntity()->withoutGlobalScopes()->firstOrCreate(...$create);
         }
         if (isset($unicode_dto->childs) && count($unicode_dto->childs) > 0){
             $ordering = 1;
