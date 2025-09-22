@@ -28,4 +28,9 @@ class PaginateData extends Data implements DataPaginateData
     #[MapInputName('total')]
     #[MapName('total')]
     public ?int $total = null;
+
+    public static function booted(array &$attributes){
+        $attributes['perPage'] ??= $attributes['per_page'] ?? 10;
+        $attributes['pageName'] ??= $attributes['page_name'] ?? 'page';
+    }
 }
