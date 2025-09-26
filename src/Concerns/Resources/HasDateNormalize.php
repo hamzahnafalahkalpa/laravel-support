@@ -5,6 +5,7 @@ namespace Hanafalah\LaravelSupport\Concerns\Resources;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Concerns\Support\HasArray;
+use Illuminate\Database\Eloquent\Model;
 
 trait HasDateNormalize
 {
@@ -14,7 +15,7 @@ trait HasDateNormalize
 
     public function normalize()
     {
-        if (config('app.client_timezone') !== null) {
+        if (config('app.client_timezone') !== null && $this instanceof Model) {
             $dates = $this->filterDates();
             foreach ($dates as $key => $cast) {
                 if (Str::contains($cast, 'props->')) {

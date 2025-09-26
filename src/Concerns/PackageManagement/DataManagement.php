@@ -38,9 +38,7 @@ trait DataManagement
 
     public function __callSchemaEloquent(){
         $method = $this->getCallMethod();
-
-        $entity = $this->__entity;
-
+        $entity = $this->getEntity();
         $result = $this->methodHandler($method,[
             "export"                        => 'generalExport',
             "show$entity"                   => 'generalShow',
@@ -62,6 +60,10 @@ trait DataManagement
             Str::camel($entity)             => 'generalSchemaModel',
         ]);
         if (isset($result)) return $result;
+    }
+
+    public function getEntity(): string{
+        return $this->__entity;
     }
 
     /**
@@ -96,7 +98,7 @@ trait DataManagement
     }
 
     public function usingEntity(): Model{
-        return $this->{$this->__entity.'Model'}();
+        return $this->{$this->getEntity().'Model'}();
     }
 
     public function entityData(mixed $model = null): mixed{
@@ -125,9 +127,9 @@ trait DataManagement
         }
         $reference_type = request()->search_reference_type ?? null;
         switch ($response) {
-            case 'list'     : return $this->{'view'.$this->__entity.'List'}($reference_type);break;
-            case 'paginate' : return $this->{'view'.$this->__entity.'Paginate'}($reference_type);break;
-            case 'find'     : return $this->{'find'.$this->__entity}($reference_type);break;
+            case 'list'     : return $this->{'view'.$this->getEntity().'List'}($reference_type);break;
+            case 'paginate' : return $this->{'view'.$this->getEntity().'Paginate'}($reference_type);break;
+            case 'find'     : return $this->{'find'.$this->getEntity()}($reference_type);break;
         }
         abort(404);
     }
@@ -153,7 +155,7 @@ trait DataManagement
     }   
 
     public function generalFind(? callable $callback = null): ?array{
-        $model = $this->{'prepareFind'.$this->__entity}($callback);
+        $model = $this->{'prepareFind'.$this->getEntity()}($callback);
         if (!isset($model)) return null;
         return $this->showEntityResource(function() use ($model){
             return $model;
@@ -161,11 +163,11 @@ trait DataManagement
     }
 
     public function camelEntity(): string{
-        return Str::camel($this->__entity);
+        return Str::camel($this->getEntity());
     }
 
     public function snakeEntity(): string{
-        return Str::snake($this->__entity);
+        return Str::snake($this->getEntity());
     }
 
     public function forgetTagsEntity(?string $entity = null): void{
@@ -174,7 +176,7 @@ trait DataManagement
 
     public function generalPrepareShow(? Model $model = null, ? array $attributes = null): Model{
         $attributes ??= request()->all();
-        $model ??= (\method_exists($this, 'get'.$this->__entity)) ? $this->{'get'.$this->__entity}() : $this->generalGetModelEntity();
+        $model ??= (\method_exists($this, 'get'.$this->getEntity())) ? $this->{'get'.$this->getEntity()}() : $this->generalGetModelEntity();
         if (!isset($model)){
             $valid = $attributes['id'] ?? $attributes['uuid'] ?? null;
             if (!isset($valid)) throw new \Exception('No id or uuid provided', 422);
@@ -191,7 +193,7 @@ trait DataManagement
 
     public function generalShow(? Model $model = null): array{
         return $this->showEntityResource(function() use ($model){
-            return $this->{'prepareShow'.$this->__entity}($model);
+            return $this->{'prepareShow'.$this->getEntity()}($model);
         });
     }
 
@@ -213,7 +215,7 @@ trait DataManagement
 
     public function generalViewPaginate(?PaginateData $paginate_dto = null): array{
         return $this->viewEntityResource(function() use ($paginate_dto){
-            return $this->{"prepareView".$this->__entity."Paginate"}($paginate_dto ?? $this->requestDTO(PaginateData::class));
+            return $this->{"prepareView".$this->getEntity()."Paginate"}($paginate_dto ?? $this->requestDTO(PaginateData::class));
         }, ['rows_per_page' => [50]]);
     }
 
@@ -224,12 +226,12 @@ trait DataManagement
 
     public function generalViewList(): array{
         return $this->viewEntityResource(function(){
-            return $this->{'prepareView'.$this->__entity.'List'}();
+            return $this->{'prepareView'.$this->getEntity().'List'}();
         });
     }
 
     public function generalPrepareStore(mixed $dto = null): Model{
-        if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->__entity}Data",null));
+        if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->getEntity()}Data",null));
         $model = $this->usingEntity()->updateOrCreate([
             'id' => $dto->id ?? null
         ], [
@@ -243,7 +245,7 @@ trait DataManagement
     public function generalPrepareStoreMultiple(array $datas): Collection{
         $collection = new Collection();
         foreach ($datas as $data) {
-            $collection->push($this->generalPrepareStore($this->requestDTO(config("app.contracts.{$this->__entity}Data",$data))));
+            $collection->push($this->generalPrepareStore($this->requestDTO(config("app.contracts.{$this->getEntity()}Data",$data))));
         }
         return $collection;
     }
@@ -251,22 +253,22 @@ trait DataManagement
     public function generalStore(mixed $dto = null): array{
         return $this->transaction(function () use ($dto) {
             try {
-                $model = $this->{'prepareStore'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}Data",null))); //RETURN MODEL
+                $model = $this->{'prepareStore'.$this->getEntity()}($dto ?? $this->requestDTO(config("app.contracts.{$this->getEntity()}Data",null))); //RETURN MODEL
             } catch (\Throwable $th) {
                 throw $th;
             }
-            return $this->{'show'.$this->__entity}($model);
+            return $this->{'show'.$this->getEntity()}($model);
         });
     }
 
     public function generalStoreMultiple(array $datas){
         return $this->transaction(function () use ($datas) {
-            return $this->{'show'.$this->__entity}($this->{'prepareStoreMultiple'.$this->__entity}($datas));
+            return $this->{'show'.$this->getEntity()}($this->{'prepareStoreMultiple'.$this->getEntity()}($datas));
         });
     }
 
     public function generalPrepareUpdate(mixed $dto): Model{
-        if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->__entity}UpdateData",null));
+        if (is_array($dto)) $dto = $this->requestDTO(config("app.contracts.{$this->getEntity()}UpdateData",null));
         $model = $this->usingEntity()->updateOrCreate([
             'id' => $dto->id
         ], [
@@ -279,7 +281,7 @@ trait DataManagement
 
     public function generalUpdate(mixed $dto = null){
         return $this->transaction(function () use ($dto) {
-            return $this->{'show'.$this->__entity}($this->{'prepareUpdate'.$this->__entity}($dto ?? $this->requestDTO(config("app.contracts.{$this->__entity}UpdateData",null))));
+            return $this->{'show'.$this->getEntity()}($this->{'prepareUpdate'.$this->getEntity()}($dto ?? $this->requestDTO(config("app.contracts.{$this->getEntity()}UpdateData",null))));
         });
     }
 
@@ -294,7 +296,7 @@ trait DataManagement
 
     public function generalDelete(): bool{
         return $this->transaction(function () {
-            return $this->{'prepareDelete'.$this->__entity}();
+            return $this->{'prepareDelete'.$this->getEntity()}();
         });
     }
 
