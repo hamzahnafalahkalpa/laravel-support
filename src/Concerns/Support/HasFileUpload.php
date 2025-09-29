@@ -97,6 +97,23 @@ trait HasFileUpload{
             ]);
             $result = $filename;
             $remove_current = true;
+        } elseif (is_string($file) && Str::startsWith($file, 'data:')) {
+            // === handle base64 ===
+            [$meta, $fileBase64] = explode(',', $file, 2);
+            $fileBase64 = base64_decode($fileBase64);
+
+            // cari mime type & extension dari metadata
+            preg_match('/^data:(.*?);base64$/', $meta, $matches);
+            $mimeType   = $matches[1] ?? 'application/octet-stream';
+            $extension  = explode('/', $mimeType)[1] ?? 'bin';
+
+            $filename ??= Str::orderedUuid();
+            $filename  .= '.' . $extension;
+
+            Storage::disk($disk)->put($file_path.'/'.$filename, $fileBase64);
+
+            $result = $filename;
+            $remove_current = true;
         } elseif (is_string($file)) {
             $result = $file;
         } else {
