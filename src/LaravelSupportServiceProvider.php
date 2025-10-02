@@ -34,7 +34,9 @@ class LaravelSupportServiceProvider extends BaseServiceProvider
         }
       ])
       ->appBooting(function ($app) {
-        config(['laravel-stub.stub' => config('laravel-support.stub')]);
+        config([
+          'laravel-stub.stub' => config('laravel-support.stub')
+        ]);
       });
   }
 

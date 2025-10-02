@@ -13,7 +13,7 @@ trait HasProfilePhoto{
     }
 
     protected function getFilePath(? string $path = null): string{
-        $path ??= 'PROFILES';
+        $path ??= 'profiles';
         return $this->storagePath($path);
     }
 
@@ -22,12 +22,12 @@ trait HasProfilePhoto{
     }
 
     public function setProfilePhoto(string|UploadedFile|null $photo = null, ?string $path = null, ?string $filename = null): ?string{
-        $path ??= 'PROFILES';
+        $path ??= 'profiles';
         return $this->setupFile($photo,$path,$filename);
     }
 
     public function getProfilePhoto(? string $path = null){
-        $path ??= 'PROFILES';
+        $path ??= 'profiles';
         return $this->getStorageFile($path);
     }
 }

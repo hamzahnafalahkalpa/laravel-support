@@ -358,7 +358,7 @@ abstract class BaseServiceProvider extends ServiceProvider
         foreach ($args as $key => $list) {
             if ($list !== '*') {
                 $key = $this->registerName(($isNumber = is_numeric($key)) ? $list : $key);
-                if ($this->inArray($key, $this->__finished_register)) continue;
+                // if ($this->inArray($key, $this->__finished_register)) continue;
                 $this->{'register' . $key}(!$isNumber ? $list : null);
             } else {
                 $hasAll = true;

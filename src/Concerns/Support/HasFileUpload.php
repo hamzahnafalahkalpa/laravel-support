@@ -5,11 +5,30 @@ namespace Hanafalah\LaravelSupport\Concerns\Support;
 use Hanafalah\LaravelSupport\Resources\FileProcessing\ViewFileProcessing;
 use Hanafalah\LaravelSupport\Resources\ImageProcessing\ViewImage;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
 trait HasFileUpload{
     protected $__filesystem_disk = 'public';
+
+    public function encryptName(string $name){
+        $name = Crypt::encryptString($name);
+        return $this->base64url_encode($name);
+    }
+
+    public function decryptName(string $name){
+        $name = $this->base64url_decode($name);
+        return Crypt::decryptString($name);
+    }
+
+    private function base64url_encode($data) {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
+    private function base64url_decode($data) {
+        return base64_decode(strtr($data, '-_', '+/'));
+    }
 
     public function driver(): string{
         return config('filesystems.default',$this->__filesystem_disk);
@@ -38,7 +57,7 @@ trait HasFileUpload{
     }
 
     protected function getFilePath(? string $path = null): string{
-        $path ??= 'FILES';
+        $path ??= 'files';
         return $this->storagePath($path);
     }
 
