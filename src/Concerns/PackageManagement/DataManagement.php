@@ -53,6 +53,7 @@ trait DataManagement
             "prepareDelete{$entity}"        => 'generalPrepareDelete',
             "store{$entity}"                => 'generalStore',
             "storeMultiple{$entity}"        => 'generalStoreMultiple',
+            "prepareStore"                  => 'generalUniversalPrepareStore',
             "prepareStore{$entity}"         => 'generalPrepareStore',
             "prepareStoreMultiple{$entity}" => 'generalPrepareStoreMultiple',
             "update{$entity}"               => 'generalUpdate',
@@ -228,6 +229,10 @@ trait DataManagement
         return $this->viewEntityResource(function(){
             return $this->{'prepareView'.$this->getEntity().'List'}();
         });
+    }
+
+    public function generalUniversalPrepareStore(mixed $dto = null): Model{
+        return $this->{'prepareStore'.$this->getEntity()}($dto ?? $this->requestDTO(config("app.contracts.{$this->getEntity()}Data",null)));
     }
 
     public function generalPrepareStore(mixed $dto = null): Model{

@@ -348,13 +348,14 @@ abstract class BaseServiceProvider extends ServiceProvider
      *
      * @return self
      */
-    protected function registers(string|array $args, string|array $excepts = []): self
+    protected function registers(string|array $args, string|array $excepts = [],?bool $tes = false): self
     {
         $args       = $this->mustArray($args);
         $excepts    = $this->mustArray($excepts);
         $validation = !$this->inArray(ProviderRegisterMethod::CONFIG, $this->__finished_register) && !$this->inArray('Config', $excepts);
         if ($validation) $this->registerConfig();
         $hasAll   = false;
+        // if ($tes) dd($args);
         foreach ($args as $key => $list) {
             if ($list !== '*') {
                 $key = $this->registerName(($isNumber = is_numeric($key)) ? $list : $key);

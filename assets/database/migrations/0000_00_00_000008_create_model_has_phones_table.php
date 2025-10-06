@@ -31,6 +31,7 @@ return new class extends Migration {
                 $table->string('model_id', 36)->nullable(false);
                 $table->string('phone', 100)->nullable(false);
                 $table->timestamp('verified_at')->nullable();
+                $table->json('props')->nullable();
                 $table->timestamps();
                 $table->softDeletes();
 
