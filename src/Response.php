@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Request;
 use Hanafalah\ApiHelper\Exceptions\UnauthorizedAccess;
 use Hanafalah\LaravelSupport\Contracts\Response as ContractsResponse;
 use Hanafalah\LaravelSupport\Supports\PackageManagement;
-use Illuminate\Support\Facades\Auth;
 
 class Response extends PackageManagement implements ContractsResponse
 {

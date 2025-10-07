@@ -51,7 +51,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
      * @param Container $app The container instance for dependency injection
      */
     public function __construct(
-        ...$args
+        // ...$args
     ) {
         $this->setLocalConfig('laravel-support');
         $this->__schema_contracts = config('app.contracts', []);
@@ -89,6 +89,9 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
 
     public function schemaContract(string $contract){
         $contract = Str::studly($contract);
+        if (!array_key_exists($contract, config('app.contracts', []))) {
+            throw new \Exception("Contract '$contract' not found in config 'app.contracts'");
+        }
         return app(config('app.contracts.' . $contract));
     }
 

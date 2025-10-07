@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Hanafalah\ApiHelper\Facades\ApiAccess;
 use Hanafalah\LaravelSupport\Facades\Response;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -42,6 +43,7 @@ trait HasResponse
     {
         $success = $this->__response_code < 400;
         if ($success) $this->renderAclResponse();
+        dd();
         $this->__response = array_merge([
             'data' => $this->__response_result,
             'meta' => [
@@ -238,11 +240,12 @@ trait HasResponse
     {
         switch (true) {
             case $collections instanceof LengthAwarePaginator:
+            case $collections instanceof SupportCollection:
             case $collections instanceof Collection:
                 $collections->transform(function ($collection) use ($callback) {
                     return $callback($collection);
                 });
-                break;
+            break;
             case \is_object($collections):
             case $collections instanceof Model:
                 $collections = $callback($collections);
