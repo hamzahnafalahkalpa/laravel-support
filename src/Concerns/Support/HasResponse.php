@@ -43,7 +43,6 @@ trait HasResponse
     {
         $success = $this->__response_code < 400;
         if ($success) $this->renderAclResponse();
-        dd();
         $this->__response = array_merge([
             'data' => $this->__response_result,
             'meta' => [
