@@ -128,9 +128,9 @@ trait DataManagement
         }
         $reference_type = request()->search_reference_type ?? null;
         switch ($response) {
-            case 'list'     : return $this->{'view'.$this->getEntity().'List'}($reference_type);break;
-            case 'paginate' : return $this->{'view'.$this->getEntity().'Paginate'}($reference_type);break;
-            case 'find'     : return $this->{'find'.$this->getEntity()}($reference_type);break;
+            case 'list'     : return $this->{'view'.$this->getEntity().'List'}();break;
+            case 'paginate' : return $this->{'view'.$this->getEntity().'Paginate'}();break;
+            case 'find'     : return $this->{'find'.$this->getEntity()}();break;
         }
         abort(404);
     }
