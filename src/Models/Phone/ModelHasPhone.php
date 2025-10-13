@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Hanafalah\LaravelHasProps\Concerns\HasProps;
 use Hanafalah\LaravelSupport\Models\BaseModel;
+use Hanafalah\LaravelSupport\Resources\Phone\{ShowPhone};
 
 class ModelHasPhone extends BaseModel
 {
@@ -21,6 +22,9 @@ class ModelHasPhone extends BaseModel
         'phone'       => 'string',
         'verified_at' => 'datetime'
     ];
+
+    public function getViewResource(){return ShowPhone::class;}
+    public function getShowResource(){return ShowPhone::class;}
 
     public $phone_codes = [
         "+62"   => "Indonesia",
