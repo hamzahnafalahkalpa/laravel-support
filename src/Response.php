@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Request;
 use Hanafalah\ApiHelper\Exceptions\UnauthorizedAccess;
 use Hanafalah\LaravelSupport\Contracts\Response as ContractsResponse;
 use Hanafalah\LaravelSupport\Supports\PackageManagement;
+use Illuminate\Support\Facades\Auth;
 
 class Response extends PackageManagement implements ContractsResponse
 {
@@ -69,7 +70,7 @@ class Response extends PackageManagement implements ContractsResponse
                     case $e instanceof \Illuminate\Validation\ValidationException:
                     case $e instanceof \Illuminate\Database\QueryException:
                         $code = 422;
-                        break;
+                    break;
                     case $e instanceof \Illuminate\Auth\AuthenticationException:
                         $code = 401;
                     break;
@@ -84,6 +85,10 @@ class Response extends PackageManagement implements ContractsResponse
                     case $e instanceof UnauthorizedAccess:
                         $code = 401;
                     break;
+                }
+                if (!Auth::check()){
+                    $code = 401;
+                    $err = $e->getMessage();
                 }
                 return $this->sendResponse(null, $code ?? 403, $err);
             });
