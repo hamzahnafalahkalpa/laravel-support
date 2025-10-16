@@ -86,10 +86,10 @@ class Response extends PackageManagement implements ContractsResponse
                         $code = 401;
                     break;
                 }
-                if (!Auth::check()){
-                    $code = 401;
-                    $err = $e->getMessage();
-                }
+                // if (!Auth::check()){
+                //     $code = 401;
+                //     $err = $e->getMessage();
+                // }
                 return $this->sendResponse(null, $code ?? 403, $err);
             });
         }
