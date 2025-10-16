@@ -70,10 +70,10 @@ class Response extends PackageManagement implements ContractsResponse
                     case $e instanceof \Illuminate\Validation\ValidationException:
                     case $e instanceof \Illuminate\Database\QueryException:
                         $code = 422;
-                        // if (!Auth::check()){
-                        //     $code = 401;
-                        //     $err = $e->getMessage();
-                        // }
+                        if (!Auth::check()){
+                            $code = 401;
+                            $err = $e->getMessage();
+                        }
                     break;
                     case $e instanceof \Illuminate\Auth\AuthenticationException:
                         $code = 401;
