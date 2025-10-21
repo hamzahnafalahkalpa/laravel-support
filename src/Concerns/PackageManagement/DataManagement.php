@@ -199,7 +199,7 @@ trait DataManagement
     }
 
     private function preparePaginateBuilder(PaginateData $paginate_dto): LengthAwarePaginator{
-            return $this->{$this->camelEntity()}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
+        return $this->{$this->camelEntity()}()->with($this->viewUsingRelation())->paginate(...$paginate_dto->toArray())->appends(request()->all());
     }
 
     public function generalPrepareViewPaginate(PaginateData $paginate_dto): LengthAwarePaginator{
