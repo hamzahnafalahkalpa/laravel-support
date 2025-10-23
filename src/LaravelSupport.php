@@ -32,7 +32,7 @@ class LaravelSupport extends PackageManagement implements ContractsLaravelSuppor
         }
         $routes = array_diff(scandir($path), ['.', '..']);
         foreach ($routes as $route) {
-            if (is_file($path . '/' . $route)) include_once($path . '/' . $route);
+            if (is_file($path . '/' . $route)) require $path . '/' . $route;
         }
     }
 

@@ -108,12 +108,28 @@ trait HasFileUpload{
         // $disk       = $this->__filesystem_disk ?? $this->driver();
         $disk       = $this->driver();
         if ($file instanceof UploadedFile) {
+            if ($file->getError() !== UPLOAD_ERR_OK) {
+                $errorMessages = [
+                    UPLOAD_ERR_INI_SIZE   => 'File terlalu besar (melebihi upload_max_filesize '.ini_get('upload_max_filesize').')',
+                    UPLOAD_ERR_FORM_SIZE  => 'File terlalu besar (melebihi batas HTML form MAX_FILE_SIZE)',
+                    UPLOAD_ERR_PARTIAL    => 'File hanya terupload sebagian',
+                    UPLOAD_ERR_NO_FILE    => 'Tidak ada file yang diupload',
+                ];
+                throw new \RuntimeException(
+                    $errorMessages[$file->getError()] ?? 'Upload file gagal (error code ' . $file->getError() . ')'
+                );
+            }
+
             $filename ??= Str::orderedUuid();
             $ext        = $file->getClientOriginalExtension();
             $filename  .= '.' . $ext;
-            $file->storePubliclyAs($file_path, $filename, [
-                'disk' => $disk
-            ]);
+            $data = [
+                $file_path, 
+                $file,
+                $filename
+            ];
+            Storage::disk($disk)->putFileAs(...$data);
+
             $result = $filename;
             $remove_current = true;
         } elseif (is_string($file) && Str::startsWith($file, 'data:')) {
@@ -128,9 +144,12 @@ trait HasFileUpload{
 
             $filename ??= Str::orderedUuid();
             $filename  .= '.' . $extension;
-
-            Storage::disk($disk)->put($file_path.'/'.$filename, $fileBase64);
-
+            $data = [
+                $file_path.'/'.$filename, 
+                $fileBase64
+            ];
+            
+            $result = Storage::disk($disk)->put(...$data);
             $result = $filename;
             $remove_current = true;
         } elseif (is_string($file)) {
