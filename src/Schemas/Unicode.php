@@ -13,6 +13,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
     protected string $__entity = 'Unicode';
     public $unicode_model;
     protected mixed $__order_by_created_at = ['ordering','asc']; //asc, desc, false
+    protected bool $__is_parent_only = true;
 
     protected array $__cache = [
         'index' => [
@@ -71,10 +72,21 @@ class Unicode extends PackageManagement implements ContractsUnicode
         return $this->unicode_model = $unicode;
     }
 
+    public function setIsParentOnly(?bool $status = true):self{
+        $this->__is_parent_only = $status ?? true;
+        return $this;
+    }
+
+    private function getIsParentOnly():bool{
+        return $this->__is_parent_only;
+    }
+
     public function unicode(mixed $conditionals = null): Builder{
         return parent::generalSchemaModel($conditionals)->when(isset(request()->flag),function($query){
             return $query->flagIn(request()->flag);
-        })->whereNull('parent_id');
+        })->when($this->getIsParentOnly(),function($q){
+            $q->whereNull('parent_id');
+        });
     }
 
     //OVERIDING DATA MANAGEMENT
