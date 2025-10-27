@@ -20,7 +20,7 @@ use ReflectionClass;
 
 trait HasResponse
 {
-    use HasArray;
+    use HasArray, HasCache;
 
     protected int $__response_code;
     protected array $__response_messages = [];
@@ -68,7 +68,12 @@ trait HasResponse
             ]);
             $permission = app(config('database.models.Permission'));
             if (isset($route_name) && \is_subclass_of($permission, Model::class)) {
-                $route_permission = $permission->with(['recursiveModules','childs' => function($query){
+                $route_permission = $this->setCache([
+                    'name'    => 'permission-route-'.$route_name.'-role-'.request()->role_id,
+                    'tags'    => ['permission','permission-route','permission-route-'.$route_name,'role-'.request()->role_id],
+                    'duration' => 24*60*60
+                ],function() use ($permission, $route_name){
+                    return $permission->with(['recursiveModules','childs' => function($query){
                                                     $query->asPermission()->showInAcl()
                                                          ->where(function($query){
                                                             $query->whereNull('props->show_in_data')
@@ -80,6 +85,7 @@ trait HasResponse
                                                ->showInAcl()
                                                ->checkAccess(request()->role_id)
                                                ->first();
+                });
                 if (!isset($route_permission) && Response::getAclPermission() !== null) {
                     $route_permission = Response::getAclPermission();
                 }

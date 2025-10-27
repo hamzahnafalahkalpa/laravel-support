@@ -4,7 +4,6 @@ namespace Hanafalah\LaravelSupport\Providers;
 
 use Exception;
 use Illuminate\Contracts\Container\Container;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\{
     Facades\Config,
     ServiceProvider
@@ -15,10 +14,9 @@ use Hanafalah\LaravelSupport\Concerns\{
     ServiceProvider as Service,
     Support
 };
-use Illuminate\Support\Facades\File;
 
 use Hanafalah\LaravelSupport\Concerns\PackageManagement\HasEvent;
-
+use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Enums\Provider\ProviderRegisterMethod;
 
@@ -33,6 +31,7 @@ abstract class BaseServiceProvider extends ServiceProvider
     use Support\HasRepository;
     use Support\HasMicrotenant;
     use Support\HasArray;
+    use Support\HasRegisterConfig;
     use HasEvent;
 
     protected string $__lower_package_name,
@@ -83,15 +82,8 @@ abstract class BaseServiceProvider extends ServiceProvider
             }
         }
 
-        $this->registerProvider(function () use ($packages, $config_name) {            
-            if (isset($packages) && count($packages) > 0) {
-                foreach ($packages as $key => $package) {
-                    $provider = $this->replacement($package['provider']);
-                    $this->app->register($provider);
-                    $provider_basename = Str::replace('ServiceProvider', '', class_basename($provider));
-                    config(["$config_name.packages.$provider_basename.provider" => $provider]);
-                }
-            }
+        $this->registerProvider(function () use ($packages, $config_name) {
+            $this->processRegisterProvider($config_name, $packages);
         });
         return $this;
     }
@@ -122,63 +114,9 @@ abstract class BaseServiceProvider extends ServiceProvider
     protected function registerOverideConfig(string $config_name, ?string $additional_config_path = null): self
     {
         $this->registerConfig(function () use ($config_name, $additional_config_path) {
-            if (isset($additional_config_path)) {
-                $configs = array_values(array_diff(scandir($additional_config_path), ['.', '..', 'config.php']));
-                foreach ($configs as $config) {
-                    $path = $additional_config_path . DIRECTORY_SEPARATOR . $config;
-                    $this->basePathResolver($path);
-                    if (is_file($path)) {
-                        $content = include $path;
-                        $this->overrideConfig(Str::replace('.php', '', $config), $content);
-                    }
-                }
-            }
-            
-            $packages  = config()->get("$config_name.packages");
-            if (isset($packages)) {
-                foreach ($packages as $key => $package) {
-                    $key = Str::snake($key, '-');
-                    $this->overrideConfig($key, $package['config'] ?? config($key));
-                }
-            }
-            $laravel_encodings = config()->get('module-encoding.encodings') ?? [];
-            config()->set('module-encoding.encodings', $this->mergeArray(
-                $laravel_encodings,
-                config()->get("$config_name.encodings") ?? []
-            ));
-
-            if (config("$config_name.app.impersonate") !== null) {
-                config()->set('app.impersonate', config("$config_name.app.impersonate"));
-            }
+            $this->processRegisterConfig($config_name,$additional_config_path);
         });
         return $this;
-    }
-
-    /**
-     * Recursively overrides configuration values.
-     *
-     * This method traverses the provided value, and if it's an array, it recursively
-     * calls itself to handle nested configuration. If the value is not an array, it
-     * sets the configuration at the computed key path.
-     *
-     * @param string $key The key for the current config value.
-     * @param mixed $value The config value to be set, which can be nested.
-     * @param array $config_root The root path of the config key, allows for nested structure.
-     */
-    protected function overrideConfig(string $key, mixed $value, array $config_root = [])
-    {
-        $config_root[] = $key;
-        if ($this->isArray($value)) {
-            foreach ($value as $k => $v) {
-                $this->overrideConfig($k, $v, $config_root);
-            }
-        } else {
-            $config_root = implode('.', $config_root);
-            config()->set($config_root, $value);
-        }
-        if ($key == 'contextual_bindings') {
-            $this->contextualBindings($value);
-        }
     }
 
     /**
@@ -239,7 +177,7 @@ abstract class BaseServiceProvider extends ServiceProvider
 
         $this->registerConfig();
 
-        $this->addDataToConfig('app','contract');
+        $this->addDataToConfig($this->__lower_package_name,'app','contract');
         if ($autobinds) $this->autoBinds();
         
         if (\method_exists('events', $main_class)) {
@@ -348,14 +286,13 @@ abstract class BaseServiceProvider extends ServiceProvider
      *
      * @return self
      */
-    protected function registers(string|array $args, string|array $excepts = [],?bool $tes = false): self
+    protected function registers(string|array $args, string|array $excepts = []): self
     {
         $args       = $this->mustArray($args);
         $excepts    = $this->mustArray($excepts);
         $validation = !$this->inArray(ProviderRegisterMethod::CONFIG, $this->__finished_register) && !$this->inArray('Config', $excepts);
         if ($validation) $this->registerConfig();
         $hasAll   = false;
-        // if ($tes) dd($args);
         foreach ($args as $key => $list) {
             if ($list !== '*') {
                 $key = $this->registerName(($isNumber = is_numeric($key)) ? $list : $key);
@@ -395,7 +332,14 @@ abstract class BaseServiceProvider extends ServiceProvider
     }
 
     protected function autoBinds(): self{
-        $contracts     = config($this->__lower_package_name . '.app.contracts', []);
+        // if (!$this->checkCacheConfig('config-cache')){
+            $this->multipleBinds();
+        // }
+        return $this;
+    }
+
+    protected function multipleBinds(? array $contracts = null){
+        $contracts     = $contracts ?? config($this->__lower_package_name . '.app.contracts', []);
         $contract_name = config($this->__lower_package_name . '.libs.contract', 'Contracts');
         foreach ($contracts as $contract) {
             $target_contract = Str::replace($contract_name.'\\','',$contract);
@@ -403,48 +347,22 @@ abstract class BaseServiceProvider extends ServiceProvider
                 $this->binds([$contract => $target_contract]);
             }
         }
-
-        return $this;
     }
-
 
     protected function binds(array $binds)
     {
         foreach ($binds as $key => $bind) {
-            $this->app->bind($key, function ($app) use ($bind) {
+            $this->app->singleton($key, function ($app) use ($bind) {
                 if (is_callable($bind)) {
                     return $bind($app);
                 }
                 if (is_object($bind)) return $bind;
-                if (is_string($bind)) return new $bind;
+                if (is_string($bind)) {
+                    return new $bind;
+                }
             });            
         }
-    }
-
-    protected function contextualBindings(callable|array $binds): self{
-        if (\is_callable($binds)) {
-            $binds = $binds();
-        }
-        if (isset($binds) && is_array($binds)){
-            foreach ($binds as $key => $bind) {
-                if (!isset($bind['from']) || !isset($bind['give'])) {
-                    if (count($bind) == 2){
-                        list($from,$give) = $bind;
-                    }else{
-                        continue;
-                    }
-                }else{
-                    $from = $bind['from'];
-                    $give  = $bind['give'];
-                }
-
-                $this->app->when($from)
-                    ->needs($key)
-                    ->give($give);
-            }
-        }
-        return $this;
-    }
+    }    
 
     /**
      * Registers a callback to be called when the application is booting.
@@ -601,41 +519,13 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function registerModel(?callable $callback = null): self
     {
-        if (config()->get('database.models') == null) config()->set('database.models',[]);
-        $this->callMeBack($callback);
-        $this->addDataToConfig('database','model');
+        if (!$this->checkCacheConfig('config-cache')){
+            if (config()->get('database.models') == null) config()->set('database.models',[]);
+            $this->callMeBack($callback);
+            $this->addDataToConfig($this->__lower_package_name,'database','model');
+        }
         $this->setFinishedRegister(ProviderRegisterMethod::MODEL->value);
         return $this;
-    }
-
-    protected function addDataToConfig(string $config_name,string $type){
-        $config           = $this->__config[$this->__lower_package_name];
-        $plural_type      = Str::plural($type);
-        $config_type      = "$config_name.$plural_type";
-        $morphMaps        = config($config_type,[]);
-        if (isset($config['libs'], $config['libs'][$type])) {
-            $exploded = explode('\\', static::class);
-            $prefix   = implode('\\', array_slice($exploded, 0, 2));
-            $path     = (\method_exists($this,'basePath'))
-                        ? $this->basePath() 
-                        : $this->dir();
-            $path     = $path.$config['libs'][$type];
-            if (is_dir($path)){
-                $files   = File::allFiles($path);
-                $new_map = [];
-
-                foreach ($files as $file) {
-                    $relativePath = $file->getRelativePathname();
-                    $className = $prefix.'\\'.$config['libs'][$type].'\\'.str_replace(['/', '.php'], ['\\', ''], $relativePath);
-                    $new_map[class_basename($className)] = $className;
-                }
-            }
-        }
-        $package_morph = $this->mergeArray($new_map ?? [], $config[$config_name][$plural_type] ?? []);
-        $morphMaps = $this->mergeArray($morphMaps, $package_morph ?? []);
-        config([$config_type => $morphMaps]);
-        config([$this->__lower_package_name.'.'.$config_type => $package_morph ?? []]);
-        if ($type == 'model') Relation::morphMap($morphMaps);
     }
 
     private function replacement(string $value){
@@ -647,12 +537,13 @@ abstract class BaseServiceProvider extends ServiceProvider
             $this->mergeConfigWith($this->__lower_package_name)
                 ->setLocalConfig($this->__lower_package_name);
         }
-        if (isset($this->__config[$this->__lower_package_name]['app']['contracts'])) {
-            $general_contracts = config('app.contracts', []);
-            $contracts = $this->__config[$this->__lower_package_name]['app']['contracts'];
-            config(['app.contracts' => $this->mergeArray($general_contracts, $contracts)]);
+        if (!$this->checkCacheConfig('config-cache')){
+            if (isset($this->__config[$this->__lower_package_name]['app']['contracts'])) {
+                $general_contracts = config('app.contracts', []);
+                $contracts = $this->__config[$this->__lower_package_name]['app']['contracts'];
+                config(['app.contracts' => $this->mergeArray($general_contracts, $contracts)]);
+            }
         }
-
         $this->callMeBack($callback);
         $this->setFinishedRegister(ProviderRegisterMethod::CONFIG->value);
         return $this;
@@ -681,9 +572,6 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     public function registerNamespace(?callable $callback = null): self
     {
-        if(class_basename($this) == "KlinikStarterpackServiceProvider"){
-            // dd($this->getConfigFullPath(),support_config_path($this->__lower_package_name . '.php'));
-        }
         $this->publishes([
             $this->getConfigFullPath() => support_config_path($this->__lower_package_name . '.php'),
         ], 'config');

@@ -5,6 +5,7 @@ namespace Hanafalah\LaravelSupport\Concerns\Support;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Traits\Conditionable;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 trait HasCache
 {
@@ -29,29 +30,77 @@ trait HasCache
 
     protected function setCache(array $cacheData, callable $callback, bool $with_page = true)
     {
-        $cache = cache();
-        if (isset($cacheData['tags']) && count($cacheData['tags']) > 0) $cache = $cache->tags($cacheData['tags']);
-        if ($with_page) {
-            $cacheData['name'] .= (request()->has('page') ? '_' . request()->get('page') : '');
+        // defaults
+        $cacheData = array_merge([
+            'name'     => null,
+            'duration' => config('cache.ttl') ?? 3600, // default seconds
+            'tags'     => null,
+            'forever'  => false,
+            'page'     => null, // optional override (useful for CLI)
+        ], $cacheData);
+
+        if (empty($cacheData['name'])) {
+            throw new \InvalidArgumentException('Cache name is required.');
         }
-        return (isset($cacheData['forever']) && $cacheData['forever'] === true)
-            ? $cache->rememberForever($cacheData['name'], function () use ($cacheData, $callback) {
-                return $callback();
-            })
-            : $cache->remember($cacheData['name'], $cacheData['duration'], function () use ($callback) {
+        return $this->cacheDriver(function($cache_driver) use ($cacheData, $callback, $with_page){
+            $cache = Cache::store($cache_driver);
+            // safe page suffix (dont rely blindly on request() in console)
+            if ($with_page) {
+                $page = $cacheData['page'] ?? (app()->runningInConsole() ? null : request()->query('page', null));
+                if (!empty($page)) {
+                    $cacheData['name'] .= '_' . $page;
+                }
+            }
+
+            // normalize tags to array
+            $tags = is_array($cacheData['tags']) ? $cacheData['tags'] : (is_null($cacheData['tags']) ? [] : [(string) $cacheData['tags']]);
+            if (count($tags) > 0) {
+                try {
+                    $cache = $cache->tags($tags);
+                } catch (\BadMethodCallException $e) {
+                    // fallback: store tags into key prefix and log warning
+                    \Log::warning('Cache store does not support tags; falling back to prefixed key.', [
+                        'key' => $cacheData['name'],
+                        'tags' => $tags,
+                        'exception' => $e->getMessage()
+                    ]);
+                    $cacheData['name'] = implode('_', $tags) . '_' . $cacheData['name'];
+                    // keep $cache as-is (no tags)
+                }
+            }
+
+            // forever vs timed
+            if (!empty($cacheData['forever'])) {
+                return $cache->forever($cacheData['name'], $callback());
+            }
+
+            // normalize duration: allow numeric seconds or DateInterval/DateTimeInterface
+            $duration = $cacheData['duration'];
+            if (is_numeric($duration)) {
+                $ttl = now()->addSeconds((int) $duration);
+            } elseif ($duration instanceof \DateInterval || $duration instanceof \DateTimeInterface) {
+                $ttl = $duration;
+            } else {
+                $ttl = now()->addSeconds((int) (config('cache.ttl') ?? 3600));
+            }
+
+            return $cache->remember($cacheData['name'], $ttl, function () use ($callback) {
                 return $callback();
             });
-    }
-
-
-    public function getCache($key, mixed $tags = null, $default = null)
-    {
-        return $this->cacheDriver(function($cache_driver) use ($key,$tags,$default){
-            $cache = cache();
-            if (isset($tags) && $cache_driver == 'redis') $cache = $cache->tags($tags);
-            return $cache->get($key, $default);
         });
     }
+
+    public function getCache($key, mixed $tags = null){
+        return $this->cacheDriver(function($cache_driver) use ($key, $tags) {
+            $cache = Cache::store($cache_driver);
+
+            if (!empty($tags) && $cache_driver === 'redis') {
+                $cache = $cache->tags($tags); // <— harus assign ulang ke $cache
+            }
+            return $cache->get($key);
+        });
+    }
+
 
 
     public function forgetKey($key, mixed $tags = null)

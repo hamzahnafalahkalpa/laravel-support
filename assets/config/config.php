@@ -5,7 +5,8 @@ use Illuminate\Support\ServiceProvider;
 use Hanafalah\LaravelSupport\{
     Models,
     Commands,
-    Contracts
+    Contracts,
+    Supports
 };
 
 return [
@@ -40,6 +41,7 @@ return [
         'from'  => null, //default null to autodetect,
         'to'    => 'en'
     ],
+    'service_cache' => Supports\ServiceCache::class,
     'payload_monitoring' => [
         'enabled' => true,
         'categories' => [
