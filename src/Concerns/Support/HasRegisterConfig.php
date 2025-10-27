@@ -93,6 +93,9 @@ trait HasRegisterConfig
 
   public function checkCacheConfig(string $cached_config_name): bool
   {
+    if (config('laravel-support.is_service_cache', false) == false) {
+        return false;
+    }
     $cached_lists = config('app.cached_lists', []);
     return in_array($cached_config_name, $cached_lists);
   }
