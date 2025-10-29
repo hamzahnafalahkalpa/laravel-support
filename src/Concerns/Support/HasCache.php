@@ -71,7 +71,9 @@ trait HasCache
 
             // forever vs timed
             if (!empty($cacheData['forever'])) {
-                return $cache->forever($cacheData['name'], $callback());
+                $result = $cache->forever($cacheData['name'], $callback());
+                $cache->forever($cacheData['name'], $callback());
+                return $result;
             }
 
             // normalize duration: allow numeric seconds or DateInterval/DateTimeInterface

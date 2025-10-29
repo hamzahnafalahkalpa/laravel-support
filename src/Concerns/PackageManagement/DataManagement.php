@@ -177,7 +177,6 @@ trait DataManagement
 
     public function generalPrepareShow(? Model $model = null, ? array $attributes = null): Model{
         $attributes ??= request()->all();
-        $model ??= (\method_exists($this, 'get'.$this->getEntity())) ? $this->{'get'.$this->getEntity()}() : $this->generalGetModelEntity();
         if (!isset($model)){
             $valid = $attributes['id'] ?? $attributes['uuid'] ?? null;
             if (!isset($valid)) throw new \Exception('No id or uuid provided', 422);
