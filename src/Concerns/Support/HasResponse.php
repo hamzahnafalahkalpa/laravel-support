@@ -95,7 +95,6 @@ trait HasResponse
                     (isset($this->__response_result['data']))
                         ? $data = &$this->__response_result['data']
                         : $data = &$this->__response_result;
-                        
                     (array_is_list($data))
                         ? $datas = &$data
                         : $datas = [&$data];
