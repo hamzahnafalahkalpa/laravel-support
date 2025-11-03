@@ -260,9 +260,11 @@ trait DataManagement
             try {
                 $model = $this->{'prepareStore'.$this->getEntity()}($dto ?? $this->requestDTO(config("app.contracts.{$this->getEntity()}Data",null))); //RETURN MODEL
             } catch (\Throwable $th) {
-                // throw $th;
+                throw $th;
             }
-            return $this->{'show'.$this->getEntity()}($model);
+            return (isset($model))
+            ? $this->{'show'.$this->getEntity()}($model)
+            : [];
         });
     }
 
