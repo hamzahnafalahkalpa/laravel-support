@@ -170,7 +170,7 @@ abstract class BaseServiceProvider extends ServiceProvider
      */
     protected function registerMainClass(mixed $main_class, ?bool $autobinds = true): self
     {
-        echo "[DEBUG] Booting ".self::class."\n";
+        echo "[DEBUG] Booting ".class_basename($this)."\n";
         $this->__main_class         = $main_class;
         $this->__finished_register  = [];
         $this->setClassBaseName($main_class)
