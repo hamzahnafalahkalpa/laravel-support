@@ -22,7 +22,9 @@ class Unicode extends BaseModel
     protected $casts = [
         'name'   => 'string',
         'flag'   => 'string',
-        'label'  => 'string'
+        'label'  => 'string',
+        'reference_type' => 'string',
+        'reference_id'   => 'string',
     ];
 
     protected static function booted(): void{
