@@ -17,7 +17,9 @@ trait HasRouteConfiguration
     {
         foreach (['api', 'web'] as $name) {
             $path = $this->getRoutesFullPath($name);
-            if ($this->isFile($path)) $this->loadRoutesFrom($path);
+            if ($this->isFile($path)) {
+                $this->loadRoutesFrom($path);
+            }
         }
         return $this;
     }
