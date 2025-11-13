@@ -4,9 +4,8 @@ namespace Hanafalah\LaravelSupport;
 
 use Hanafalah\LaravelSupport\Contracts;
 use Hanafalah\LaravelSupport\LaravelSupport;
-use Hanafalah\LaravelSupport\Models\BaseModel;
 use Hanafalah\LaravelSupport\Providers\BaseServiceProvider;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class LaravelSupportServiceProvider extends BaseServiceProvider
 {
@@ -43,6 +42,14 @@ class LaravelSupportServiceProvider extends BaseServiceProvider
   public function boot()
   {
     $this->paramSetup();
+    Builder::macro('firstOrFailWithMessage', function (string $message) {
+      $model = $this->first();
+      if (!isset($model)) {
+          throw new \Exception($message);
+          // throw (new ModelNotFoundException($message))->setModel($this->getModel()::class);
+      }
+      return $model;
+  });
   }
 
   protected function dir(): string
