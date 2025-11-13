@@ -16,10 +16,16 @@ trait HasCache
         return true;
     }
 
+    protected function validForCache(): bool{
+        return ! collect(request()->keys())
+            ->contains(fn($key) => Str::startsWith($key, 'search_'));
+    }
+
+
     protected function cacheWhen(bool $condition, array $cache, callable $callback)
     {
         //SEMENTARA AUTO FALSE DULU
-        return $this->when(config('laravel-support.cache.enabled', true) && $this->isUsingCache() && $condition, function () use ($cache, $callback) {
+        return $this->when(config('laravel-support.cache.enabled', true) && $this->isUsingCache() && $this->validForCache() && $condition, function () use ($cache, $callback) {
             return $this->setCache($cache, function () use ($callback) {
                 return $callback();
             });
