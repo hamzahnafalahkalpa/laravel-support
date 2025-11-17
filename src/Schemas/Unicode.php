@@ -59,8 +59,16 @@ class Unicode extends PackageManagement implements ContractsUnicode
             }
         }
 
-        if (isset($unicode_dto->service)){
-            $service_dto = &$unicode_dto->service;
+        $service_dto = &$unicode_dto->service;
+        if (!isset($service_dto) && method_exists($unicode, 'isUsingService') && $unicode->isUsingService()){
+            $service_dto = $this->requestDTO(config('app.contracts.ServiceData'),[
+                'reference_id'   => $unicode->getKey(),
+                'reference_type' => $unicode->flag,
+                'name'           => $unicode->name,
+                'price'          => $unicode->price ?? 0
+            ]);
+        }
+        if (isset($service_dto)){
             $service_dto->reference_id ??= $unicode->getKey();
             $service_dto->reference_type ??= $unicode->flag;
             $service_dto->name ??= $unicode->name;
@@ -68,7 +76,6 @@ class Unicode extends PackageManagement implements ContractsUnicode
             $service = $this->schemaContract('Service')->prepareStoreService($service_dto);
             $unicode_dto->props['prop_service'] = $service->toViewApi()->resolve();
         }
-
         $this->fillingProps($unicode, $unicode_dto->props);
         $unicode->save();
         $this->forgetTags('unicode');

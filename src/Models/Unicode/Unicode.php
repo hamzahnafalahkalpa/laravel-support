@@ -37,7 +37,7 @@ class Unicode extends BaseModel
         });
     }
 
-    protected function isUsingService(): bool{
+    public function isUsingService(): bool{
         return false;
     }
 

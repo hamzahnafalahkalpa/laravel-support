@@ -16,7 +16,6 @@ use Hanafalah\LaravelSupport\Concerns\{
 };
 
 use Hanafalah\LaravelSupport\Concerns\PackageManagement\HasEvent;
-use Hanafalah\LaravelSupport\Concerns\Support\HasCache;
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Enums\Provider\ProviderRegisterMethod;
 
@@ -75,7 +74,7 @@ abstract class BaseServiceProvider extends ServiceProvider
     {
         if (isset($migration_path)) {
             if (isset($this->__config[$config_name]['libs']) && isset($this->__config[$config_name]['libs']['migration'])) {
-                $migration_path = $this->dir() .DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.$this->__config[$config_name]['libs']['migration'];
+                $migration_path ??= $this->dir() .DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.$this->__config[$config_name]['libs']['migration'];
                 $this->overrideDatabasePath($migration_path);
             } else {
                 new Exception('Migration path not found');
