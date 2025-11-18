@@ -17,7 +17,7 @@ class ServiceCache implements SupportsServiceCache{
     ];
 
     public function handle(?array $cache_data = null): void{
-        $cache_data ??= $this->__cache_data;
+        $cache_data ??= $this->__cache_data['laravel-support'];
         $this->setCache($cache_data, function(){
             $cache = [
                 'app.cached_lists' => [
