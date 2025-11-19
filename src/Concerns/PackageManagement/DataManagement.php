@@ -260,7 +260,6 @@ trait DataManagement
             try {
                 $model = $this->{'prepareStore'.$this->getEntity()}($dto ?? $this->requestDTO(config("app.contracts.{$this->getEntity()}Data",null))); //RETURN MODEL
             } catch (\Throwable $th) {
-            dd($th->getMessage());
                 throw $th;
             }
             return (isset($model))
@@ -332,6 +331,7 @@ trait DataManagement
     {
         static::$param_logic = $logic;
         if ($search_value && isset(request()->search_value)){
+            static::$param_logic = 'or';
             $model_casts = array_keys($this->usingEntity()->getCasts());
             $searches = [];
             foreach ($model_casts as $cast) {

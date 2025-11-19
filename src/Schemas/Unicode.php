@@ -31,12 +31,16 @@ class Unicode extends PackageManagement implements ContractsUnicode
         $add = [
             'parent_id' => $unicode_dto->parent_id ?? null,
             'name'      => $unicode_dto->name,
-            'flag'      => $unicode_dto->flag,
-            'label'     => $unicode_dto->label,
             'status'    => $unicode_dto->status,
             'ordering'  => $unicode_dto->ordering ?? 1,
         ];
         if ($this->isIdAsPrimaryValidation()){
+            if (!isset($unicode_dto->id)){
+                $add = array_merge($add,[
+                    'flag'      => $unicode_dto->flag,
+                    'label'     => $unicode_dto->label,
+                ]);
+            }
             $unicode = $this->usingEntity()->withoutGlobalScopes()->updateOrCreate([
                 'id' => $unicode_dto->id ?? null
             ],$add);
@@ -45,9 +49,13 @@ class Unicode extends PackageManagement implements ContractsUnicode
                 $guard  = ['id' => $unicode_dto->id];
                 $create = [$guard,$add];
             }else{
+                $add = array_merge($add,[
+                    'flag'      => $unicode_dto->flag,
+                    'label'     => $unicode_dto->label,
+                ]);
                 $create = [$add];
             }
-            $unicode = $this->usingEntity()->withoutGlobalScopes()->firstOrCreate(...$create);
+            $unicode = $this->usingEntity()->withoutGlobalScopes()->updateOrCreate(...$create);
         }
         if (isset($unicode_dto->childs) && count($unicode_dto->childs) > 0){
             $ordering = 1;
