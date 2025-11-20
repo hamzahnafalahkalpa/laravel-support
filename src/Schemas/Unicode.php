@@ -61,7 +61,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
             $ordering = 1;
             foreach ($unicode_dto->childs as $child){
                 $child->parent_id = $unicode->getKey();
-                $child->flag      = $unicode->flag;
+                $child->flag     ??= $unicode->flag;
                 $child->ordering ??= $ordering++;
                 $this->prepareStoreUnicode($child);
             }

@@ -55,6 +55,13 @@ trait HasConfigDatabase
         if (!is_array($viewApi)) $viewApi = $viewApi->resolve();
         return $this->propExcludes($viewApi,...$excludes);
     }
+    
+    public function toShowApiExcepts(...$excludes): array{
+        $excludes = $this->mustArray($excludes);
+        $viewApi = $this->toShowApi();
+        if (!is_array($viewApi)) $viewApi = $viewApi->resolve();
+        return $this->propExcludes($viewApi,...$excludes);
+    }
 
     public function toViewApiOnlies(...$onlies): array{
         $onlies = $this->mustArray($onlies);
