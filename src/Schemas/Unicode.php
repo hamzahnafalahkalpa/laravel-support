@@ -24,7 +24,7 @@ class Unicode extends PackageManagement implements ContractsUnicode
     ];
 
     protected function isIdAsPrimaryValidation(): bool{
-        return false;
+        return config('laravel-support.use_id_as_primary_validation_unicode', true);
     }
 
     public function prepareStoreUnicode(UnicodeData $unicode_dto): Model{            
@@ -49,11 +49,19 @@ class Unicode extends PackageManagement implements ContractsUnicode
                 $guard  = ['id' => $unicode_dto->id];
                 $create = [$guard,$add];
             }else{
-                $add = array_merge($add,[
-                    'flag'      => $unicode_dto->flag,
-                    'label'     => $unicode_dto->label,
-                ]);
-                $create = [$add];
+                if (config('app.is_seeding',false)){
+                    $add = array_merge($add,[
+                        'flag'      => $unicode_dto->flag,
+                        'label'     => $unicode_dto->label,
+                    ]);                    
+                    $create = [$add];
+                }else{
+                    $guard = [
+                        'flag'      => $unicode_dto->flag,
+                        'label'     => $unicode_dto->label,
+                    ];
+                    $create = [$guard,$add];
+                }
             }
             $unicode = $this->usingEntity()->withoutGlobalScopes()->updateOrCreate(...$create);
         }

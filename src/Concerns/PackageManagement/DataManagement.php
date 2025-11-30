@@ -20,7 +20,7 @@ trait DataManagement
 {
     private $__conditionals;
     protected mixed $__order_by_created_at = 'desc'; //asc, desc, false
-    public static $param_logic = 'and';
+    public static $param_logic = 'or';
 
     use RequestManipulation;
     use Support\HasRepository;
@@ -327,11 +327,10 @@ trait DataManagement
                     });
     }
 
-    public function setParamLogic(string $logic = 'and', bool $search_value = true, ?array $optionals = []): self
+    public function setParamLogic(string $logic = 'or', bool $search_value = true, ?array $optionals = []): self
     {
         static::$param_logic = $logic;
         if ($search_value && isset(request()->search_value)){
-            static::$param_logic = 'or';
             $model_casts = array_keys($this->usingEntity()->getCasts());
             $searches = [];
             foreach ($model_casts as $cast) {
