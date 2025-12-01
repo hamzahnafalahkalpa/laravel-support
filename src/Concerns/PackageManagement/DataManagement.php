@@ -118,7 +118,6 @@ trait DataManagement
         },$options);
     }
 
-
     public function autolist(?string $response = 'list',?callable $callback = null): mixed{
         if (isset($callback)) $this->conditionals($callback);
         if (isset(request()->search_except_id)){
@@ -191,7 +190,7 @@ trait DataManagement
         return $this->entityData($model);
     }   
 
-    public function generalShow(? Model $model = null): array{
+    public function generalShow(null|Collection|Model $model = null): array{
         return $this->showEntityResource(function() use ($model){
             return $this->{'prepareShow'.$this->getEntity()}($model);
         });
@@ -249,7 +248,7 @@ trait DataManagement
     public function generalPrepareStoreMultiple(array $datas): Collection{
         $collection = new Collection();
         foreach ($datas as $data) {
-            $collection->push($this->generalPrepareStore($this->requestDTO(config("app.contracts.{$this->getEntity()}Data",$data))));
+            $collection->push($this->generalPrepareStore($this->requestDTO(config("app.contracts.{$this->getEntity()}Data"),$data)));
         }
         return $collection;
     }
@@ -268,9 +267,13 @@ trait DataManagement
         });
     }
 
-    public function generalStoreMultiple(array $datas){
+    public function generalStoreMultiple(array $datas): array{
         return $this->transaction(function () use ($datas) {
-            return $this->{'show'.$this->getEntity()}($this->{'prepareStoreMultiple'.$this->getEntity()}($datas));
+            $results = $this->{'prepareStoreMultiple'.$this->getEntity()}($datas);
+            $results->transform(function($model){
+                return $this->{'show'.$this->getEntity()}($model);
+            });
+            return $results->toArray();
         });
     }
 
