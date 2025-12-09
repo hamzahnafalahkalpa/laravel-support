@@ -20,7 +20,8 @@ trait DataManagement
 {
     private $__conditionals;
     protected mixed $__order_by_created_at = 'desc'; //asc, desc, false
-    public static $param_logic = 'or';
+    public static $param_logic = null;
+    public static $param_logic_settled = false;
 
     use RequestManipulation;
     use Support\HasRepository;
@@ -118,6 +119,7 @@ trait DataManagement
         },$options);
     }
 
+
     public function autolist(?string $response = 'list',?callable $callback = null): mixed{
         if (isset($callback)) $this->conditionals($callback);
         if (isset(request()->search_except_id)){
@@ -190,7 +192,7 @@ trait DataManagement
         return $this->entityData($model);
     }   
 
-    public function generalShow(null|Collection|Model $model = null): array{
+    public function generalShow(? Model $model = null): array{
         return $this->showEntityResource(function() use ($model){
             return $this->{'prepareShow'.$this->getEntity()}($model);
         });
@@ -259,7 +261,6 @@ trait DataManagement
             try {
                 $model = $this->{'prepareStore'.$this->getEntity()}($dto ?? $this->requestDTO(config("app.contracts.{$this->getEntity()}Data",null))); //RETURN MODEL
             } catch (\Throwable $th) {
-                dd($th->getMessage());
                 throw $th;
             }
             return (isset($model))
@@ -313,7 +314,7 @@ trait DataManagement
 
     public function generalSchemaModel(mixed $conditionals = null): Builder{
         $this->booting();
-        $this->setParamLogic();
+        if (!static::$param_logic_settled) $this->setParamLogic();
         $model = $this->usingEntity();
         $fillable = $model->getFillable();
         return $model->withParameters($this->getParamLogic())
@@ -331,18 +332,24 @@ trait DataManagement
                     });
     }
 
-    public function setParamLogic(string $logic = 'or', bool $search_value = true, ?array $optionals = []): self
+    public function setParamLogic(?string $logic = null, ?array $optionals = null): self
     {
         static::$param_logic = $logic;
-        if ($search_value && isset(request()->search_value)){
+
+        if (isset(request()->search_value)){
+            static::$param_logic ??= 'or';
             $model_casts = array_keys($this->usingEntity()->getCasts());
             $searches = [];
             foreach ($model_casts as $cast) {
                 $searches['search_'.$cast] = request()->search_value;
             }
             $searches['search_value'] = null;
+            $optionals ??= [];
             request()->merge($searches,...$optionals);
+        }else{
+            static::$param_logic ??= 'and';
         }
+        static::$param_logic_settled = true;
         return $this;
     }
 

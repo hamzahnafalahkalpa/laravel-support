@@ -39,13 +39,13 @@ interface DataManagement
     public function generalPrepareStore(mixed $dto = null): Model;
     public function generalPrepareStoreMultiple(array $datas): Collection;
     public function generalStore(mixed $dto = null): array;
-    public function generalStoreMultiple(array $datas);
+    public function generalStoreMultiple(array $datas): array;
     public function generalPrepareUpdate(mixed $dto): Model;
     public function generalUpdate(mixed $dto = null);
     public function generalPrepareDelete(? array $attributes = null): bool;
     public function generalDelete(): bool;
     public function generalSchemaModel(mixed $conditionals = null): Builder;
-    public function setParamLogic(string $logic = 'and', bool $search_value = true, ?array $optionals = []): self;
+    public function setParamLogic(?string $logic = null, ?array $optionals = null): self;
     public function getParamLogic(): string;
 
 
