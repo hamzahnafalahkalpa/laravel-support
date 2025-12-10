@@ -8,8 +8,12 @@ trait NowYouSeeMe
 {
     protected $__table_name;
 
-    public function isTableExists()
+    public function isTableExists(?object $table = null)
     {
+        if (isset($table)){
+            $this->__table = $table;
+            $this->__table_name = $table->getTable();
+        }
         return $this->schema(function ($schema, $table_name) {
             return $schema->hasTable($table_name);
         });

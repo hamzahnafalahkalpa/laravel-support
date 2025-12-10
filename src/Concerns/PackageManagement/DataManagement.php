@@ -119,7 +119,6 @@ trait DataManagement
         },$options);
     }
 
-
     public function autolist(?string $response = 'list',?callable $callback = null): mixed{
         if (isset($callback)) $this->conditionals($callback);
         if (isset(request()->search_except_id)){
@@ -192,7 +191,7 @@ trait DataManagement
         return $this->entityData($model);
     }   
 
-    public function generalShow(? Model $model = null): array{
+    public function generalShow(null|Collection|Model $model = null): array{
         return $this->showEntityResource(function() use ($model){
             return $this->{'prepareShow'.$this->getEntity()}($model);
         });
