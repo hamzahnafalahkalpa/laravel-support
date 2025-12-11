@@ -4,14 +4,10 @@ namespace Hanafalah\LaravelSupport\Concerns\Support;
 
 use Exception;
 use Illuminate\Support\Facades\{
-  Validator,
-  Log,
-  DB
+  Validator, DB
 };
 use Hanafalah\LaravelSupport\Facades\LaravelSupport;
-use Hanafalah\LaravelSupport\Supports\Data;
 use Illuminate\Support\Facades\Request;
-use ReflectionClass;
 
 /**
  * @method static self validatingParam(array $case=[])

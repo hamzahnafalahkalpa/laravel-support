@@ -43,15 +43,15 @@ class SupportBaseModel extends AbstractModel
         });
         static::created(function ($query) {
             static::clearCacheModel($query);
-            static::withoutEvents(function () use ($query) {
-                $query->setOld($query);
-            });
+            // static::withoutEvents(function () use ($query) {
+            //     $query->setOld($query);
+            // });
         });
         static::updated(function ($query) {
             static::clearCacheModel($query);
-            static::withoutEvents(function () use ($query) {
-                if (!$query->wasRecentlyCreated && $query->isDirty('current')) $query->setOld($query);
-            });
+            // static::withoutEvents(function () use ($query) {
+            //     if (!$query->wasRecentlyCreated && $query->isDirty('current')) $query->setOld($query);
+            // });
         });
         static::deleting(function ($query) {
         });
