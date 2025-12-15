@@ -41,6 +41,7 @@ trait DataManagement
         $method = $this->getCallMethod();
         $entity = $this->getEntity();
         $result = $this->methodHandler($method,[
+            "import"                        => 'generalImport',
             "export"                        => 'generalExport',
             "show$entity"                   => 'generalShow',
             "prepareShow$entity"            => 'generalPrepareShow',
@@ -140,6 +141,13 @@ trait DataManagement
         $type = Str::studly($type);
         $export_class = config($this->__config_name.'.exports.'.$type,null);
         return new $export_class($this);
+    }
+
+    public function generalImport(string $type): mixed{
+        if (!isset($this->__config_name)) throw new \Exception('No config name provided', 422);
+        $type = Str::studly($type);
+        $import_class = config($this->__config_name.'.imports.'.$type,null);
+        return new $import_class($this);
     }
 
     public function generalGetModelEntity(): mixed{
