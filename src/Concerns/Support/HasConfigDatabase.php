@@ -117,7 +117,6 @@ trait HasConfigDatabase
         }, ARRAY_FILTER_USE_KEY);
 
         if (count($parameters) == 0) return $builder;
-
         return $builder->where(function ($query) use ($parameters, $operator) {
             $connection_name = $this->getConnectionName();
             $connection      = config('database.connections.' . ($connection_name ?? config('database.default')));
