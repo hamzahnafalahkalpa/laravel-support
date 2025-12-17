@@ -224,7 +224,7 @@ trait DataManagement
     public function generalViewPaginate(?PaginateData $paginate_dto = null): array{
         return $this->viewEntityResource(function() use ($paginate_dto){
             return $this->{"prepareView".$this->getEntity()."Paginate"}($paginate_dto ?? $this->requestDTO(PaginateData::class));
-        }, ['rows_per_page' => [50]]);
+        }, ['rows_per_page' => [request()->per_page ?? request()->perPage ?? request()->limit ?? 10]]);
     }
 
     public function generalPrepareViewList(? array $attributes = null): Collection{

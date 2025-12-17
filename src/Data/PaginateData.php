@@ -9,7 +9,7 @@ use Spatie\LaravelData\Attributes\MapName;
 
 class PaginateData extends Data implements DataPaginateData
 {
-    #[MapInputName('per_page')]
+    #[MapInputName('perPage')]
     #[MapName('perPage')]
     public ?int $perPage = 10;
 
@@ -17,7 +17,7 @@ class PaginateData extends Data implements DataPaginateData
     #[MapName('columns')]
     public ?array $columns = ['*'];
 
-    #[MapInputName('page_name')]
+    #[MapInputName('pageName')]
     #[MapName('pageName')]
     public ?string $pageName = 'page';
 
@@ -30,7 +30,7 @@ class PaginateData extends Data implements DataPaginateData
     public ?int $total = null;
 
     public static function before(array &$attributes){
-        $attributes['perPage'] ??= $attributes['per_page'] ?? 10;
+        $attributes['perPage'] ??= $attributes['per_page'] ?? $attributes['limit'] ?? 10;
         $attributes['pageName'] ??= $attributes['page_name'] ?? 'page';
     }
 }
