@@ -105,33 +105,24 @@ trait HasFileUpload{
     public function setupFile(string|UploadedFile|null $file = null, ?string $path = null, ?string $filename = null): ?string{
         $current    = $this->getFile() ?? null;
         $file_path  = $this->getFilePath($path);
-        // $disk       = $this->__filesystem_disk ?? $this->driver();
         $disk       = $this->driver();
         if ($file instanceof UploadedFile) {
-            if ($file->getError() !== UPLOAD_ERR_OK) {
-                $errorMessages = [
-                    UPLOAD_ERR_INI_SIZE   => 'File terlalu besar (melebihi upload_max_filesize '.ini_get('upload_max_filesize').')',
-                    UPLOAD_ERR_FORM_SIZE  => 'File terlalu besar (melebihi batas HTML form MAX_FILE_SIZE)',
-                    UPLOAD_ERR_PARTIAL    => 'File hanya terupload sebagian',
-                    UPLOAD_ERR_NO_FILE    => 'Tidak ada file yang diupload',
-                ];
-                throw new \RuntimeException(
-                    $errorMessages[$file->getError()] ?? 'Upload file gagal (error code ' . $file->getError() . ')'
-                );
+            $originalName = $file->getClientOriginalName();
+            if (
+                Str::contains($originalName, '.part')
+                && request()->has('chunk_index')
+            ) {
+                $this->uploadChunk($file, [
+                    'upload_id'   => request()->id,
+                    'chunk_index' => request()->chunk_index,
+                    'key'         => $this->getFilePath($path).'/'.($filename ?? $originalName),
+                ]);
+                return null;
+            }else{
+                $data = $this->normalUploadFile($file, $file_path, $filename, $disk);
+                $result = $data[2];
+                $remove_current = true;
             }
-
-            $filename ??= Str::orderedUuid();
-            $ext        = $file->getClientOriginalExtension();
-            $filename  .= '.' . $ext;
-            $data = [
-                $file_path, 
-                $file,
-                $filename
-            ];
-            Storage::disk($disk)->putFileAs(...$data);
-
-            $result = $filename;
-            $remove_current = true;
         } elseif (is_string($file) && Str::startsWith($file, 'data:')) {
             // === handle base64 ===
             [$meta, $fileBase64] = explode(',', $file, 2);
@@ -162,6 +153,31 @@ trait HasFileUpload{
             $this->deleteFile($this->getFilePath($path) . '/' . $current);
         }
         return $result;
+    }
+
+    protected function normalUploadFile(UploadedFile $file, ?string $file_path = null, ?string $filename = null, ?string $disk = null): array{
+        if ($file->getError() !== UPLOAD_ERR_OK) {
+            $errorMessages = [
+                UPLOAD_ERR_INI_SIZE   => 'File terlalu besar (melebihi upload_max_filesize '.ini_get('upload_max_filesize').')',
+                UPLOAD_ERR_FORM_SIZE  => 'File terlalu besar (melebihi batas HTML form MAX_FILE_SIZE)',
+                UPLOAD_ERR_PARTIAL    => 'File hanya terupload sebagian',
+                UPLOAD_ERR_NO_FILE    => 'Tidak ada file yang diupload',
+            ];
+            throw new \RuntimeException(
+                $errorMessages[$file->getError()] ?? 'Upload file gagal (error code ' . $file->getError() . ')'
+            );
+        }
+
+        $filename ??= Str::orderedUuid();
+        $ext        = $file->getClientOriginalExtension();
+        $filename  .= '.' . $ext;
+        $data = [
+            $file_path, 
+            $file,
+            $filename
+        ];
+        Storage::disk($disk)->putFileAs(...$data);
+        return $data;
     }
 
     public function deleteFile(string $path, ?string $disk = null): void{
