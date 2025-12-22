@@ -5,6 +5,7 @@ namespace Hanafalah\LaravelSupport;
 use Hanafalah\LaravelSupport\Contracts;
 use Hanafalah\LaravelSupport\LaravelSupport;
 use Hanafalah\LaravelSupport\Providers\BaseServiceProvider;
+use Hanafalah\LaravelSupport\Supports\SupportCache;
 use Illuminate\Database\Eloquent\Builder;
 
 class LaravelSupportServiceProvider extends BaseServiceProvider

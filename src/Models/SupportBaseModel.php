@@ -36,7 +36,7 @@ class SupportBaseModel extends AbstractModel
         parent::booted();
         static::addGlobalScope(new HasCurrentScope);
         static::creating(function ($query) {
-            $query->currentChecking($query);
+            $query->setCurrent($query);
             if (self::isSetUuid($query) && !isset($query->{$query->getUuidName()})) {
                 $query->uuid = Str::orderedUuid();
             }

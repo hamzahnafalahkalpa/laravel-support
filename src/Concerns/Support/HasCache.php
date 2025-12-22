@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 trait HasCache
 {
     use Conditionable;
-    protected array $__cache;
+    protected array $__cache = [];
 
     protected function isUsingCache(): bool{
         return true;
@@ -22,7 +22,7 @@ trait HasCache
     }
 
 
-    protected function cacheWhen(bool $condition, array $cache, callable $callback)
+    public function cacheWhen(bool $condition, array $cache, callable $callback)
     {
         //SEMENTARA AUTO FALSE DULU
         return $this->when(config('laravel-support.cache.enabled', true) && $this->isUsingCache() && $this->validForCache() && $condition, function () use ($cache, $callback) {
@@ -34,9 +34,7 @@ trait HasCache
         });
     }
 
-    protected function setCache(array $cacheData, callable $callback, bool $with_page = true)
-    {
-        // defaults
+    public function setCache(array $cacheData, callable $callback, bool $with_page = true, bool $update = false){        
         $cacheData = array_merge([
             'name'     => null,
             'duration' => config('cache.ttl') ?? 3600, // default seconds
@@ -48,7 +46,7 @@ trait HasCache
         if (empty($cacheData['name'])) {
             throw new \InvalidArgumentException('Cache name is required.');
         }
-        return $this->cacheDriver(function($cache_driver) use ($cacheData, $callback, $with_page){
+        return $this->cacheDriver(function($cache_driver) use ($cacheData, $callback, $with_page, $update) {
             $cache = Cache::store($cache_driver);
             // safe page suffix (dont rely blindly on request() in console)
             if ($with_page) {
@@ -92,9 +90,15 @@ trait HasCache
                 $ttl = now()->addSeconds((int) (config('cache.ttl') ?? 3600));
             }
 
-            return $cache->remember($cacheData['name'], $ttl, function () use ($callback) {
-                return $callback();
-            });
+            if ($update) {
+                $cache->put($cacheData['name'], $callback(), $ttl);
+                $result = $cache->get($cacheData['name']);
+                return $result;
+            }else{
+                return $cache->remember($cacheData['name'], $ttl, function () use ($callback) {
+                    return $callback();
+                });
+            }
         });
     }
 

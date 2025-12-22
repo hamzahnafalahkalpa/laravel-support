@@ -50,6 +50,18 @@ return [
             'fast'    => 100
         ]
     ],
+    'encoding_cache_data' => [
+        'encoding' => [
+            'name'     => 'encoding',
+            'tags'     => ['encoding', 'encoding-index'],
+            'duration' => 24 * 60
+        ],
+        'model_has_encoding' => [
+            'name'     => 'model_has_encoding',
+            'tags'     => ['encoding', 'model_has_encoding-index'],
+            'duration' => 24 * 60
+        ]
+    ],
     'cache' => [
         'enabled' => env('USING_CACHE', false)
     ],
