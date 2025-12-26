@@ -98,6 +98,7 @@ trait HasFileUpload{
         foreach ($unusedFiles as $file) {
             $this->deleteFile($this->getFilePath($path).'/'.$file);
         }
+    
         return $newFiles->values()->all();
     }
 
@@ -107,7 +108,10 @@ trait HasFileUpload{
         $disk       = $this->driver();
         if ($file instanceof UploadedFile) {
             $originalName = $file->getClientOriginalName();
-            if (Str::contains($originalName, '.part') && request()->has('chunk_index')) {
+            if (
+                Str::contains($originalName, '.part')
+                && request()->has('chunk_index')
+            ) {
                 $this->uploadChunk($file, [
                     'upload_id'   => request()->id,
                     'chunk_index' => request()->chunk_index,
@@ -115,9 +119,8 @@ trait HasFileUpload{
                 ]);
                 return null;
             }else{
-                $name = $filename ?? $originalName;
-                $data = $this->normalUploadFile($file, $file_path, $name, $disk);
-                $result = $file_path.'/'.$name;
+                $data = $this->normalUploadFile($file, $file_path, $filename, $disk);
+                $result = $data[2];
                 $remove_current = true;
             }
         } elseif (is_string($file) && Str::startsWith($file, 'data:')) {
@@ -167,9 +170,7 @@ trait HasFileUpload{
 
         $filename ??= Str::orderedUuid();
         $ext        = $file->getClientOriginalExtension();
-        if (!str_ends_with($filename, '.' . $ext)) {
-            $filename .= '.' . $ext;
-        }
+        $filename  .= '.' . $ext;
         $data = [
             $file_path, 
             $file,
