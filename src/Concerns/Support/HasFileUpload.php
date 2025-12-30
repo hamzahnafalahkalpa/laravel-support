@@ -120,7 +120,8 @@ trait HasFileUpload{
                 return null;
             }else{
                 $data = $this->normalUploadFile($file, $file_path, $filename, $disk);
-                $result = $data[2];
+                $result = ltrim($data[0], DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . ltrim($data[2], DIRECTORY_SEPARATOR);
+                $result = ltrim($result, '/');
                 $remove_current = true;
             }
         } elseif (is_string($file) && Str::startsWith($file, 'data:')) {
@@ -141,7 +142,9 @@ trait HasFileUpload{
             ];
             
             $result = Storage::disk($disk)->put(...$data);
-            $result = $filename;
+            // $result = $filename;
+            $result = ltrim($file_path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . ltrim($filename, DIRECTORY_SEPARATOR);
+            $result = ltrim($result, '/');
             $remove_current = true;
         } elseif (is_string($file)) {
             $result = $file;
@@ -167,7 +170,6 @@ trait HasFileUpload{
                 $errorMessages[$file->getError()] ?? 'Upload file gagal (error code ' . $file->getError() . ')'
             );
         }
-
         $filename ??= Str::orderedUuid();
         $ext        = $file->getClientOriginalExtension();
         $filename  .= '.' . $ext;
