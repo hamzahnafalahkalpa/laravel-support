@@ -342,17 +342,18 @@ trait DataManagement
     public function setParamLogic(?string $logic = null, ?array $optionals = null): self
     {
         static::$param_logic = $logic;
-
         if (isset(request()->search_value)){
             static::$param_logic ??= 'or';
             $model_casts = array_keys($this->usingEntity()->getCasts());
             $searches = [];
             foreach ($model_casts as $cast) {
+                if (in_array($cast,['props','created_at','updated_at','deleted_at'])) continue;
                 $searches['search_'.$cast] = request()->search_value;
             }
             $searches['search_value'] = null;
             $optionals ??= [];
-            request()->merge($searches,...$optionals);
+            $params = array_merge($searches, $optionals);
+            request()->replace($params);
         }else{
             static::$param_logic ??= 'and';
         }

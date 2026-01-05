@@ -24,7 +24,6 @@ trait HasCache
 
     public function cacheWhen(bool $condition, array $cache, callable $callback)
     {
-        //SEMENTARA AUTO FALSE DULU
         return $this->when(config('laravel-support.cache.enabled', true) && $this->isUsingCache() && $this->validForCache() && $condition, function () use ($cache, $callback) {
             return $this->setCache($cache, function () use ($callback) {
                 return $callback();

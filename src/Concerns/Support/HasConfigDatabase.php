@@ -183,7 +183,6 @@ trait HasConfigDatabase
                             }
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $parameter = $this->timezoneCalculation($parameter);
-
                                 foreach ($parameter as $param) {
                                     if (!is_array($param)) {
                                         if ($this->dateChecking($param)){
