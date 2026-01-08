@@ -83,15 +83,15 @@ trait HasRequest
 
   public function transaction($callback): mixed
   {
-    if (config('micro-tenant') !== null){
-      if (env('DB_DRIVER') == 'mysql'){
-        DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
-        DB::statement('SET GLOBAL FOREIGN_KEY_CHECKS = 0;');
-        DB::statement('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
-        DB::statement('SET GLOBAL TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
-        DB::statement('SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
-      }
-    }
+    // if (config('micro-tenant') !== null){
+    //   if (env('DB_DRIVER') == 'mysql'){
+    //     DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
+    //     DB::statement('SET GLOBAL FOREIGN_KEY_CHECKS = 0;');
+    //     DB::statement('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
+    //     DB::statement('SET GLOBAL TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
+    //     DB::statement('SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
+    //   }
+    // }
 
     $user_connections = [];
     try {
