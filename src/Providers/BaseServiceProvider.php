@@ -18,6 +18,7 @@ use Hanafalah\LaravelSupport\Concerns\{
 use Hanafalah\LaravelSupport\Concerns\PackageManagement\HasEvent;
 use Illuminate\Support\Str;
 use Hanafalah\LaravelSupport\Enums\Provider\ProviderRegisterMethod;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 abstract class BaseServiceProvider extends ServiceProvider
 {

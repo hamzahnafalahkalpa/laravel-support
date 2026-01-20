@@ -45,8 +45,7 @@ trait HasMigrationConfiguration
      * @return self
      */
     protected function setMigrationBasePath(string $path): self
-    {
-        if ($this::class == 'Hanafalah\ModuleUser\Commands\InstallMakeCommand') dd($path,$this->dir());
+    {        
         $path = $this->makeRealPath($path, $this->dir());
         $this->__migration_base_path = $this->dir() . $path;
         return $this;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Hanafalah\MicroTenant\Concerns\Schema;
+namespace Hanafalah\LaravelSupport\Concerns\Schema;
 
 trait HasSchema
 {

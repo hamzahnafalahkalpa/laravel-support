@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Traits\Conditionable;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 
 trait HasCache
 {
@@ -47,6 +48,7 @@ trait HasCache
         }
         return $this->cacheDriver(function($cache_driver) use ($cacheData, $callback, $with_page, $update) {
             $cache = Cache::store($cache_driver);
+
             // safe page suffix (dont rely blindly on request() in console)
             if ($with_page) {
                 $page = $cacheData['page'] ?? (app()->runningInConsole() ? null : request()->query('page', null));
@@ -81,6 +83,7 @@ trait HasCache
 
             // normalize duration: allow numeric seconds or DateInterval/DateTimeInterface
             $duration = $cacheData['duration'];
+
             if (is_numeric($duration)) {
                 $ttl = now()->addSeconds((int) $duration);
             } elseif ($duration instanceof \DateInterval || $duration instanceof \DateTimeInterface) {
@@ -94,10 +97,12 @@ trait HasCache
                 $result = $cache->get($cacheData['name']);
                 return $result;
             }else{
-                return $cache->remember($cacheData['name'], $ttl, function () use ($callback) {
+                $result = $cache->remember($cacheData['name'], $ttl, function () use ($callback) {
                     return $callback();
                 });
+                return $result;
             }
+
         });
     }
 
