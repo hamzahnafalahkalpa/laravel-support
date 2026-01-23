@@ -66,7 +66,6 @@ class Response extends PackageManagement implements ContractsResponse
                 $this->catch($e);
                 $err = $e->getMessage();
                 if ($err == '') $err = $this->getResponseMessages();
-                return $this->sendResponse(null, $this->getResponseCode() ?? 500, $err);
                 switch (true) {
                     case $e instanceof \Illuminate\Validation\ValidationException:
                     case $e instanceof \Illuminate\Database\QueryException:
