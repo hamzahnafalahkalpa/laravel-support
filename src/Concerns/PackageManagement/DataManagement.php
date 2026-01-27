@@ -21,7 +21,6 @@ trait DataManagement
     private $__conditionals;
     protected mixed $__order_by_created_at = 'desc'; //asc, desc, false
     public static $param_logic = null;
-    public static $param_logic_settled = false;
 
     use RequestManipulation;
     use Support\HasRepository;
@@ -321,7 +320,7 @@ trait DataManagement
 
     public function generalSchemaModel(mixed $conditionals = null): Builder{
         $this->booting();
-        if (!static::$param_logic_settled) $this->setParamLogic();
+        if (!config('app.set-param-logic',false)) $this->setParamLogic();
         $model = $this->usingEntity();
         $fillable = $model->getFillable();
         return $model->withParameters($this->getParamLogic())
@@ -350,14 +349,15 @@ trait DataManagement
                 if (in_array($cast,['props','created_at','updated_at','deleted_at'])) continue;
                 $searches['search_'.$cast] = request()->search_value;
             }
-            $searches['search_value'] = null;
+            $searches['search_value'] = null; 
             $optionals ??= [];
             $params = array_merge($searches, $optionals);
+            unset($params['search_value']);
             request()->replace($params);
         }else{
             static::$param_logic ??= 'and';
         }
-        static::$param_logic_settled = true;
+        config(['app.set-param-logic' => true]);
         return $this;
     }
 

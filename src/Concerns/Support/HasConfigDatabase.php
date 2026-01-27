@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 trait HasConfigDatabase
 {
@@ -117,17 +118,18 @@ trait HasConfigDatabase
         }, ARRAY_FILTER_USE_KEY);
 
         if (count($parameters) == 0) return $builder;
-        return $builder->where(function ($query) use ($parameters, $operator) {
+        $builder->where(function ($query) use ($parameters, $operator) {
             $connection_name = $this->getConnectionName();
             $connection      = config('database.connections.' . ($connection_name ?? config('database.default')));
             $db_driver       = $connection['driver'];
             foreach ($parameters as $key => $parameter) {
-                if ($parameter == '') continue;
+                if ($parameter == '' || !isset($parameter)) continue;
                 $field = Str::after($key, 'search_');
                 $casts = $this->getCasts();
                 $query_field = (method_exists($this, 'getPropsQuery'))
                     ? $this->getPropsQuery()[$field] ?? $field
                     : $field;
+                
                 if (isset($casts[$field])) {
                     switch ($casts[$field]) {
                         case 'string':
@@ -156,12 +158,12 @@ trait HasConfigDatabase
                                 foreach ($parameter as &$param) {
                                     $param = Str::lower($param);
                                 }
-                                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                                return $query->whereNested(function ($query) use ($query_field, $parameter) {
                                     $query->whereIn($query_field, $parameter);
                                 }, $operator);
                             }else{
                                 $parameter = Str::lower($parameter);
-                                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                                return $query->whereNested(function ($query) use ($query_field, $parameter) {
                                     $query->whereLike($query_field, "%$parameter%")
                                         ->orWhereLike($query_field, "$parameter%")
                                         ->orWhereLike($query_field, "%$parameter")
@@ -170,7 +172,7 @@ trait HasConfigDatabase
                             }
                         break;
                         case 'array':
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
+                            return $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $query->whereJsonContains($query_field, $parameter);
                             }, $operator);
                         break;
@@ -181,7 +183,7 @@ trait HasConfigDatabase
                                     $parameter = explode(' - ', $parameter);
                                 }
                             }
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
+                            return $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $parameter = $this->timezoneCalculation($parameter);
                                 foreach ($parameter as $param) {
                                     if (!is_array($param)) {
@@ -204,35 +206,33 @@ trait HasConfigDatabase
                                     $parameter = explode(' - ', $parameter);
                                 }
                             }
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                $parameters = $this->mustArray($parameter);
-                                if ($this->dateChecking($parameters)) {
-                                    if (count($parameters) == 1) $parameters[1] = $parameters[0];
-                                    $query->whereBetween($query_field, $parameters);
-                                } else {
-                                    $query->where($query_field, $parameters);
-                                }
-                            }, $operator);
+                            if ($this->dateChecking($parameters)) {
+                                return $query->whereNested(function ($query) use ($query_field, $parameter) {
+                                    $parameters = $this->mustArray($parameter);
+                                        if (count($parameters) == 1) $parameters[1] = $parameters[0];
+                                        $query->whereBetween($query_field, $parameters);                                    
+                                }, $operator);
+                            }
                         break;
                         case 'immutable_datetime':
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
+                            return $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 if (is_array($parameter)) {
-                                    $query->whereBetween($query_field, $parameter);
+                                    return $query->whereBetween($query_field, $parameter);
                                 } else {
-                                    $query->where($query_field, $parameter);
+                                    return $query->where($query_field, $parameter);
                                 }
                             }, $operator);
                         break;
                         case 'boolean':
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                $query->where($query_field, (bool)$parameter);
+                            return $query->whereNested(function ($query) use ($query_field, $parameter) {
+                                return $query->where($query_field, (bool)$parameter);
                             }, $operator);
                         break;
                         case 'integer':
                         case 'float':
                         case 'double':
                         default:
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
+                            return $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $query->where($query_field, $parameter);
                             }, $operator);
                         break;
@@ -246,6 +246,7 @@ trait HasConfigDatabase
                 }
             }
         });
+        return $builder;
     }
 
     private function dateChecking(string|array $params)
