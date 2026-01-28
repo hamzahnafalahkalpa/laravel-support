@@ -89,7 +89,7 @@ trait HasRequest
           DB::statement('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
       }
 
-      $user_connections = [];
+      $user_connections = config('database.active_connections',[]);
       $listenerActive   = true;
 
       DB::listen(function ($query) use (&$user_connections, &$listenerActive) {
@@ -105,11 +105,14 @@ trait HasRequest
               '/^(insert|update|delete|merge|truncate|copy)\b/',
               $sql
           );
-
+          $user_connections = config('database.active_connections',[]);
           if ($isWrite && ! in_array($connection, $user_connections, true)) {
               $user_connections[] = $connection;
               DB::connection($connection)->beginTransaction();
           }
+          config([
+            'database.active_connections' => $user_connections
+          ]);
       });
 
       try {
@@ -117,7 +120,7 @@ trait HasRequest
 
           // STOP listener sebelum commit
           $listenerActive = false;
-
+          $user_connections = config('database.active_connections',[]);
           foreach ($user_connections as $connection) {
               DB::connection($connection)->commit();
           }
