@@ -147,7 +147,17 @@ trait HasFileUpload{
             $result = ltrim($result, '/');
             $remove_current = true;
         } elseif (is_string($file)) {
-            $result = $file;
+            // jika string berisi URL
+            if (Str::startsWith($file, ['http://', 'https://'])) {
+                // ambil path dari URL
+                $urlPath = parse_url($file, PHP_URL_PATH); // "/profiles/xxx.jpeg"
+                // hilangkan prefix $file_path
+                $result = ltrim(str_replace($file_path, '', $urlPath), '/');
+                // gabungkan lagi dengan $file_path
+                $result = ltrim($file_path, '/') . '/' . $result;
+            } else {
+                $result = $file;
+            }
         } else {
             $remove_current = true;
             $result = null;
