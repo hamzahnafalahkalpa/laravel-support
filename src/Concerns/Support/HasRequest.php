@@ -81,52 +81,69 @@ trait HasRequest
     throw new \Exception($message);
   }
 
-  public function transaction($callback): mixed
+  public function transaction(callable $callback): mixed
   {
-    // if (config('micro-tenant') !== null){
-    //   if (env('DB_DRIVER') == 'mysql'){
-    //     DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
-    //     DB::statement('SET GLOBAL FOREIGN_KEY_CHECKS = 0;');
-    //     DB::statement('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
-    //     DB::statement('SET GLOBAL TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
-    //     DB::statement('SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
-    //   }
-    // }
+      // khusus MySQL (kalau dipakai)
+      if (config('micro-tenant') !== null && env('DB_DRIVER') === 'mysql') {
+          DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
+          DB::statement('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
+      }
 
-    $user_connections = [];
-    try {
-      DB::listen(function ($query) use (&$user_connections) {
-        $connection_name = $query->connectionName;
-        if (!in_array($connection_name, $user_connections)) {
-          $user_connections[] = $connection_name;
-          DB::connection($connection_name)->beginTransaction();
-        }
+      $user_connections = [];
+      $listenerActive   = true;
+
+      DB::listen(function ($query) use (&$user_connections, &$listenerActive) {
+          if (! $listenerActive) {
+              return;
+          }
+
+          $connection = $query->connectionName;
+          $sql = ltrim(strtolower($query->sql));
+
+          // DETEKSI WRITE SAJA
+          $isWrite = preg_match(
+              '/^(insert|update|delete|merge|truncate|copy)\b/',
+              $sql
+          );
+
+          if ($isWrite && ! in_array($connection, $user_connections, true)) {
+              $user_connections[] = $connection;
+              DB::connection($connection)->beginTransaction();
+          }
       });
 
-      $value = $callback();
-      foreach ($user_connections as $connection_name) {
-        DB::connection($connection_name)->commit();
-      }
-      $result = true;
-    } catch (\Throwable $e) {
-      foreach ($user_connections as $connection_name) {
-        try {
-            DB::connection($connection_name)->rollBack();
-        } catch (\Throwable $ex) {
-            // kalau sudah aborted, rollback bisa gagal → biarin aja
-        }
+      try {
+          $result = $callback();
 
-        // reset connection supaya status "aborted" hilang
-        DB::purge($connection_name);
-        DB::reconnect($connection_name);
-      }
+          // STOP listener sebelum commit
+          $listenerActive = false;
 
-      LaravelSupport::catch($e);
-      $result = false;
-      if (Request::wantsJson()) {
-        throw $e;
+          foreach ($user_connections as $connection) {
+              DB::connection($connection)->commit();
+          }
+
+          return $result;
+      } catch (\Throwable $e) {
+          $listenerActive = false;
+
+          foreach ($user_connections as $connection) {
+              try {
+                  DB::connection($connection)->rollBack();
+              } catch (\Throwable) {
+                  // ignore
+              }
+
+              // penting untuk Postgres (aborted transaction state)
+              DB::purge($connection);
+          }
+
+          LaravelSupport::catch($e);
+
+          if (Request::wantsJson()) {
+              throw $e;
+          }
+
+          return false;
       }
-    }
-    return (isset($value)) ? $value : $result;
   }
 }
