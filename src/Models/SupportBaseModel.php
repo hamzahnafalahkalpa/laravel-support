@@ -3,7 +3,6 @@
 namespace Hanafalah\LaravelSupport\Models;
 
 use Hanafalah\LaravelSupport\Concerns as SupportConcerns;
-use Hanafalah\LaravelHasProps\Concerns as PropsConcerns;
 use Hanafalah\LaravelHasProps\Concerns\HasConfigProps;
 use Hanafalah\LaravelHasProps\Concerns\HasCurrent;
 use Illuminate\Support\Str;
@@ -18,6 +17,7 @@ class SupportBaseModel extends AbstractModel
     use SupportConcerns\DatabaseConfiguration\HasModelConfiguration;
     use SupportConcerns\Support\HasConfigDatabase;
     use SupportConcerns\Support\HasRepository;
+    use SupportConcerns\Support\HasElasticSearch;
 
     const STATUS_ACTIVE     = 1;
     const STATUS_DELETED    = 0;
@@ -30,6 +30,18 @@ class SupportBaseModel extends AbstractModel
     protected $keyType      = "int";
     protected $list         = [];
     protected $show         = [];
+
+    /**
+     * Elasticsearch configuration for this model
+     *
+     * @var array
+     */
+    protected array $elastic_config = [
+        'enabled' => false,
+        'index_name' => null,  // null = use table name
+        'variables' => [],     // empty = use getCasts()
+        'hydrate' => false,
+    ];
 
     protected static function booted(): void
     {
@@ -55,6 +67,11 @@ class SupportBaseModel extends AbstractModel
         });
         static::deleting(function ($query) {
         });
+
+        // Register Elasticsearch observer if enabled
+        if (config('elasticsearch.enabled', false) && config('elasticsearch.auto_index.enabled', true)) {
+            static::observe(\Hanafalah\LaravelSupport\Observers\ElasticSearchObserver::class);
+        }
     }
 
     public function getCurrentChecking(): bool

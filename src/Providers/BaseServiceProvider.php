@@ -528,6 +528,7 @@ abstract class BaseServiceProvider extends ServiceProvider
             $this->addDataToConfig($this->__lower_package_name,'database','model');
         }
         $this->setFinishedRegister(ProviderRegisterMethod::MODEL->value);
+            // dd(config('database'));
         return $this;
     }
 

@@ -323,7 +323,13 @@ trait DataManagement
         if (!config('app.set-param-logic',false)) $this->setParamLogic();
         $model = $this->usingEntity();
         $fillable = $model->getFillable();
-        return $model->withParameters($this->getParamLogic())
+
+        // Route to Elasticsearch if enabled on model
+        $builder = method_exists($model, 'isElasticSearchEnabled') && $model->isElasticSearchEnabled()
+            ? $model->withElasticSearch($this->getParamLogic())  // ES query
+            : $model->withParameters($this->getParamLogic());     // DB query
+
+        return $builder
                     ->conditionals($this->mergeCondition($conditionals ?? []))
                     ->when(!$this->__order_by_created_at, function ($query) use ($fillable) {
                         $query->when(in_array('name', $fillable), function ($query) {

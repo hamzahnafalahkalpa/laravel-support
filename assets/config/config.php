@@ -92,7 +92,9 @@ return [
     ],
     'commands' => [
         Commands\InstallMakeCommand::class,
-        Commands\AddPackageCommand::class
+        Commands\AddPackageCommand::class,
+        // Commands\ElasticsearchIndexCommand::class,
+        // Commands\GetElasticsearchIndexCommand::class
     ],
     // Add models from the desired namespaces to 'package_model_list' to keep track of providers
     'package_model_list' => null

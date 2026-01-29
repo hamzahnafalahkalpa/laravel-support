@@ -81,72 +81,213 @@ trait HasRequest
     throw new \Exception($message);
   }
 
-  public function transaction(callable $callback): mixed
+  /**
+   * Optimized transaction handler with proper isolation levels and deadlock prevention
+   *
+   * @param callable $callback
+   * @param int $maxRetries Maximum number of retries on deadlock (default: 3)
+   * @return mixed
+   * @throws \Throwable
+   */
+  public function transaction(callable $callback, int $maxRetries = 3): mixed
   {
-      // khusus MySQL (kalau dipakai)
-      if (config('micro-tenant') !== null && env('DB_DRIVER') === 'mysql') {
-          DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
-          DB::statement('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED');
+      $attempts = 0;
+
+      while ($attempts < $maxRetries) {
+          try {
+              return $this->executeTransaction($callback);
+          } catch (\Throwable $e) {
+              $attempts++;
+
+              // Check if it's a deadlock or serialization failure
+              $isDeadlock = $this->isDeadlockException($e);
+              $isSerializationFailure = $this->isSerializationException($e);
+
+              if (($isDeadlock || $isSerializationFailure) && $attempts < $maxRetries) {
+                  // Exponential backoff: wait before retry
+                  $waitTime = min(100000 * pow(2, $attempts - 1), 1000000); // Max 1 second
+                  usleep($waitTime);
+
+                  // Log retry attempt
+                  \Log::warning("Transaction deadlock detected, retrying ({$attempts}/{$maxRetries})", [
+                      'error' => $e->getMessage(),
+                      'code' => $e->getCode()
+                  ]);
+
+                  continue;
+              }
+
+              // If not a deadlock or max retries reached, rethrow
+              throw $e;
+          }
       }
 
-      $user_connections = config('database.active_connections',[]);
-      $listenerActive   = true;
+      throw new \Exception("Transaction failed after {$maxRetries} attempts");
+  }
 
-      DB::listen(function ($query) use (&$user_connections, &$listenerActive) {
-          if (! $listenerActive) {
+  /**
+   * Execute the actual transaction
+   *
+   * @param callable $callback
+   * @return mixed
+   * @throws \Throwable
+   */
+  protected function executeTransaction(callable $callback): mixed
+  {
+      // Track active connections
+      $activeConnections = [];
+      $listenerActive = true;
+
+      // Set proper isolation level for PostgreSQL (READ COMMITTED is default and safest)
+      // For MySQL, we keep default REPEATABLE READ
+      if (env('DB_DRIVER') === 'pgsql') {
+          DB::statement('SET LOCAL lock_timeout = \'10s\'');
+          DB::statement('SET LOCAL statement_timeout = \'60s\'');
+      }
+
+      // Listen for queries to detect which connections need transactions
+      $listenerId = DB::listen(function ($query) use (&$activeConnections, &$listenerActive) {
+          if (!$listenerActive) {
               return;
           }
 
           $connection = $query->connectionName;
           $sql = ltrim(strtolower($query->sql));
 
-          // DETEKSI WRITE SAJA
+          // Detect WRITE queries only (INSERT, UPDATE, DELETE, etc.)
           $isWrite = preg_match(
-              '/^(insert|update|delete|merge|truncate|copy)\b/',
+              '/^(insert|update|delete|merge|truncate|copy|create|alter|drop)\b/',
               $sql
           );
-          $user_connections = config('database.active_connections',[]);
-          if ($isWrite && ! in_array($connection, $user_connections, true)) {
-              $user_connections[] = $connection;
-              DB::connection($connection)->beginTransaction();
+
+          // Start transaction only once per connection when first write is detected
+          if ($isWrite && !isset($activeConnections[$connection])) {
+              try {
+                  $conn = DB::connection($connection);
+
+                  // Start transaction
+                  $conn->beginTransaction();
+
+                  // Set isolation level and timeouts for this connection
+                  if ($conn->getDriverName() === 'pgsql') {
+                      $conn->statement('SET LOCAL lock_timeout = \'10s\'');
+                      $conn->statement('SET LOCAL statement_timeout = \'60s\'');
+                      $conn->statement('SET LOCAL idle_in_transaction_session_timeout = \'300s\'');
+                  }
+
+                  $activeConnections[$connection] = true;
+
+                  \Log::debug("Transaction started on connection: {$connection}");
+              } catch (\Throwable $e) {
+                  \Log::error("Failed to start transaction on {$connection}: " . $e->getMessage());
+                  throw $e;
+              }
           }
-          config([
-            'database.active_connections' => $user_connections
-          ]);
       });
 
       try {
+          // Execute the callback
           $result = $callback();
 
-          // STOP listener sebelum commit
+          // Stop listener before committing
           $listenerActive = false;
-          $user_connections = config('database.active_connections',[]);
-          foreach ($user_connections as $connection) {
-              DB::connection($connection)->commit();
+          DB::flushQueryLog(); // Clear query log
+
+          // Commit all active connections in reverse order (LIFO)
+          $connectionNames = array_reverse(array_keys($activeConnections));
+
+          foreach ($connectionNames as $connection) {
+              try {
+                  $conn = DB::connection($connection);
+
+                  if ($conn->transactionLevel() > 0) {
+                      $conn->commit();
+                      \Log::debug("Transaction committed on connection: {$connection}");
+                  }
+              } catch (\Throwable $commitError) {
+                  \Log::error("Failed to commit transaction on {$connection}: " . $commitError->getMessage());
+                  throw $commitError;
+              }
           }
 
           return $result;
+
       } catch (\Throwable $e) {
           $listenerActive = false;
 
-          foreach ($user_connections as $connection) {
+          // Rollback all active connections
+          foreach (array_keys($activeConnections) as $connection) {
               try {
-                  DB::connection($connection)->rollBack();
-              } catch (\Throwable) {
-                  // ignore
+                  $conn = DB::connection($connection);
+
+                  if ($conn->transactionLevel() > 0) {
+                      $conn->rollBack();
+                      \Log::debug("Transaction rolled back on connection: {$connection}");
+                  }
+              } catch (\Throwable $rollbackError) {
+                  // Log but don't throw - we're already handling an exception
+                  \Log::error("Failed to rollback transaction on {$connection}: " . $rollbackError->getMessage());
               }
 
-              // penting untuk Postgres (aborted transaction state)
-              DB::purge($connection);
+              // For PostgreSQL, purge connection to clear any "aborted transaction" state
+              if (DB::connection($connection)->getDriverName() === 'pgsql') {
+                  try {
+                      DB::purge($connection);
+                      \Log::debug("Connection purged: {$connection}");
+                  } catch (\Throwable $purgeError) {
+                      \Log::error("Failed to purge connection {$connection}: " . $purgeError->getMessage());
+                  }
+              }
           }
 
+          // Log the error
           LaravelSupport::catch($e);
 
-          if (Request::wantsJson()) {
-              throw $e;
-          }
-
-          return false;
+          // Rethrow for retry logic or API response
+          throw $e;
       }
+  }
+
+  /**
+   * Check if exception is a deadlock
+   *
+   * @param \Throwable $e
+   * @return bool
+   */
+  protected function isDeadlockException(\Throwable $e): bool
+  {
+      $message = $e->getMessage();
+      $code = $e->getCode();
+
+      // PostgreSQL deadlock codes
+      if (str_contains($message, 'deadlock detected') || $code === '40P01') {
+          return true;
+      }
+
+      // MySQL deadlock codes
+      if ($code === 1213 || str_contains($message, 'Deadlock found')) {
+          return true;
+      }
+
+      return false;
+  }
+
+  /**
+   * Check if exception is a serialization failure
+   *
+   * @param \Throwable $e
+   * @return bool
+   */
+  protected function isSerializationException(\Throwable $e): bool
+  {
+      $message = $e->getMessage();
+      $code = $e->getCode();
+
+      // PostgreSQL serialization failure
+      if (str_contains($message, 'could not serialize access') || $code === '40001') {
+          return true;
+      }
+
+      return false;
   }
 }

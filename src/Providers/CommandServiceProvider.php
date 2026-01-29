@@ -9,7 +9,10 @@ class CommandServiceProvider extends ServiceProvider
 {
     protected $__commands = [
         Commands\InstallMakeCommand::class,
-        Commands\AddPackageCommand::class
+        Commands\AddPackageCommand::class,
+        Commands\ElasticsearchIndexCommand::class,
+        Commands\GetElasticsearchIndexCommand::class,
+        Commands\DeleteElasticsearchIndexCommand::class
     ];
 
     public function register()
