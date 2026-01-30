@@ -21,6 +21,8 @@ trait DataManagement
     private $__conditionals;
     protected mixed $__order_by_created_at = 'desc'; //asc, desc, false
     public static $param_logic = null;
+    public $current_model;
+    public $current_dto;
 
     use RequestManipulation;
     use Support\HasRepository;
@@ -263,9 +265,11 @@ trait DataManagement
 
 
     public function generalStore(mixed $dto = null): array{
-        return $this->transaction(function () use ($dto) {
+        $transaction = $this->transaction(function () use (&$dto) {
             try {
-                $model = $this->{'prepareStore'.$this->getEntity()}($dto ?? $this->requestDTO(config("app.contracts.{$this->getEntity()}Data",null))); //RETURN MODEL
+                $dto ??= $this->requestDTO(config("app.contracts.{$this->getEntity()}Data",null));
+                $this->current_dto = $dto;
+                $this->current_model = $model = $this->{'prepareStore'.$this->getEntity()}($dto); //RETURN MODEL
             } catch (\Throwable $th) {
                 throw $th;
             }
@@ -273,6 +277,12 @@ trait DataManagement
             ? $this->{'show'.$this->getEntity()}($model)
             : [];
         });
+        $this->afterTransaction($this->current_model, $this->current_dto, $transaction);
+        return $transaction;
+    }
+
+    public function afterTransaction(Model $current_model, mixed $dto, ?array $response = null): self{
+        return $this;
     }
 
     public function generalStoreMultiple(array $datas): array{

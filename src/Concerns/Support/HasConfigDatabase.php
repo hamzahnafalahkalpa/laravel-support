@@ -12,13 +12,9 @@ trait HasConfigDatabase
     use HasCall;
 
     private static $__config_base_path = 'database.models';
-    public static $config_timezone, $config_client_timezone, $timezones;
 
     public function initializeHasConfigDatabase()
     {
-        static::$config_timezone = config('app.timezone');
-        static::$config_client_timezone = config('app.client_timezone', config('app.timezone'));
-        static::$timezones = config('app.timezones', []);
         $this->mergeCasts($this->casts ?? []);
         if (isset($this->list) || isset($this->show)) {
             $this->mergeFillable($this->mergeArray($this->list ?? [], $this->show ?? []));
@@ -261,35 +257,69 @@ trait HasConfigDatabase
         return $is_date;
     }
 
+    /**
+     * Convert date parameters from client timezone to UTC for database queries.
+     *
+     * This method is Octane-safe as it uses per-request timezone from middleware
+     * instead of static variables.
+     *
+     * @param  string|array  $parameter
+     * @return array
+     */
     public function timezoneCalculation($parameter)
     {
-        if (isset(static::$config_client_timezone) && static::$config_timezone != static::$config_client_timezone) {
-            $results   = [];
-            if (in_array(static::$config_client_timezone, static::$timezones)) {
-                $parameter = $this->mustArray($parameter);
-                foreach ($parameter as $param) {
-                    //CHECK IF $parameter IS DATE OR DATETIME
-                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $param)) {
-                        $date       = Carbon::createFromFormat('Y-m-d', $param, static::$config_client_timezone);
-                        $startOfDay = $date->copy()->startOfDay();
-                        $endOfDay   = $date->copy()->endOfDay();
-                        $startOfDay->setTimezone(static::$config_timezone);
-                        $endOfDay->setTimezone(static::$config_timezone);
-                        $results[] = [$startOfDay, $endOfDay];
-                    } elseif (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $param)) {
-                        $date = Carbon::createFromFormat('Y-m-d H:i', $param, static::$config_client_timezone);
-                        $results[] = $date->setTimezone(static::$config_timezone)->format('Y-m-d H:i');
-                    } else {
-                        $results[] = $param;
-                    }
-                }
-                if (count($results) == 2) {
-                    $results = [[$results[0][0], $results[1][1]]];
-                }
+        $results = [];
+        $parameter = $this->mustArray($parameter);
+        $clientTimezone = $this->getClientTimezone();
+        $databaseTimezone = 'UTC';
+
+        foreach ($parameter as $param) {
+            // Date format: '2024-01-30'
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $param)) {
+                // Parse date in client timezone and get full day range in UTC
+                $date = Carbon::createFromFormat('Y-m-d', $param, $clientTimezone);
+                $startOfDay = $date->copy()->startOfDay()->setTimezone($databaseTimezone);
+                $endOfDay = $date->copy()->endOfDay()->setTimezone($databaseTimezone);
+                $results[] = [$startOfDay->format('Y-m-d H:i:s'), $endOfDay->format('Y-m-d H:i:s')];
             }
-            return $results;
+            // DateTime format: '2024-01-30 14:30'
+            elseif (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $param)) {
+                $date = Carbon::createFromFormat('Y-m-d H:i', $param, $clientTimezone);
+                $results[] = $date->setTimezone($databaseTimezone)->format('Y-m-d H:i:s');
+            }
+            // DateTime with seconds: '2024-01-30 14:30:00'
+            elseif (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $param)) {
+                $date = Carbon::parse($param, $clientTimezone);
+                $results[] = $date->setTimezone($databaseTimezone)->format('Y-m-d H:i:s');
+            }
+            // Already processed or invalid, keep as is
+            else {
+                $results[] = $param;
+            }
         }
-        return [[$parameter, $parameter]];
+
+        // If we have 2 date ranges, merge them into one range
+        if (count($results) == 2 && is_array($results[0]) && is_array($results[1])) {
+            return [[$results[0][0], $results[1][1]]];
+        }
+
+        return $results;
+    }
+
+    /**
+     * Get the client timezone for the current request.
+     *
+     * @return string
+     */
+    protected function getClientTimezone(): string
+    {
+        if ($request = request()) {
+            if ($timezone = $request->attributes->get('client_timezone')) {
+                return $timezone;
+            }
+        }
+
+        return date_default_timezone_get() ?: config('app.timezone', 'UTC');
     }
 
     /**

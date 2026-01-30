@@ -175,7 +175,7 @@ trait HasResponse
 
     private function prepareUser()
     {
-        $user           = $this->UserModel()->find(ApiAccess::getUser()->getKey());
+        $user           = $this->UserModel()->find(auth()->user()->getKey());
         $user_reference = &$user->userReference;
         $user_reference->setRelation('role', $user_reference->role);
         return $user;
