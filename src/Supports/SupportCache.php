@@ -14,7 +14,11 @@ class SupportCache implements SupportsSupportCache{
         $this->__cache_datas[$name] = $data;
     }
 
-    public function getSavedCache(string $name): mixed{
-        return $this->__cache_datas[$name] ?? null;
+    public function getSavedCache(?string $name = null): mixed{
+        if (!isset($name)){
+            return $this->__cache_datas;
+        }else{
+            return $this->__cache_datas[$name] ?? null;
+        }
     }
 }
