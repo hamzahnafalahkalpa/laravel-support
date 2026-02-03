@@ -26,7 +26,6 @@ return new class extends Migration
         if (!$this->isTableExists()) {
             Schema::create($table_name, function (Blueprint $table) {
                 $table->ulid('id')->primary();
-                $table->integer('tenant_id')->nullable()->index();
                 $table->ulid('user_id')->nullable()->index();
                 $table->string('export_type');
                 $table->string('reference_type')->nullable();

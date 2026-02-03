@@ -106,7 +106,11 @@ trait DataManagement
     }
 
     public function entityData(mixed $model = null): mixed{
-        return $this->{$this->snakeEntity().'_model'} = $model;
+        if (!isset($model)){
+            return $this->{$this->snakeEntity().'_model'};
+        }else{
+            return $this->{$this->snakeEntity().'_model'} = $model;
+        }
     }
 
     public function viewEntityResource(callable $callback,array $options = []): array{

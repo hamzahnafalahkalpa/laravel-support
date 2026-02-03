@@ -75,7 +75,7 @@ class ProcessExportJob implements ShouldQueue
             $export->markAsProcessing();
 
             // Resolve export class from configuration
-            $exportClass = config("module-patient.exports.{$export->export_type}");
+            $exportClass = config("laravel-support.exports.{$export->export_type}");
 
             if (!$exportClass) {
                 throw new \Exception("Export class not found for type: {$export->export_type}");

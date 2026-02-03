@@ -27,7 +27,6 @@ class Export extends BaseModel
      * @var array<string>
      */
     protected $fillable = [
-        'tenant_id',
         'user_id',
         'export_type',
         'reference_type',
@@ -67,15 +66,7 @@ class Export extends BaseModel
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'user_id');
-    }
-
-    /**
-     * Scope to filter exports by tenant.
-     */
-    public function scopeByTenant($query, int $tenantId)
-    {
-        return $query->where('tenant_id', $tenantId);
+        return $this->belongsToModel('User', 'user_id');
     }
 
     /**
@@ -165,18 +156,42 @@ class Export extends BaseModel
     {
         return $this->isCompleted() &&
                $this->file_path &&
-               Storage::exists($this->file_path);
+               Storage::disk('s3')->exists($this->file_path);
     }
 
     /**
-     * Get the full storage path of the export file.
+     * Get a temporary download URL for the export file (S3 presigned URL).
+     * Valid for 60 minutes by default.
      */
-    public function getFullStoragePath(): ?string
+    public function getDownloadUrl(int $expirationMinutes = 60): ?string
     {
-        if (!$this->file_path) {
+        if (!$this->file_path || !$this->canDownload()) {
             return null;
         }
 
-        return storage_path('app/' . $this->file_path);
+        return Storage::disk('s3')->temporaryUrl(
+            $this->file_path,
+            now()->addMinutes($expirationMinutes)
+        );
+    }
+
+    /**
+     * Get the S3 file path.
+     */
+    public function getS3Path(): ?string
+    {
+        return $this->file_path;
+    }
+
+    /**
+     * Delete the export file from S3.
+     */
+    public function deleteFile(): bool
+    {
+        if (!$this->file_path) {
+            return false;
+        }
+
+        return Storage::disk('s3')->delete($this->file_path);
     }
 }
