@@ -48,11 +48,44 @@ class Response extends PackageManagement implements ContractsResponse
     {
         $response = $next($request);
         if ($response->getStatusCode() < 400  && $this->hasAppCode()) {
+            // Skip transformation for binary/file responses (PDF, images, etc.)
+            if ($this->isBinaryResponse($response)) {
+                return $response;
+            }
             if (Request::wantsJson() && !is_array($response)) {
                 return $this->response($response->original);
             }
         }
         return $response;
+    }
+
+    /**
+     * Check if response is a binary/file response that should not be transformed.
+     *
+     * @param mixed $response
+     * @return bool
+     */
+    private function isBinaryResponse($response): bool
+    {
+        $contentType = $response->headers->get('Content-Type', '');
+
+        $binaryTypes = [
+            'application/pdf',
+            'application/octet-stream',
+            'image/',
+            'audio/',
+            'video/',
+            'application/zip',
+            'application/x-rar',
+        ];
+
+        foreach ($binaryTypes as $type) {
+            if (str_contains($contentType, $type)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function hasAppCode(): bool{
