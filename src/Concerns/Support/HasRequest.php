@@ -89,7 +89,7 @@ trait HasRequest
    * @return mixed
    * @throws \Throwable
    */
-  public function transaction(callable $callback, int $maxRetries = 3): mixed
+  public function transaction(callable $callback, ?int $maxRetries = 3): mixed
   {
       $attempts = 0;
 
