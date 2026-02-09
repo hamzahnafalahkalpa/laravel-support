@@ -28,6 +28,7 @@ class ElasticsearchLog extends PackageManagement implements ContractsElasticsear
             'name'      => $elasticsearch_log_dto->name,
             'reference_type' => $elasticsearch_log_dto->reference_type,
             'reference_id' => $elasticsearch_log_dto->reference_id,
+            'synced_at' => $elasticsearch_log_dto->synced_at
         ];
         if (isset($elasticsearch_log_dto->id)){
             $guard  = ['id' => $elasticsearch_log_dto->id];

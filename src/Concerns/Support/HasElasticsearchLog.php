@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  */
 trait HasElasticsearchLog
 {
-
+    use HasRequestData;
     /**
      * Log Elasticsearch bulk operations to database.
      *
@@ -87,27 +87,19 @@ trait HasElasticsearchLog
 
         $data = [
             'name' => $this->extractIndexType($indexName),
-            'reference_type' => $indexName,
-            'reference_id' => $documentId,
+            'index_name' => $indexName,
+            'document_id' => $documentId,
             'synced_at' => $now,
-            'props' => [
-                'action' => $action,
-                'result' => $resultData['result'] ?? null,
-                'version' => $resultData['_version'] ?? null,
-                'is_dashboard' => $isDashboard,
-            ],
+            'action' => $action,
+            'result' => $resultData['result'] ?? null,
+            'version' => $resultData['_version'] ?? null,
+            'is_dashboard' => $isDashboard,
         ];
-
-        if ($isDashboard) {
-            // For dashboard: update if exists, create if not
-            $model::updateOrCreate(
-                ['id' => $logId],
-                array_merge($data, ['updated_at' => $now])
-            );
-        } else {
-            // For reporting: always create new record
-            $model::create(array_merge(['id' => $logId], $data));
-        }
+        $model = app(config('app.contracts.ElasticsearchLog'))->prepareStoreElasticsearchLog(
+            $this->requestDTO(config('app.contracts.ElasticsearchLogData'),
+                array_merge($data, ['id' => $logId,'updated_at' => $now])
+            )
+        );
     }
 
     /**
@@ -150,7 +142,7 @@ trait HasElasticsearchLog
         $base32 = strtoupper(substr(base_convert($hash, 16, 32), 0, 26));
 
         // Pad if necessary
-        return str_pad($base32, 26, '0', STR_PAD_LEFT);
+        return substr(str_pad($base32, 26, '0', STR_PAD_LEFT), 0, 26);
     }
 
     /**
