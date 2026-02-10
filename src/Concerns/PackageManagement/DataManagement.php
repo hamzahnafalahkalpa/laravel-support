@@ -342,7 +342,6 @@ trait DataManagement
         $builder = method_exists($model, 'isElasticSearchEnabled') && $model->isElasticSearchEnabled()
             ? $model->withElasticSearch($this->getParamLogic())  // ES query
             : $model->withParameters($this->getParamLogic());     // DB query
-
         return $builder
                     ->conditionals($this->mergeCondition($conditionals ?? []))
                     ->when(!$this->__order_by_created_at, function ($query) use ($fillable) {

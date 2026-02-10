@@ -41,7 +41,10 @@ trait HasElasticSearch
     }
 
     /**
-     * Get the Elasticsearch index name with prefix
+     * Get the Elasticsearch index name with prefix and tenant ID
+     *
+     * Format: {prefix}.{tenant_id}.{index_name} when tenant exists
+     * Example: local.4.patient
      *
      * @return string
      */
@@ -51,7 +54,65 @@ trait HasElasticSearch
         $prefix = config('elasticsearch.prefix', '');
         $separator = config('elasticsearch.separator', '.');
 
-        return $prefix ? $prefix . $separator . $indexName : $indexName;
+        // Build index name parts
+        $parts = [];
+
+        // Add prefix if exists
+        if ($prefix) {
+            $parts[] = $prefix;
+        }
+
+        // Add tenant ID only if not already in prefix
+        $tenantId = $this->getElasticTenantId();
+        if ($tenantId && !$this->prefixContainsTenantId($prefix, $tenantId, $separator)) {
+            $parts[] = $tenantId;
+        }
+
+        // Add index name
+        $parts[] = $indexName;
+
+        return implode($separator, $parts);
+    }
+
+    /**
+     * Check if the prefix already contains the tenant ID
+     *
+     * @param string $prefix
+     * @param string $tenantId
+     * @param string $separator
+     * @return bool
+     */
+    protected function prefixContainsTenantId(string $prefix, string $tenantId, string $separator): bool
+    {
+        // Check if prefix ends with tenant ID (e.g., "local.4" ends with ".4")
+        if (str_ends_with($prefix, $separator . $tenantId)) {
+            return true;
+        }
+
+        // Check if prefix is exactly the tenant ID
+        if ($prefix === $tenantId) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the tenant ID for Elasticsearch index naming
+     *
+     * @return string|null
+     */
+    protected function getElasticTenantId(): ?string
+    {
+        // Check tenancy() helper first
+        if (function_exists('tenancy') && tenancy()->tenant) {
+            return (string) tenancy()->tenant->getKey();
+        }
+
+        // Fallback to config or session
+        $tenantId = config('tenant.current_id') ?? session('tenant_id');
+
+        return $tenantId ? (string) $tenantId : null;
     }
 
     /**
@@ -77,11 +138,12 @@ trait HasElasticSearch
      * Build Elasticsearch query from search parameters
      *
      * @param array $parameters
+     * @param string $operator 'and' or 'or'
      * @return array
      */
-    public function buildElasticQuery(array $parameters): array
+    public function buildElasticQuery(array $parameters, string $operator = 'and'): array
     {
-        $must = [];
+        $clauses = [];
         $casts = $this->getCasts();
 
         foreach ($parameters as $key => $value) {
@@ -97,22 +159,64 @@ trait HasElasticSearch
                 continue;
             }
 
-            // Build query based on field type
+            // Skip non-string searches for date fields (e.g., searching "Udin" in dob)
             $castType = $casts[$field] ?? 'string';
+            if (in_array($castType, ['date', 'datetime', 'timestamp', 'immutable_date', 'immutable_datetime']) && !$this->isValidDateValue($value)) {
+                continue;
+            }
+
+            // Build query based on field type
             $fieldQuery = $this->buildElasticFieldQuery($field, $value, $castType);
 
             if ($fieldQuery) {
-                $must[] = $fieldQuery;
+                $clauses[] = $fieldQuery;
             }
+        }
+
+        // If no clauses, return match_all
+        if (empty($clauses)) {
+            return [
+                'query' => [
+                    'match_all' => new \stdClass()
+                ]
+            ];
+        }
+
+        // Use 'should' (OR) or 'must' (AND) based on operator
+        if (strtolower($operator) === 'or') {
+            return [
+                'query' => [
+                    'bool' => [
+                        'should' => $clauses,
+                        'minimum_should_match' => 1
+                    ]
+                ]
+            ];
         }
 
         return [
             'query' => [
                 'bool' => [
-                    'must' => $must ?: [['match_all' => new \stdClass()]]
+                    'must' => $clauses
                 ]
             ]
         ];
+    }
+
+    /**
+     * Check if value is a valid date format
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    protected function isValidDateValue(mixed $value): bool
+    {
+        if (!is_string($value)) {
+            return false;
+        }
+
+        // Check common date formats
+        return (bool) strtotime($value);
     }
 
     /**
@@ -226,7 +330,7 @@ trait HasElasticSearch
                 'from' => ($page - 1) * $perPage,
                 '_source' => ['id'], // Only fetch IDs
             ];
-
+            
             // Add sorting if provided
             if (!empty($sort)) {
                 $params['body']['sort'] = $sort;
@@ -298,8 +402,8 @@ trait HasElasticSearch
             return $query;
         }
 
-        // Build Elasticsearch query
-        $esQuery = $this->buildElasticQuery($parameters);
+        // Build Elasticsearch query with operator (and/or)
+        $esQuery = $this->buildElasticQuery($parameters, $operator);
 
         // Get pagination parameters
         $perPage = (int) ($parameters['per-page'] ?? 15);
@@ -315,7 +419,7 @@ trait HasElasticSearch
                     'order' => strtolower($orderType)
                 ]
             ];
-        }
+        }        
 
         // Execute Elasticsearch query
         $result = $this->executeElasticQuery($esQuery, $perPage, $page, $sort);
@@ -342,8 +446,21 @@ trait HasElasticSearch
         }
 
         // Filter by IDs maintaining Elasticsearch order
-        $query->whereIn($this->getKeyName(), $result['ids'])
-            ->orderByRaw('FIELD(' . $this->getKeyName() . ', ' . implode(',', $result['ids']) . ')');
+        $query->whereIn($this->getKeyName(), $result['ids']);
+
+        // Maintain ES result order using database-specific syntax
+        $driver = $query->getConnection()->getDriverName();
+        $keyName = $this->getKeyName();
+
+        if ($driver === 'pgsql') {
+            // PostgreSQL: use array_position
+            $quotedIds = array_map(fn($id) => "'" . addslashes($id) . "'", $result['ids']);
+            $query->orderByRaw("array_position(ARRAY[" . implode(',', $quotedIds) . "]::text[], {$keyName}::text)");
+        } else {
+            // MySQL: use FIELD function
+            $quotedIds = array_map(fn($id) => "'" . addslashes($id) . "'", $result['ids']);
+            $query->orderByRaw("FIELD({$keyName}, " . implode(',', $quotedIds) . ")");
+        }
 
         return $query;
     }

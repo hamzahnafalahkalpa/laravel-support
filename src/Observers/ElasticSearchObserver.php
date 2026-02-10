@@ -15,7 +15,11 @@ class ElasticSearchObserver
      */
     public function created(Model $model): void
     {
-        $this->indexModel($model);
+        Log::debug('[ES Observer] Created event triggered', [
+            'model' => get_class($model),
+            'id' => $model->getKey()
+        ]);
+        $this->indexModel($model, 'created');
     }
 
     /**
@@ -26,7 +30,11 @@ class ElasticSearchObserver
      */
     public function updated(Model $model): void
     {
-        $this->indexModel($model);
+        Log::debug('[ES Observer] Updated event triggered', [
+            'model' => get_class($model),
+            'id' => $model->getKey()
+        ]);
+        $this->indexModel($model, 'updated');
     }
 
     /**
@@ -37,6 +45,10 @@ class ElasticSearchObserver
      */
     public function deleted(Model $model): void
     {
+        Log::debug('[ES Observer] Deleted event triggered', [
+            'model' => get_class($model),
+            'id' => $model->getKey()
+        ]);
         $this->deleteFromIndex($model);
     }
 
@@ -44,17 +56,29 @@ class ElasticSearchObserver
      * Index a model in Elasticsearch
      *
      * @param Model $model
+     * @param string $event
      * @return void
      */
-    protected function indexModel(Model $model): void
+    protected function indexModel(Model $model, string $event = 'unknown'): void
     {
         // Check if auto-indexing is enabled
         if (!config('elasticsearch.auto_index.enabled', true)) {
+            Log::debug('[ES Observer] Auto-indexing is disabled');
             return;
         }
 
         // Check if model has Elasticsearch enabled
-        if (!method_exists($model, 'isElasticSearchEnabled') || !$model->isElasticSearchEnabled()) {
+        if (!method_exists($model, 'isElasticSearchEnabled')) {
+            Log::debug('[ES Observer] Model does not have isElasticSearchEnabled method', [
+                'model' => get_class($model)
+            ]);
+            return;
+        }
+
+        if (!$model->isElasticSearchEnabled()) {
+            Log::debug('[ES Observer] Elasticsearch is disabled for this model', [
+                'model' => get_class($model)
+            ]);
             return;
         }
 
@@ -69,35 +93,62 @@ class ElasticSearchObserver
                 ? $model->getElasticIndexName()
                 : $model->getTable();
 
+            Log::info('[ES Observer] Indexing model', [
+                'event' => $event,
+                'model' => get_class($model),
+                'id' => $model->getKey(),
+                'index' => $indexName,
+                'data' => $data
+            ]);
+
             // Dispatch ElasticJob
             $jobClass = config('elasticsearch.job_class', 'App\Jobs\ElasticJob');
 
-            if (!class_exists($jobClass)) {
-                // Try wellmed-gateway location
-                $jobClass = '\WellmedGateway\Jobs\ElasticJob';
-            }
+            Log::debug('[ES Observer] Job class configured', [
+                'job_class' => $jobClass,
+                'exists' => class_exists($jobClass)
+            ]);
 
             if (class_exists($jobClass)) {
-                dispatch(new $jobClass([
+                $jobPayload = [
                     'type' => 'BULK',
                     'datas' => [[
                         'index' => $indexName,
                         'action' => 'index',
                         'data' => [$data]
                     ]]
-                ]))
-                    ->onQueue(config('elasticsearch.auto_index.queue', 'elasticsearch'))
-                    ->onConnection(config('elasticsearch.auto_index.connection', 'rabbitmq'));
-            } else {
-                Log::warning('ElasticJob class not found for auto-indexing', [
+                ];
+
+                $queue = config('elasticsearch.auto_index.queue', 'elasticsearch');
+                $connection = config('elasticsearch.auto_index.connection', 'rabbitmq');
+
+                Log::info('[ES Observer] Dispatching job', [
+                    'job_class' => $jobClass,
+                    'queue' => $queue,
+                    'connection' => $connection,
+                    'payload' => $jobPayload
+                ]);
+
+                dispatch(new $jobClass($jobPayload))
+                    ->onQueue($queue)
+                    ->onConnection($connection);
+
+                Log::info('[ES Observer] Job dispatched successfully', [
                     'model' => get_class($model),
-                    'tried_classes' => ['App\Jobs\ElasticJob', 'WellmedGateway\Jobs\ElasticJob']
+                    'id' => $model->getKey(),
+                    'index' => $indexName
+                ]);
+            } else {
+                Log::warning('[ES Observer] ElasticJob class not found', [
+                    'model' => get_class($model),
+                    'configured_class' => $jobClass
                 ]);
             }
 
         } catch (\Exception $e) {
-            Log::error('Failed to index model in Elasticsearch', [
+            Log::error('[ES Observer] Failed to index model', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'model' => get_class($model),
                 'id' => $model->getKey()
             ]);
@@ -114,11 +165,15 @@ class ElasticSearchObserver
     {
         // Check if auto-indexing is enabled
         if (!config('elasticsearch.auto_index.enabled', true)) {
+            Log::debug('[ES Observer] Auto-indexing is disabled (delete)');
             return;
         }
 
         // Check if model has Elasticsearch enabled
         if (!method_exists($model, 'isElasticSearchEnabled') || !$model->isElasticSearchEnabled()) {
+            Log::debug('[ES Observer] Elasticsearch not enabled for model (delete)', [
+                'model' => get_class($model)
+            ]);
             return;
         }
 
@@ -127,6 +182,12 @@ class ElasticSearchObserver
             $indexName = method_exists($model, 'getElasticIndexName')
                 ? $model->getElasticIndexName()
                 : $model->getTable();
+
+            Log::info('[ES Observer] Deleting from index', [
+                'model' => get_class($model),
+                'id' => $model->getKey(),
+                'index' => $indexName
+            ]);
 
             // Dispatch ElasticJob for deletion
             $jobClass = config('elasticsearch.job_class', 'App\Jobs\ElasticJob');
@@ -137,19 +198,27 @@ class ElasticSearchObserver
             }
 
             if (class_exists($jobClass)) {
-                dispatch(new $jobClass([
+                $jobPayload = [
                     'type' => 'DELETE',
                     'datas' => [[
                         'index' => $indexName,
                         'id' => $model->getKey()
                     ]]
-                ]))
+                ];
+
+                dispatch(new $jobClass($jobPayload))
                     ->onQueue(config('elasticsearch.auto_index.queue', 'elasticsearch'))
                     ->onConnection(config('elasticsearch.auto_index.connection', 'rabbitmq'));
+
+                Log::info('[ES Observer] Delete job dispatched', [
+                    'model' => get_class($model),
+                    'id' => $model->getKey(),
+                    'index' => $indexName
+                ]);
             }
 
         } catch (\Exception $e) {
-            Log::error('Failed to delete model from Elasticsearch', [
+            Log::error('[ES Observer] Failed to delete from Elasticsearch', [
                 'error' => $e->getMessage(),
                 'model' => get_class($model),
                 'id' => $model->getKey()
