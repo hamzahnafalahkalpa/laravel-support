@@ -339,7 +339,7 @@ trait DataManagement
         $fillable = $model->getFillable();
 
         // Route to Elasticsearch if enabled on model
-        $builder = method_exists($model, 'isElasticSearchEnabled') && $model->isElasticSearchEnabled()
+        $builder = method_exists($model, 'isElasticSearchEnabled') && $model->isElasticSearchEnabled() && config('elasticsearch.enabled',false)
             ? $model->withElasticSearch($this->getParamLogic())  // ES query
             : $model->withParameters($this->getParamLogic());     // DB query
         return $builder

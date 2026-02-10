@@ -225,6 +225,12 @@ trait HasConfigDatabase
                         case 'integer':
                         case 'float':
                         case 'double':
+                            if (preg_match('/^\d+$/', $parameter)) {
+                                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                                    $query->where($query_field, $parameter);
+                                }, $operator);
+                            }
+                        break;
                         default:
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
                                 $query->where($query_field, $parameter);
