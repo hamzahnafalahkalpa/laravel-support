@@ -12,12 +12,19 @@ class CommandServiceProvider extends ServiceProvider
         Commands\AddPackageCommand::class,
         Commands\ElasticsearchIndexCommand::class,
         Commands\GetElasticsearchIndexCommand::class,
-        Commands\DeleteElasticsearchIndexCommand::class
+        Commands\DeleteElasticsearchIndexCommand::class,
+        Commands\SetupCacheCommand::class,
+        Commands\SetupClearCommand::class,
+        Commands\SetupStatusCommand::class,
+        Commands\SetupProfileCommand::class,
     ];
 
     public function register()
     {
-        $this->commands(config('laravel-support.commands', $this->__commands));
+        // Merge config commands with default commands to ensure all are registered
+        $configCommands = config('laravel-support.commands', []);
+        $commands = array_unique(array_merge($configCommands, $this->__commands));
+        $this->commands($commands);
     }
 
     public function provides()

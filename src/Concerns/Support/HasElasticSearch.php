@@ -330,6 +330,8 @@ trait HasElasticSearch
     public function executeElasticQuery(array $esQuery, int $perPage = 15, int $page = 1, array $sort = []): array
     {
         try {
+            $startTime = microtime(true);
+
             $client = app('elasticsearch');
 
             $params = [
@@ -339,7 +341,7 @@ trait HasElasticSearch
                 'from' => ($page - 1) * $perPage,
                 '_source' => ['id'], // Only fetch IDs
             ];
-            
+
             // Add sorting if provided
             if (!empty($sort)) {
                 $params['body']['sort'] = $sort;
@@ -357,9 +359,23 @@ trait HasElasticSearch
             // Reset circuit breaker on success
             $this->resetCircuitBreaker();
 
+            $elapsed = round((microtime(true) - $startTime) * 1000, 2);
+
+            // Log ES query timing if profiling enabled
+            if (env('PATIENT_PROFILE', false)) {
+                Log::info('[ESProfile] Query executed', [
+                    'index' => $this->getElasticIndexName(),
+                    'time_ms' => $elapsed,
+                    'hits' => count($ids),
+                    'total' => $total,
+                    'query_type' => isset($esQuery['query']['bool']['should']) ? 'OR' : 'AND'
+                ]);
+            }
+
             return [
                 'ids' => $ids,
-                'total' => $total
+                'total' => $total,
+                'es_time_ms' => $elapsed
             ];
 
         } catch (\Exception $e) {

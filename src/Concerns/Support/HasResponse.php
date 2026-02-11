@@ -59,125 +59,296 @@ trait HasResponse
     {
         $route      = request()->route();
         $route_name = $route ? $route->getName() : null;
-        if (Auth::check()) {
-            $user = $this->prepareUser();
-            $role = $user->userReference->role;
-            request()->merge([
-                'role_id' => isset($role) ? $role->getKey() : null,
-                'is_show_in_acl' => true
-            ]);
-            $permission = app(config('database.models.Permission'));
-            if (isset($route_name) && \is_subclass_of($permission, Model::class)) {
-                $route_permission = $this->setCache([
-                    'name'    => 'permission-route-'.$route_name.'-role-'.request()->role_id,
-                    'tags'    => ['permission','permission-route','permission-route-'.$route_name,'role-'.request()->role_id],
-                    'duration' => 24*60*60
-                ],function() use ($permission, $route_name){
-                    return $permission->with(['recursiveModules','childs' => function($query){
-                                                    $query->asPermission()->showInAcl()
-                                                         ->where(function($query){
-                                                            $query->whereNull('props->show_in_data')
-                                                                  ->orWhere('props->show_in_data',false);
-                                                         })
-                                                         ->checkAccess(request()->role_id);
-                                                }])
-                                               ->where("alias", $route_name)
-                                               ->showInAcl()
-                                               ->checkAccess(request()->role_id)
-                                               ->first();
-                });
-                if (!isset($route_permission) && Response::getAclPermission() !== null) {
-                    $route_permission = Response::getAclPermission();
+
+        if (!Auth::check()) {
+            return;
+        }
+
+        $user = $this->prepareUser();
+        $userReference = $user->userReference;
+
+        if (!$userReference) {
+            return;
+        }
+
+        $role = $userReference->role;
+        $roleId = $role?->getKey();
+
+        request()->merge([
+            'role_id' => $roleId,
+            'is_show_in_acl' => true
+        ]);
+
+        $permissionModel = config('database.models.Permission');
+        if (!$route_name || !$permissionModel || !\is_subclass_of($permissionModel, Model::class)) {
+            return;
+        }
+
+        $permission = app($permissionModel);
+
+        // Cache key includes role_id for proper isolation
+        $cacheKey = 'permission-route-'.$route_name.'-role-'.$roleId;
+
+        $route_permission = $this->setCache([
+            'name'    => $cacheKey,
+            'tags'    => ['permission','permission-route','permission-route-'.$route_name,'role-'.$roleId],
+            'duration' => 24*60*60
+        ], function() use ($permission, $route_name, $roleId) {
+            return $permission->with(['recursiveModules','childs' => function($query) use ($roleId) {
+                $query->asPermission()->showInAcl()
+                     ->where(function($query){
+                        $query->whereNull('props->show_in_data')
+                              ->orWhere('props->show_in_data',false);
+                     })
+                     ->checkAccess($roleId);
+            }])
+            ->where("alias", $route_name)
+            ->showInAcl()
+            ->checkAccess($roleId)
+            ->first();
+        });
+
+        if (!$route_permission && Response::getAclPermission() !== null) {
+            $route_permission = Response::getAclPermission();
+        }
+
+        if (!$route_permission) {
+            $this->__response['acl'] = null;
+            return;
+        }
+
+        // Process recursive modules if they exist
+        if ($route_permission->relationLoaded('recursiveModules')) {
+            $this->recursiveModules($route_permission->recursiveModules);
+        }
+
+        // Get childs with data display - use cached relation if available
+        $childs = $route_permission->childs()->asPermission()->showInData()->get();
+
+        // Prepare data reference
+        $data = isset($this->__response_result['data'])
+            ? $this->__response_result['data']
+            : $this->__response_result;
+
+        if (!is_array($data)) {
+            $this->__response['acl'] = $route_permission->toViewApi()->resolve();
+            return;
+        }
+
+        $datas = array_is_list($data) ? $data : [$data];
+        $isListData = array_is_list($data);
+
+        $methodInfo = $this->checkingMethod();
+        $methodType = $methodInfo[2] ?? null;
+
+        if ($childs && count($childs) > 0) {
+            // Cache FormRequest check results to avoid repeated reflection
+            $accessCache = [];
+
+            foreach ($datas as $index => &$dataItem) {
+                if (!is_array($dataItem)) continue;
+
+                request()->merge(['id' => $dataItem['id'] ?? null]);
+                $dataItem['accessibility'] = [];
+
+                foreach ($childs as $child) {
+                    $alias = $child->alias;
+
+                    // Use cached result if available
+                    if (!isset($accessCache[$alias])) {
+                        $accessCache[$alias] = $this->getCurrentFormRequestInstance($alias) ?? true;
+                    }
+
+                    $child->access = $accessCache[$alias];
+                    $dataItem['accessibility'][Str::afterLast($alias, '.')] = $child->access;
                 }
-                if (isset($route_permission)) {
-                    $this->recursiveModules($route_permission->recursiveModules);
-                    $childs = $route_permission->childs()->asPermission()->showInData()->get();
-                    (isset($this->__response_result['data']))
-                        ? $data = &$this->__response_result['data']
-                        : $data = &$this->__response_result;
-                    (array_is_list($data))
-                        ? $datas = &$data
-                        : $datas = [&$data];
-                    [$controllerClass, $methodName, $methodType] = $this->checkingMethod();
-                    if (isset($childs) && count($childs) > 0) {
-                        foreach ($datas as &$data) {
-                            request()->merge(['id' => $data['id'] ?? null]);
-                            $data['accessibility'] = [];
-                            foreach ($childs as &$child) {
-                                $child->access = $this->getCurrentFormRequestInstance($child->alias) ?? true;
-                                $data['accessibility'][Str::afterLast($child->alias, '.')] = $child->access;
-                            }
-                        }
-                    }else{
-                        if ($methodType !== 'DELETE'){
-                            if (array_is_list($datas)) {
-                                foreach ($datas as &$data) {
-                                    $data['accessibility'] = null;
-                                } 
-                            }else{
-                                $datas['accessibility'] = null;
-                            }
-                        }
+            }
+
+            // Update the response result
+            if ($isListData) {
+                if (isset($this->__response_result['data'])) {
+                    $this->__response_result['data'] = $datas;
+                } else {
+                    $this->__response_result = $datas;
+                }
+            } else {
+                if (isset($this->__response_result['data'])) {
+                    $this->__response_result['data'] = $datas[0];
+                } else {
+                    $this->__response_result = $datas[0];
+                }
+            }
+        } else {
+            if ($methodType !== 'DELETE') {
+                foreach ($datas as $index => &$dataItem) {
+                    if (is_array($dataItem)) {
+                        $dataItem['accessibility'] = null;
+                    }
+                }
+
+                if ($isListData) {
+                    if (isset($this->__response_result['data'])) {
+                        $this->__response_result['data'] = $datas;
+                    } else {
+                        $this->__response_result = $datas;
+                    }
+                } else {
+                    if (isset($this->__response_result['data'])) {
+                        $this->__response_result['data'] = $datas[0];
+                    } else {
+                        $this->__response_result = $datas[0];
                     }
                 }
             }
-            $this->__response['acl'] = isset($route_permission) ? $route_permission->toViewApi()->resolve() : null;
+        }
+
+        $this->__response['acl'] = $route_permission->toViewApi()->resolve();
+    }
+
+    private function recursiveModules(&$permissions, array &$accessCache = []){
+        if (empty($permissions)) {
+            return;
+        }
+
+        // Collect all permission IDs to batch load childs
+        $permissionIds = [];
+        foreach ($permissions as $permission) {
+            if (!$permission->relationLoaded('childs')) {
+                $permissionIds[] = $permission->getKey();
+            }
+        }
+
+        // Batch load childs for all permissions at once (avoid N+1)
+        if (!empty($permissionIds)) {
+            $permissionModel = $permissions->first();
+            $childsMap = $permissionModel->newQuery()
+                ->whereIn('parent_id', $permissionIds)
+                ->showInAcl()
+                ->asPermission()
+                ->get()
+                ->groupBy('parent_id');
+
+            foreach ($permissions as &$permission) {
+                $permission->setRelation('childs', $childsMap[$permission->getKey()] ?? collect());
+            }
+        }
+
+        foreach ($permissions as &$permission) {
+            if ($permission->access) {
+                $alias = $permission->alias;
+                // Use cached result if available
+                if (!isset($accessCache[$alias])) {
+                    $accessCache[$alias] = $this->getCurrentFormRequestInstance($alias) ?? true;
+                }
+                $permission->access = $accessCache[$alias];
+            }
+
+            // Recurse if needed
+            if ($permission->relationLoaded('recursiveModules') &&
+                $permission->recursiveModules &&
+                count($permission->recursiveModules) > 0) {
+                $this->recursiveModules($permission->recursiveModules, $accessCache);
+            }
         }
     }
 
-    private function recursiveModules(&$permissions){
-        foreach ($permissions as &$permission) {
-            if ($permission->access){
-                $permission->access = $this->getCurrentFormRequestInstance($permission->alias) ?? true;
-            }
-            //ACCESS GATE HERE
-            $permission->load(['childs' => function($query){
-                $query->showInAcl()->asPermission();
-            }]);
-            if (isset($permission->recursiveModules) && count($permission->recursiveModules) > 0) {
-                $this->recursiveModules($permission->recursiveModules);
-            }
-        }
-    }
+    /**
+     * Cache for route method info to avoid repeated lookups
+     */
+    private static array $methodCache = [];
+
+    /**
+     * Cache for FormRequest validation results
+     */
+    private static array $formRequestCache = [];
 
     private function checkingMethod(?string $alias = null){
+        $cacheKey = $alias ?? '__current__';
+
+        if (isset(self::$methodCache[$cacheKey])) {
+            return self::$methodCache[$cacheKey];
+        }
+
         $route = isset($alias) ? Route::getRoutes()->getByName($alias) : Route::getCurrentRoute();
-        if (!$route) return null;
+        if (!$route) {
+            return self::$methodCache[$cacheKey] = null;
+        }
 
-        $action = $route->getActionName(); 
-        if (!str_contains($action, '@')) return null;
-        return [...explode('@', $action),...$route->methods()];
+        $action = $route->getActionName();
+        if (!str_contains($action, '@')) {
+            return self::$methodCache[$cacheKey] = null;
+        }
 
+        return self::$methodCache[$cacheKey] = [...explode('@', $action), ...$route->methods()];
     }
+
     private function getCurrentFormRequestInstance(?string $alias = null): mixed
     {
-        [$controllerClass, $methodName, $methodType] = $this->checkingMethod($alias);
-        if (!class_exists($controllerClass)) return null;
-        
-        $reflection = new ReflectionClass($controllerClass);
-        if (!$reflection->hasMethod($methodName)) return null;
+        // Return cached result if available
+        $cacheKey = $alias ?? '__current__';
+        if (isset(self::$formRequestCache[$cacheKey])) {
+            return self::$formRequestCache[$cacheKey];
+        }
 
-        $method = $reflection->getMethod($methodName);
-        $params = $method->getParameters();
-        foreach ($params as $param) {
-            $type = $param->getType();
-            if ($type instanceof ReflectionNamedType && is_subclass_of($type->getName(), FormRequest::class)) {
-                try {
-                    app($type->getName());
-                    return true;
-                } catch (\Throwable $th) {
-                    return false;
+        $methodInfo = $this->checkingMethod($alias);
+        if (!$methodInfo) {
+            return self::$formRequestCache[$cacheKey] = false;
+        }
+
+        [$controllerClass, $methodName, $methodType] = $methodInfo;
+
+        if (!class_exists($controllerClass)) {
+            return self::$formRequestCache[$cacheKey] = null;
+        }
+
+        try {
+            $reflection = new ReflectionClass($controllerClass);
+            if (!$reflection->hasMethod($methodName)) {
+                return self::$formRequestCache[$cacheKey] = null;
+            }
+
+            $method = $reflection->getMethod($methodName);
+            $params = $method->getParameters();
+
+            foreach ($params as $param) {
+                $type = $param->getType();
+                if ($type instanceof ReflectionNamedType && is_subclass_of($type->getName(), FormRequest::class)) {
+                    try {
+                        app($type->getName());
+                        return self::$formRequestCache[$cacheKey] = true;
+                    } catch (\Throwable $th) {
+                        return self::$formRequestCache[$cacheKey] = false;
+                    }
                 }
             }
+        } catch (\Throwable $th) {
+            return self::$formRequestCache[$cacheKey] = false;
         }
-        return false;
+
+        return self::$formRequestCache[$cacheKey] = false;
+    }
+
+    /**
+     * Clear static caches (for Octane)
+     */
+    public static function flushResponseCaches(): void
+    {
+        self::$methodCache = [];
+        self::$formRequestCache = [];
     }
 
     private function prepareUser()
     {
-        $user           = $this->UserModel()->find(auth()->user()->getKey());
-        $user_reference = &$user->userReference;
-        $user_reference->setRelation('role', $user_reference->role);
+        // Use already authenticated user instead of querying again
+        $user = auth()->user();
+
+        // Only load userReference if not already loaded
+        if (!$user->relationLoaded('userReference')) {
+            $user->load('userReference.role');
+        } elseif ($user->userReference && !$user->userReference->relationLoaded('role')) {
+            $user->userReference->load('role');
+        }
+
         return $user;
     }
 

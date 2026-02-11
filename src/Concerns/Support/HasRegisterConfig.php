@@ -5,9 +5,108 @@ namespace Hanafalah\LaravelSupport\Concerns\Support;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Hanafalah\LaravelSupport\Services\SetupCacheService;
+use Hanafalah\LaravelSupport\Services\SetupBuilder;
 
 trait HasRegisterConfig
 {
+    protected ?SetupCacheService $__setupCache = null;
+    protected ?SetupBuilder $__setupBuilder = null;
+
+    /**
+     * Initialize setup cache service
+     *
+     * @param string $projectName
+     * @return SetupCacheService
+     */
+    protected function initSetupCache(string $projectName): SetupCacheService
+    {
+        if (!$this->__setupCache) {
+            $this->__setupCache = new SetupCacheService($projectName);
+        }
+        return $this->__setupCache;
+    }
+
+    /**
+     * Initialize setup builder service
+     *
+     * @return SetupBuilder
+     */
+    protected function initSetupBuilder(): SetupBuilder
+    {
+        if (!$this->__setupBuilder) {
+            $this->__setupBuilder = new SetupBuilder();
+        }
+        return $this->__setupBuilder;
+    }
+
+    /**
+     * Check if Redis setup cache should be used
+     *
+     * @return bool
+     */
+    protected function shouldUseSetupCache(): bool
+    {
+        return config('laravel-support.use_redis_setup_cache', false)
+            && extension_loaded('redis');
+    }
+
+    /**
+     * Load setup from Redis cache or generate if not exists
+     *
+     * @param string $projectName Project name (e.g., 'wellmed-backbone')
+     * @param array $packages Packages configuration
+     * @param string $providerClass Main provider class
+     * @return bool True if loaded from cache, false if generated
+     */
+    protected function loadOrGenerateSetup(string $projectName, array $packages, string $providerClass): bool
+    {
+        if (!$this->shouldUseSetupCache()) {
+            return false;
+        }
+
+        $cache = $this->initSetupCache($projectName);
+        $builder = $this->initSetupBuilder();
+
+        $wasFromCache = $cache->exists();
+
+        $setup = $cache->getOrGenerate(function () use ($builder, $projectName, $packages, $providerClass) {
+            return $builder->buildSetupData($projectName, $packages, $providerClass);
+        });
+
+        $cache->apply($setup);
+
+        return $wasFromCache;
+    }
+
+    /**
+     * Check if setup cache exists and is valid
+     *
+     * @param string $projectName
+     * @return bool
+     */
+    protected function hasValidSetupCache(string $projectName): bool
+    {
+        if (!$this->shouldUseSetupCache()) {
+            return false;
+        }
+
+        $cache = $this->initSetupCache($projectName);
+        return $cache->exists();
+    }
+
+    /**
+     * Invalidate setup cache
+     *
+     * @param string $projectName
+     * @return void
+     */
+    protected function invalidateSetupCache(string $projectName): void
+    {
+        $cache = $this->initSetupCache($projectName);
+        $cache->invalidate();
+    }
+
 
   protected function addDataToConfig(string $package_name, string $config_name, string $type){
     $plural_type      = Str::plural($type);

@@ -5,6 +5,8 @@ namespace Hanafalah\LaravelSupport;
 use Hanafalah\LaravelSupport\Contracts;
 use Hanafalah\LaravelSupport\LaravelSupport;
 use Hanafalah\LaravelSupport\Providers\BaseServiceProvider;
+use Hanafalah\LaravelSupport\Services\SetupBuilder;
+use Hanafalah\LaravelSupport\Services\SetupCacheService;
 use Illuminate\Database\Eloquent\Builder;
 
 class LaravelSupportServiceProvider extends BaseServiceProvider
@@ -28,7 +30,14 @@ class LaravelSupportServiceProvider extends BaseServiceProvider
             Contracts\FileRepository::class => function ($app) {
               return new FileRepository($app);
             },
-            Contracts\Supports\DataManagement::class => Supports\PackageManagement::class
+            Contracts\Supports\DataManagement::class => Supports\PackageManagement::class,
+            // Setup cache services
+            SetupBuilder::class => function ($app) {
+              return new SetupBuilder();
+            },
+            'setup.builder' => function ($app) {
+              return new SetupBuilder();
+            },
           ]);
         }
       ])

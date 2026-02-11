@@ -65,6 +65,29 @@ return [
     'cache' => [
         'enabled' => env('USING_CACHE', false)
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Redis Setup Cache
+    |--------------------------------------------------------------------------
+    |
+    | Enable Redis-based caching for service provider setup (models, contracts).
+    | This significantly improves performance by avoiding filesystem scanning
+    | on every request in Octane environment.
+    |
+    | When enabled:
+    | - Models and contracts are cached to Redis
+    | - Cache is invalidated when composer.lock changes
+    | - Use 'php artisan setup:cache {project}' to regenerate
+    |
+    */
+    'use_redis_setup_cache' => env('USE_REDIS_SETUP_CACHE', false),
+
+    'setup_cache' => [
+        'ttl' => env('SETUP_CACHE_TTL', 604800), // 7 days in seconds
+        'redis_connection' => env('SETUP_CACHE_REDIS_CONNECTION', 'setup'),
+        'auto_generate' => env('SETUP_CACHE_AUTO_GENERATE', true), // Auto-generate cache on first request
+    ],
     'app' => [
         'contracts'     => [
             //ADD YOUR CONTRACTS HERE
@@ -93,6 +116,7 @@ return [
     'commands' => [
         Commands\InstallMakeCommand::class,
         Commands\AddPackageCommand::class,
+        Commands\SetupCacheCommand::class,
         // Commands\ElasticsearchIndexCommand::class,
         // Commands\GetElasticsearchIndexCommand::class
     ],
