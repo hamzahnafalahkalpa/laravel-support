@@ -44,6 +44,7 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
     public $instance;
     protected array $__resources = [];
     protected array $__schema_contracts = [];
+    public bool $is_recently_created = false;
 
     /**
      * Constructor method for initializing the PackageManagement class.
