@@ -46,10 +46,19 @@ trait HasElasticSearch
      * Format: {prefix}.{tenant_id}.{index_name} when tenant exists
      * Example: local.4.patient
      *
+     * If the model implements getStaticIndexName(), it will be used directly
+     * without tenant prefix. This is useful for shared/global data like
+     * Disease, Province, District, Village, etc.
+     *
      * @return string
      */
     public function getElasticIndexName(): string
     {
+        // Check if model has static index name (no tenant prefix)
+        if (method_exists($this, 'getStaticIndexName')) {
+            return $this->getStaticIndexName();
+        }
+
         $indexName = $this->elastic_config['index_name'] ?? $this->getTable();
         $prefix = config('elasticsearch.prefix', '');
         $separator = config('elasticsearch.separator', '.');
