@@ -12,6 +12,8 @@ trait HasConfigDatabase
     use HasCall;
 
     private static $__config_base_path = 'database.models';
+    private static $__config_resource_path = 'database.resources';
+    private static array $__registered_resources = [];
 
     public function initializeHasConfigDatabase()
     {
@@ -19,6 +21,79 @@ trait HasConfigDatabase
         if (isset($this->list) || isset($this->show)) {
             $this->mergeFillable($this->mergeArray($this->list ?? [], $this->show ?? []));
         }
+
+        // Register resources once per model class
+        $this->registerResourcesOnce();
+    }
+
+    /**
+     * Register model resources to config once per model class.
+     * This allows controllers to override resources via config().
+     */
+    protected function registerResourcesOnce(): void
+    {
+        $class = static::class;
+
+        // Skip if already registered for this class
+        if (isset(self::$__registered_resources[$class])) {
+            return;
+        }
+
+        self::$__registered_resources[$class] = true;
+
+        $modelName = $this->getMorphClass();
+        $configKey = self::$__config_resource_path . '.' . $modelName;
+
+        // Only register if not already set in config
+        if (config($configKey) === null) {
+            $viewResource = $this->getViewResource();
+            $showResource = $this->getShowResource();
+
+            if ($viewResource !== null || $showResource !== null) {
+                $resources = [];
+                if ($viewResource !== null) {
+                    $resources['view'] = $viewResource;
+                }
+                if ($showResource !== null) {
+                    $resources['show'] = $showResource;
+                }
+                config([$configKey => $resources]);
+            }
+        }
+    }
+
+    /**
+     * Get the config key for this model's resources.
+     * Override this method if you want a custom key.
+     */
+    // public function getResourceConfigKey(): string
+    // {
+        // return class_basename(static::class);
+    // }
+
+    /**
+     * Resolve resource class from config or model method.
+     * Config takes priority, allowing controller overrides.
+     */
+    protected function resolveResourceClass(string $type): ?string
+    {
+        $modelName = $this->getMorphClass();
+        $basePath = self::$__config_resource_path . '.' . $modelName;
+
+        // Check for specific type override first (e.g., database.resources.Patient.view)
+        $specificConfig = config("{$basePath}.{$type}");
+        if ($specificConfig !== null) {
+            return $specificConfig;
+        }
+
+        // Check for general override (e.g., database.resources.Patient as string)
+        $generalConfig = config($basePath);
+        if ($generalConfig !== null && is_string($generalConfig)) {
+            return $generalConfig;
+        }
+
+        // Fall back to model's method
+        return $type === 'view' ? $this->getViewResource() : $this->getShowResource();
     }
 
     public function getShow()
@@ -40,8 +115,10 @@ trait HasConfigDatabase
     }
 
     public function toViewApi(){
-        return ($this->getViewResource() !== null)
-            ? new ($this->getViewResource())($this)
+        $resourceClass = $this->resolveResourceClass('view');
+
+        return ($resourceClass !== null)
+            ? new $resourceClass($this)
             : $this->toArray();
     }
 
@@ -85,8 +162,10 @@ trait HasConfigDatabase
     }
 
     public function toShowApi(){
-        return ($this->getShowResource() !== null)
-            ? new ($this->getShowResource())($this)
+        $resourceClass = $this->resolveResourceClass('show');
+
+        return ($resourceClass !== null)
+            ? new $resourceClass($this)
             : $this->toArray();
     }
 
