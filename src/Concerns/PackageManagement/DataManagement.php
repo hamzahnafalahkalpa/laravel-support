@@ -162,14 +162,12 @@ trait DataManagement
 
     public function generalPrepareFind(?callable $callback = null, ? array $attributes = null): Model{
         $attributes ??= request()->all();
-        $model = $this->{$this->camelEntity()}()->conditionals(isset($callback),function($query) use ($callback){
+        $model = $this->{$this->camelEntity()}()->conditionals(isset($callback),function($query) use ($callback,$attributes){
             $this->mergeCondition($callback($query));
-            if(isset(request()->id)){
-                $query->where($this->usingEntity()->getKeyName(),request()->id);
-            }
-            if(isset(request()->uuid)){
-                $query->where('uuid',request()->uuid);
-            }
+        })->when(isset($attributes['id']),function($query) use ($attributes){
+            $query->where($this->usingEntity()->getKeyName(),$attributes['id']);
+        })->when(isset($attributes['uuid']),function($query) use ($attributes){
+            $query->where('uuid',$attributes['uuid']);
         })->with($this->showUsingRelation())->first();
         return $this->entityData($model);
     }   
