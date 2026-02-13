@@ -164,6 +164,12 @@ trait DataManagement
         $attributes ??= request()->all();
         $model = $this->{$this->camelEntity()}()->conditionals(isset($callback),function($query) use ($callback){
             $this->mergeCondition($callback($query));
+            if(isset(request()->id)){
+                $query->where($this->usingEntity()->getKeyName(),request()->id);
+            }
+            if(isset(request()->uuid)){
+                $query->where('uuid',request()->uuid);
+            }
         })->with($this->showUsingRelation())->first();
         return $this->entityData($model);
     }   
