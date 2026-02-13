@@ -13,10 +13,10 @@ abstract class BaseDashboardMetricResource
     /**
      * Get metric definitions for the given period type.
      *
-     * @param string $periodType The period type (daily, weekly, monthly, yearly)
+     * @param ?string $periodType The period type (daily, weekly, monthly, yearly)
      * @return array<string, array> Map of metric ID to presentation data
      */
-    abstract protected function getDefinitions(string $periodType): array;
+    abstract protected function getDefinitions(?string $periodType = null): array;
 
     /**
      * Transform ES data by merging with presentation definitions.
@@ -25,23 +25,34 @@ abstract class BaseDashboardMetricResource
      * @param string $periodType The period type
      * @return array Transformed data with presentation fields
      */
-    public function transform(array $esData, string $periodType): array
+    public function transform(array $esData, ?string $periodType = null): array
     {
         $definitions = $this->getDefinitions($periodType);
         $result = [];
-
-        foreach ($esData as $item) {
-            $id = $this->normalizeMetricId($item['id'] ?? '');
-
-            if (isset($definitions[$id])) {
-                $result[] = $this->mergeWithPresentation($item, $definitions[$id]);
-            } else {
-                // Return item as-is if no definition found
-                $result[] = $item;
+        if ($this->isAssocArray($esData)){
+            $result = array_merge($esData,$definitions);
+        }else{
+            foreach ($esData as $item) {
+                $id = $this->normalizeMetricId($item['id'] ?? '');
+                if (isset($definitions[$id])) {
+                    $result[] = $this->mergeWithPresentation($item, $definitions[$id]);
+                } else {
+                    // Return item as-is if no definition found
+                    $result[] = $item;
+                }
             }
         }
 
         return $result;
+    }
+
+    protected function isAssocArray(array $array): bool
+    {
+        if ($array === []) {
+            return false; // treat empty as non-assoc (adjust if needed)
+        }
+
+        return array_keys($array) !== range(0, count($array) - 1);
     }
 
     /**
