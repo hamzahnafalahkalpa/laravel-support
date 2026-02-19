@@ -15,6 +15,11 @@ trait HasModelConfiguration
     public static $__model;
     public static array $__models_config = [];
 
+    /**
+     * Flag to prevent recursive config loading
+     */
+    private static bool $__loading_models_config = false;
+
     public function initializeHasModelConfiguration()
     {
         if (property_exists($this, 'timestamps') && $this->timestamps) {
@@ -44,7 +49,8 @@ trait HasModelConfiguration
         $isMorph    = Str::endsWith($method, 'ModelMorph');
         if (($method !== 'Model' && Str::endsWith($method, 'Model')) || $isInstance || $isMorph) {
             $firstMethod = Str::of($method)->beforeLast('Model');
-            $modelName   = config('database.models.' . $firstMethod);
+            // Lazy load: only fetch config when actually needed
+            $modelName = $this->getModelFromConfig((string) $firstMethod);
             if (isset($modelName)) {
                 if ($isInstance) {
                     return $modelName;
@@ -57,13 +63,43 @@ trait HasModelConfiguration
     }
 
     /**
+     * Get model class from config with lazy loading.
+     *
+     * @param string $modelKey
+     * @return string|null
+     */
+    protected function getModelFromConfig(string $modelKey): ?string
+    {
+        // Check static cache first
+        if (isset(static::$__models_config[$modelKey])) {
+            return static::$__models_config[$modelKey];
+        }
+
+        // Fetch only the specific model config, not all models
+        return config('database.models.' . $modelKey);
+    }
+
+    /**
      * Retrieves the models configuration associated with the current instance.
+     * Uses lazy loading with recursion protection.
      *
      * @return array The models configuration associated with the current instance.
      */
     protected function getAppModelConfig(): array
     {
-        if (count(static::$__models_config) == 0) static::$__models_config = config('database.models') ?? [];
+        // Prevent recursive loading
+        if (static::$__loading_models_config) {
+            return static::$__models_config;
+        }
+
+        if (count(static::$__models_config) == 0) {
+            static::$__loading_models_config = true;
+            try {
+                static::$__models_config = config('database.models') ?? [];
+            } finally {
+                static::$__loading_models_config = false;
+            }
+        }
         return static::$__models_config;
     }
 

@@ -196,21 +196,27 @@ class SetupCacheService
             $shortNameContracts = [];
 
             foreach ($setup['contracts'] as $contract => $implementation) {
+                // Skip short name entries (no backslash) - regenerate them below
+                if (!str_contains($contract, '\\')) {
+                    continue;
+                }
+
                 if (!app()->bound($contract) && class_exists($implementation)) {
                     app()->singleton($contract, $implementation);
                 }
 
-                // Also create short name mapping for config access like config('app.contracts.IntegrationData')
-                // Extract short name from contract class (e.g., 'IntegrationData' from full namespace)
-                // Map to IMPLEMENTATION class, not contract interface (requestDTO needs actual class)
+                // Short name => CONTRACT INTERFACE (consistent with module convention)
+                // e.g., "IntegrationData" => "Projects\WellmedBackbone\Contracts\Data\ModulePatient\IntegrationData"
                 $shortName = class_basename($contract);
-                $shortNameContracts[$shortName] = $implementation;
+                if (!isset($shortNameContracts[$shortName])) {
+                    $shortNameContracts[$shortName] = $contract;
+                }
             }
 
-            // Merge both full class name contracts and short name mappings            
+            // Only add short name mappings to config('app.contracts')
+            // Full namespace entries are for container bindings only, not config access
             config(['app.contracts' => array_merge(
                 config('app.contracts', []),
-                $setup['contracts'],
                 $shortNameContracts
             )]);
         }

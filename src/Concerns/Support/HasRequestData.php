@@ -83,12 +83,14 @@ trait HasRequestData
             $concrete = $binding['concrete'];
             if ($concrete instanceof Closure) {
                 $parameters    = (new ReflectionFunction($concrete))->getStaticVariables();
-                $resolvedClass = $parameters['bind'] ?? null;
+                $resolvedClass = $parameters['bind'] ?? $parameters['target_contract'] ?? null;
             } else {
                 $resolvedClass = $concrete;
             }
 
-            if (!$resolvedClass) throw new \Exception("Unable to determine the target class for {$dto}");
+            if (!$resolvedClass) {
+                throw new \Exception("Unable to determine the target class for {$dto}");
+            }
 
             $dto = $resolvedClass;
         }

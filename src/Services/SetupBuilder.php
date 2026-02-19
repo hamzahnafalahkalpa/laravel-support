@@ -69,13 +69,14 @@ class SetupBuilder
         $contracts = array_merge($contracts, $this->processConfigContracts($configContracts));
 
         // Add short name mappings for config('app.contracts.X') style access
-        // Maps short name (e.g., 'IntegrationData') to implementation class
+        // Maps short name (e.g., 'IntegrationData') to CONTRACT INTERFACE
+        // Consistent with module convention: "License" => "Hanafalah\ModuleLicense\Contracts\Schemas\License"
         $shortNameContracts = [];
         foreach ($contracts as $contract => $implementation) {
             $shortName = class_basename($contract);
             // Only add if not already exists (avoid overwriting explicit mappings)
-            if (!isset($contracts[$shortName])) {
-                $shortNameContracts[$shortName] = $implementation;
+            if (!isset($contracts[$shortName]) && !isset($shortNameContracts[$shortName])) {
+                $shortNameContracts[$shortName] = $contract;
             }
         }
         $contracts = array_merge($contracts, $shortNameContracts);

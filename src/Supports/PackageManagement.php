@@ -43,19 +43,34 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
     public $initialized = false;
     public $instance;
     protected array $__resources = [];
-    protected array $__schema_contracts = [];
+    protected ?array $__schema_contracts = null; // Lazy loaded
     public bool $is_recently_created = false;
 
     /**
      * Constructor method for initializing the PackageManagement class.
+     * Optimized: No config loading in constructor to prevent memory issues.
      *
      * @param Container $app The container instance for dependency injection
      */
     public function __construct(
         // ...$args
     ) {
-        $this->setLocalConfig('laravel-support');
-        $this->__schema_contracts = config('app.contracts', []);
+        // Defer config loading to avoid memory exhaustion during boot
+        // Config will be loaded lazily when needed via getSchemaContracts()
+    }
+
+    /**
+     * Get schema contracts with lazy loading.
+     *
+     * @return array
+     */
+    protected function getSchemaContracts(): array
+    {
+        if ($this->__schema_contracts === null) {
+            $this->setLocalConfig('laravel-support');
+            $this->__schema_contracts = config('app.contracts', []);
+        }
+        return $this->__schema_contracts;
     }
 
     protected function fillingProps(object &$model, mixed $props = [], ?array $onlies = []){
@@ -90,10 +105,11 @@ abstract class PackageManagement extends BasePackageManagement implements DataMa
 
     public function schemaContract(string $contract){
         $contract = Str::studly($contract);
-        if (!array_key_exists($contract, config('app.contracts', []))) {
+        $contracts = $this->getSchemaContracts();
+        if (!array_key_exists($contract, $contracts)) {
             throw new \Exception("Contract '$contract' not found in config 'app.contracts'");
         }
-        return app(config('app.contracts.' . $contract));
+        return app($contracts[$contract] ?? config('app.contracts.' . $contract));
     }
 
     public function myModel(?Model $model = null){

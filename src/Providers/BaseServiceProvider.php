@@ -273,12 +273,30 @@ abstract class BaseServiceProvider extends ServiceProvider
     }
 
     /**
+     * Safe register methods that won't cause memory issues.
+     * Schema and Services are excluded by default from '*' to prevent circular loading.
+     */
+    protected const SAFE_REGISTER_METHODS = [
+        'Config', 'Model', 'Database', 'Migration', 'Route', 'Namespace', 'Provider'
+    ];
+
+    /**
+     * Dangerous register methods that can cause memory exhaustion.
+     * These should be explicitly called only when needed.
+     */
+    protected const DANGEROUS_REGISTER_METHODS = [
+        'Schema', 'Services'
+    ];
+
+    /**
      * Registers a list of services.
      *
      * This method takes an array of strings. Each string should be a valid case of
      * the ProviderRegisterMethod enum. If the string is '*', it will register all
-     * services. If the string is not '*', it will register the service with that name.
-     * If the string is a number, it will register the service with that index.
+     * SAFE services (excludes Schema and Services to prevent memory issues).
+     *
+     * To register Schema or Services, you must explicitly include them:
+     * ->registers(['*', 'Schema']) or ->registers(['Schema'])
      *
      * The second argument is an array of strings. Each string should be a valid case
      * of the ProviderRegisterMethod enum. If the string is present in the second
@@ -295,11 +313,17 @@ abstract class BaseServiceProvider extends ServiceProvider
         $excepts    = $this->mustArray($excepts);
         $validation = !$this->inArray(ProviderRegisterMethod::CONFIG, $this->__finished_register) && !$this->inArray('Config', $excepts);
         if ($validation) $this->registerConfig();
-        $hasAll   = false;
+
+        $hasAll = false;
+        $explicitDangerous = []; // Track explicitly requested dangerous methods
+
         foreach ($args as $key => $list) {
             if ($list !== '*') {
                 $key = $this->registerName(($isNumber = is_numeric($key)) ? $list : $key);
-                // if ($this->inArray($key, $this->__finished_register)) continue;
+                // Track if dangerous method was explicitly requested
+                if ($this->inArray($key, self::DANGEROUS_REGISTER_METHODS)) {
+                    $explicitDangerous[] = $key;
+                }
                 $this->{'register' . $key}(!$isNumber ? $list : null);
             } else {
                 $hasAll = true;
@@ -307,8 +331,9 @@ abstract class BaseServiceProvider extends ServiceProvider
         }
 
         if ($hasAll) {
-            $args = $this->mapArray(fn($case) => $case->value, ProviderRegisterMethod::cases());
-            $args = $this->diff($args, $this->__finished_register[\class_basename($this)], $excepts);
+            // Only use SAFE methods when '*' is used, exclude dangerous ones
+            $args = self::SAFE_REGISTER_METHODS;
+            $args = $this->diff($args, $this->__finished_register[\class_basename($this)] ?? [], $excepts);
             foreach ($args as $arg) {
                 if (method_exists($this, 'register' . $arg)) {
                     $this->{'register' . $arg}();
@@ -335,9 +360,10 @@ abstract class BaseServiceProvider extends ServiceProvider
     }
 
     protected function autoBinds(): self{
-        // if (!$this->checkCacheConfig('config-cache')){
+        // Defer binding to avoid class_exists() calls during boot
+        $this->app->booted(function() {
             $this->multipleBinds();
-        // }
+        });
         return $this;
     }
 

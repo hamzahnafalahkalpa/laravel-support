@@ -370,7 +370,7 @@ trait DataManagement
         $methods = $this->getEntityMethods();
         $request = request();
         return $this->viewEntityResource(function () use ($paginate_dto, $methods) {
-            return $this->{$methods['prepareViewPaginate']}($paginate_dto ?? $this->requestDTO(config('app.contracts.PaginateData')));
+            return $this->{$methods['prepareViewPaginate']}($paginate_dto ?? $this->requestDTO(PaginateData::class));
         }, ['rows_per_page' => [$request->per_page ?? $request->perPage ?? $request->limit ?? 10]]);
     }
 
