@@ -83,9 +83,42 @@ class ElasticSearchObserver
         }
 
         try {
+            // IMPORTANT: Refresh model from database to ensure props are loaded
+            // This is crucial for models using HasProps trait where virtual attributes
+            // are stored in JSON props column
+            if ($event === 'created' || $event === 'updated') {
+                try {
+                    $model->refresh();
+
+                    // Additional step: Manually decode virtual columns if model uses HasProps
+                    // The retrieved event (which normally decodes props) may not have fired yet
+                    if (method_exists($model, 'decodeVirtualColumn')) {
+                        $model->decodeVirtualColumn();
+                        Log::debug('[ES Observer] Virtual columns decoded', [
+                            'model' => get_class($model),
+                            'id' => $model->getKey()
+                        ]);
+                    }
+
+                    Log::debug('[ES Observer] Model refreshed from database', [
+                        'model' => get_class($model),
+                        'id' => $model->getKey()
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('[ES Observer] Failed to refresh model, using current state', [
+                        'model' => get_class($model),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
             // Get searchable data
+            // Check if model uses reporting context (checks elastic_config['use_reporting_index'])
+            $useReporting = $model->elastic_config['use_reporting_index'] ?? false;
+            $context = $useReporting ? 'reporting' : 'search';
+
             $data = method_exists($model, 'toElasticArray')
-                ? $model->toElasticArray()
+                ? $model->toElasticArray($context)
                 : $this->extractSearchableData($model);
 
             // Get index name
@@ -229,6 +262,9 @@ class ElasticSearchObserver
     /**
      * Extract searchable data from model
      *
+     * This method extracts data using props query mapping for models with HasProps trait,
+     * falling back to getAttribute() for regular attributes.
+     *
      * @param Model $model
      * @return array
      */
@@ -236,22 +272,63 @@ class ElasticSearchObserver
     {
         $data = ['id' => $model->getKey()];
 
+        // Get props query mapping if available (for models using HasProps)
+        $propsQueryMapping = method_exists($model, 'getPropsQuery') ? $model->getPropsQuery() : [];
+
         // Get searchable fields
         if (method_exists($model, 'getElasticSearchableFields')) {
             $fields = $model->getElasticSearchableFields();
             foreach ($fields as $field) {
-                $data[$field] = $model->$field;
+                // Check if field has props query mapping
+                if (isset($propsQueryMapping[$field])) {
+                    $data[$field] = $this->extractValueFromPropsPath($model, $propsQueryMapping[$field]);
+                } else {
+                    $data[$field] = $model->getAttribute($field);
+                }
             }
         } else {
             // Fallback: use all fillable fields
             $fillable = $model->getFillable();
             foreach ($fillable as $field) {
                 if (!in_array($field, ['props', 'created_at', 'updated_at', 'deleted_at'])) {
-                    $data[$field] = $model->$field;
+                    if (isset($propsQueryMapping[$field])) {
+                        $data[$field] = $this->extractValueFromPropsPath($model, $propsQueryMapping[$field]);
+                    } else {
+                        $data[$field] = $model->getAttribute($field);
+                    }
                 }
             }
         }
 
         return $data;
+    }
+
+    /**
+     * Extract value from props path like 'props->prop_people->dob'
+     *
+     * @param Model $model
+     * @param string $path Path like 'props->prop_people->dob'
+     * @return mixed
+     */
+    protected function extractValueFromPropsPath(Model $model, string $path): mixed
+    {
+        // Remove 'props->' prefix if present
+        $path = preg_replace('/^props->/', '', $path);
+
+        // Split the path by '->'
+        $segments = explode('->', $path);
+
+        // Start from the first segment (e.g., 'prop_people')
+        $value = $model->getAttribute($segments[0]);
+
+        // Traverse nested paths
+        for ($i = 1; $i < count($segments); $i++) {
+            if (!is_array($value) || !isset($value[$segments[$i]])) {
+                return null;
+            }
+            $value = $value[$segments[$i]];
+        }
+
+        return $value;
     }
 }

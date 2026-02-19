@@ -127,10 +127,16 @@ trait HasElasticSearch
     /**
      * Get fields that should be indexed in Elasticsearch
      *
+     * @param string $context 'search' or 'reporting'
      * @return array
      */
-    public function getElasticSearchableFields(): array
+    public function getElasticSearchableFields(string $context = 'search'): array
     {
+        // For reporting context, use reporting_variables if defined
+        if ($context === 'reporting' && !empty($this->elastic_config['reporting_variables'])) {
+            return $this->elastic_config['reporting_variables'];
+        }
+
         // If variables explicitly configured, use those
         if (!empty($this->elastic_config['variables'])) {
             return $this->elastic_config['variables'];
@@ -552,19 +558,208 @@ trait HasElasticSearch
     /**
      * Get data for Elasticsearch indexing
      *
+     * @param string $context 'search' or 'reporting' - determines which fields to include
      * @return array
      */
-    public function toElasticArray(): array
+    public function toElasticArray(string $context = 'search'): array
     {
-        $searchableFields = $this->getElasticSearchableFields();
+        $searchableFields = $this->getElasticSearchableFields($context);
         $data = ['id' => $this->getKey()];
 
+        // Get props query mapping if available (for models using HasProps)
+        $propsQueryMapping = method_exists($this, 'getPropsQuery') ? $this->getPropsQuery() : [];
+
         foreach ($searchableFields as $field) {
-            // Use getAttribute to properly handle props-based virtual attributes
-            $value = $this->getAttribute($field);
+            $value = null;
+
+            // Check if field has props query mapping (e.g., 'dob' => 'props->prop_people->dob')
+            if (isset($propsQueryMapping[$field])) {
+                $value = $this->extractValueFromPropsPath($propsQueryMapping[$field]);
+            }
+
+            // Fallback to getAttribute if props extraction didn't work
+            if ($value === null) {
+                $value = $this->getAttribute($field);
+            }
+
             $data[$field] = $value;
         }
 
         return $data;
+    }
+
+    /**
+     * Extract value from props path like 'props->prop_people->dob'
+     *
+     * @param string $path Path like 'props->prop_people->dob' or 'props->prop_people->card_identity->nik'
+     * @return mixed
+     */
+    protected function extractValueFromPropsPath(string $path): mixed
+    {
+        // Remove 'props->' prefix if present
+        $path = preg_replace('/^props->/', '', $path);
+
+        // Split the path by '->'
+        $segments = explode('->', $path);
+
+        // Start from the first segment (e.g., 'prop_people')
+        $value = $this->getAttribute($segments[0]);
+
+        // Traverse nested paths
+        for ($i = 1; $i < count($segments); $i++) {
+            if (!is_array($value) || !isset($value[$segments[$i]])) {
+                return null;
+            }
+            $value = $value[$segments[$i]];
+        }
+
+        return $value;
+    }
+
+    /**
+     * Get data for reporting index (includes all reporting fields)
+     * Alias for toElasticArray('reporting')
+     *
+     * @return array
+     */
+    public function toReportingArray(): array
+    {
+        return $this->toElasticArray('reporting');
+    }
+
+    /**
+     * Get Elasticsearch document data for current model instance by ID
+     * Model must be resolved and have an ID ($this->getKey() must not be null)
+     *
+     * @return array|null Returns document data or null if not found or error
+     */
+    public function getElasticDocument(): ?array
+    {
+        // Ensure model has an ID
+        $id = $this->getKey();
+        if (!$id) {
+            Log::warning('Cannot get Elasticsearch document: Model ID is null', [
+                'model' => get_class($this)
+            ]);
+            return null;
+        }
+
+        // Check if Elasticsearch is enabled
+        if (!$this->isElasticSearchEnabled()) {
+            return null;
+        }
+
+        try {
+            $client = app('elasticsearch');
+
+            $params = [
+                'index' => $this->getElasticIndexName(),
+                'id' => $id,
+            ];
+
+            $response = $client->get($params);
+
+            // Return the document source data
+            return $response['_source'] ?? null;
+
+        } catch (\Elasticsearch\Common\Exceptions\Missing404Exception $e) {
+            // Document not found in Elasticsearch
+            Log::info('Elasticsearch document not found', [
+                'model' => get_class($this),
+                'id' => $id,
+                'index' => $this->getElasticIndexName()
+            ]);
+            return null;
+
+        } catch (\Exception $e) {
+            Log::warning('Failed to get Elasticsearch document', [
+                'model' => get_class($this),
+                'id' => $id,
+                'index' => $this->getElasticIndexName(),
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Get multiple Elasticsearch documents from the index
+     *
+     * This is a static-like method that can be called on model instance
+     * to get multiple documents from Elasticsearch with pagination
+     *
+     * @param int $limit Number of documents to retrieve (default: 10)
+     * @param int $offset Offset for pagination (default: 0)
+     * @param array $query Optional Elasticsearch query (default: match_all)
+     * @param array $sort Optional sort configuration
+     * @return array Returns ['data' => [...], 'total' => int, 'limit' => int, 'offset' => int]
+     */
+    public function getElasticDocuments(int $limit = 10, int $offset = 0, array $query = [], array $sort = []): array
+    {
+        // Check if Elasticsearch is enabled
+        if (!$this->isElasticSearchEnabled()) {
+            return [
+                'data' => [],
+                'total' => 0,
+                'limit' => $limit,
+                'offset' => $offset,
+                'error' => 'Elasticsearch is not enabled'
+            ];
+        }
+
+        try {
+            $client = app('elasticsearch');
+
+            // Build query - use provided query or default to match_all
+            $esQuery = !empty($query) ? $query : ['match_all' => new \stdClass()];
+
+            $params = [
+                'index' => $this->getElasticIndexName(),
+                'body' => [
+                    'query' => $esQuery,
+                    'size' => $limit,
+                    'from' => $offset,
+                ],
+            ];
+
+            // Add sorting if provided
+            if (!empty($sort)) {
+                $params['body']['sort'] = $sort;
+            }
+
+            $response = $client->search($params);
+
+            // Extract documents
+            $documents = [];
+            foreach ($response['hits']['hits'] as $hit) {
+                $documents[] = $hit['_source'];
+            }
+
+            $total = $response['hits']['total']['value'] ?? 0;
+
+            return [
+                'data' => $documents,
+                'total' => $total,
+                'limit' => $limit,
+                'offset' => $offset,
+            ];
+
+        } catch (\Exception $e) {
+            Log::warning('Failed to get Elasticsearch documents', [
+                'model' => get_class($this),
+                'index' => $this->getElasticIndexName(),
+                'limit' => $limit,
+                'offset' => $offset,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'data' => [],
+                'total' => 0,
+                'limit' => $limit,
+                'offset' => $offset,
+                'error' => $e->getMessage()
+            ];
+        }
     }
 }

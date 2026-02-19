@@ -5,7 +5,7 @@ namespace Hanafalah\LaravelSupport\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Hanafalah\LaravelSupport\Jobs\JobRequest;
-use Projects\WellmedGateway\Schemas\Elastic;
+use Hanafalah\LaravelSupport\Schemas\Elastic;
 use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Queue\SerializesModels;
 
