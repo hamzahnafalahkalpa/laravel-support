@@ -2,6 +2,7 @@
 
 namespace Hanafalah\LaravelSupport\Concerns\Support;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -275,21 +276,16 @@ trait HasElasticSearch
             case 'date':
             case 'datetime':
             case 'timestamp':
-                // Support range queries for dates
-                if (is_array($value)) {
-                    $range = [];
-                    if (isset($value['from'])) {
-                        $range['gte'] = $value['from'];
-                    }
-                    if (isset($value['to'])) {
-                        $range['lte'] = $value['to'];
-                    }
-                    return $range ? ['range' => [$field => $range]] : null;
+                // Convert date(s) to UTC range for Elasticsearch
+                $utcRange = $this->convertDateToElasticUtcRange($value);
+
+                if ($utcRange === null) {
+                    return null;
                 }
-                // Exact date match
+
                 return [
-                    'term' => [
-                        $field => $value
+                    'range' => [
+                        $field => $utcRange
                     ]
                 ];
 
@@ -322,6 +318,123 @@ trait HasElasticSearch
                     ]
                 ];
         }
+    }
+
+    /**
+     * Convert date parameter(s) to UTC range for Elasticsearch queries.
+     *
+     * Supports:
+     * - Single date: '2026-02-02' -> range for entire day in UTC
+     * - Array with two dates: ['2026-02-02', '2026-02-05'] -> range between dates in UTC
+     * - Array with from/to keys: ['from' => '2026-02-02', 'to' => '2026-02-05']
+     *
+     * @param mixed $value
+     * @return array|null ['gte' => '...', 'lte' => '...']
+     */
+    protected function convertDateToElasticUtcRange(mixed $value): ?array
+    {
+        $clientTimezone = $this->getElasticClientTimezone();
+        $databaseTimezone = 'UTC';
+
+        // Handle array input (range or from/to keys)
+        if (is_array($value)) {
+            // Check for from/to format
+            if (isset($value['from']) || isset($value['to'])) {
+                $range = [];
+                if (isset($value['from'])) {
+                    $startDate = $this->parseElasticDate($value['from'], $clientTimezone);
+                    if ($startDate) {
+                        $range['gte'] = $startDate->startOfDay()->setTimezone($databaseTimezone)->format('Y-m-d\TH:i:s\Z');
+                    }
+                }
+                if (isset($value['to'])) {
+                    $endDate = $this->parseElasticDate($value['to'], $clientTimezone);
+                    if ($endDate) {
+                        $range['lte'] = $endDate->endOfDay()->setTimezone($databaseTimezone)->format('Y-m-d\TH:i:s\Z');
+                    }
+                }
+                return $range ?: null;
+            }
+
+            // Handle indexed array [date1, date2] for range
+            if (count($value) >= 2) {
+                $startDate = $this->parseElasticDate($value[0], $clientTimezone);
+                $endDate = $this->parseElasticDate($value[1], $clientTimezone);
+
+                if ($startDate && $endDate) {
+                    return [
+                        'gte' => $startDate->startOfDay()->setTimezone($databaseTimezone)->format('Y-m-d\TH:i:s\Z'),
+                        'lte' => $endDate->endOfDay()->setTimezone($databaseTimezone)->format('Y-m-d\TH:i:s\Z'),
+                    ];
+                }
+            }
+
+            // Single element array - treat as single date
+            if (count($value) === 1) {
+                $value = $value[0];
+            } else {
+                return null;
+            }
+        }
+
+        // Handle single date string - convert to full day range in UTC
+        $date = $this->parseElasticDate($value, $clientTimezone);
+        if (!$date) {
+            return null;
+        }
+
+        return [
+            'gte' => $date->copy()->startOfDay()->setTimezone($databaseTimezone)->format('Y-m-d\TH:i:s\Z'),
+            'lte' => $date->copy()->endOfDay()->setTimezone($databaseTimezone)->format('Y-m-d\TH:i:s\Z'),
+        ];
+    }
+
+    /**
+     * Parse a date string into a Carbon instance.
+     *
+     * @param string $value
+     * @param string $timezone
+     * @return Carbon|null
+     */
+    protected function parseElasticDate(string $value, string $timezone): ?Carbon
+    {
+        // Date format: '2024-01-30'
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return Carbon::createFromFormat('Y-m-d', $value, $timezone);
+        }
+
+        // DateTime format: '2024-01-30 14:30'
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value)) {
+            return Carbon::createFromFormat('Y-m-d H:i', $value, $timezone);
+        }
+
+        // DateTime with seconds: '2024-01-30 14:30:00'
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
+            return Carbon::parse($value, $timezone);
+        }
+
+        // Try generic parsing
+        try {
+            return Carbon::parse($value, $timezone);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get the client timezone for Elasticsearch queries.
+     *
+     * @return string
+     */
+    protected function getElasticClientTimezone(): string
+    {
+        if ($request = request()) {
+            if ($timezone = $request->attributes->get('client_timezone')) {
+                return $timezone;
+            }
+        }
+
+        return date_default_timezone_get() ?: config('app.timezone', 'UTC');
     }
 
     /**
