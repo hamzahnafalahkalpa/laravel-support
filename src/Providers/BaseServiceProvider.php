@@ -387,9 +387,10 @@ abstract class BaseServiceProvider extends ServiceProvider
                 }
                 if (is_object($bind)) return $bind;
                 if (is_string($bind)) {
-                    return new $bind;
+                    // Use container's make() to auto-resolve constructor dependencies
+                    return $app->make($bind);
                 }
-            });            
+            });
         }
     }    
 
