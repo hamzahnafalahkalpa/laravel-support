@@ -20,6 +20,8 @@ class Response extends PackageManagement implements ContractsResponse
 
     private $__response;
     protected static $__setup_permission = null;
+    protected static $__source_model = null;
+    protected static $__source_type = null;
 
     public function response(mixed $result = null, ?int $code = null, ?string $message = null)
     {
@@ -35,6 +37,55 @@ class Response extends PackageManagement implements ContractsResponse
     public function getAclPermission()
     {
         return static::$__setup_permission;
+    }
+
+    /**
+     * Set the source model for filter metadata generation
+     *
+     * @param mixed $model
+     */
+    public function setSourceModel(mixed $model): void
+    {
+        static::$__source_model = $model;
+    }
+
+    /**
+     * Get the source model for filter metadata generation
+     *
+     * @return mixed
+     */
+    public function getSourceModel(): mixed
+    {
+        return static::$__source_model;
+    }
+
+    /**
+     * Set the source type for filter validation
+     *
+     * @param string $type One of: 'Model', 'Paginate', 'Collection'
+     */
+    public function setSourceType(string $type): void
+    {
+        static::$__source_type = $type;
+    }
+
+    /**
+     * Get the source type for filter validation
+     *
+     * @return string|null One of: 'Model', 'Paginate', 'Collection', or null
+     */
+    public function getSourceType(): ?string
+    {
+        return static::$__source_type;
+    }
+
+    /**
+     * Flush source model and type (for Octane)
+     */
+    public static function flushSourceModel(): void
+    {
+        static::$__source_model = null;
+        static::$__source_type = null;
     }
 
     /**

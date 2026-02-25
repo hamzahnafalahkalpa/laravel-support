@@ -168,7 +168,15 @@ trait HasElasticSearch
                 continue;
             }
 
-            $field = substr($key, 7); // Remove 'search_' prefix
+            // Parse field and operator from key
+            $parsedKey = $this->parseElasticSearchKey($key);
+            $field = $parsedKey['field'];
+            $searchOperator = $parsedKey['operator'];
+
+            // Skip operator keys (they're handled in parseElasticSearchKey)
+            if ($field === null) {
+                continue;
+            }
 
             // Skip if empty
             if (is_null($value) || $value === '') {
@@ -181,8 +189,8 @@ trait HasElasticSearch
                 continue;
             }
 
-            // Build query based on field type
-            $fieldQuery = $this->buildElasticFieldQuery($field, $value, $castType);
+            // Build query based on field type and operator
+            $fieldQuery = $this->buildElasticFieldQuery($field, $value, $castType, $searchOperator);
 
             if ($fieldQuery) {
                 $clauses[] = $fieldQuery;
@@ -241,14 +249,63 @@ trait HasElasticSearch
      * @param string $field
      * @param mixed $value
      * @param string $castType
+     * @param string|null $searchOperator
      * @return array|null
      */
-    protected function buildElasticFieldQuery(string $field, mixed $value, string $castType): ?array
+    protected function buildElasticFieldQuery(string $field, mixed $value, string $castType, ?string $searchOperator = null): ?array
     {
         switch ($castType) {
             case 'string':
             case 'text':
-                // LIKE behavior using multi_match with phrase_prefix
+                return $this->buildElasticStringQuery($field, $value, $searchOperator ?? 'like');
+
+            case 'array':
+            case 'json':
+                return $this->buildElasticArrayQuery($field, $value, $searchOperator ?? 'contains');
+
+            case 'date':
+            case 'datetime':
+            case 'timestamp':
+            case 'immutable_date':
+            case 'immutable_datetime':
+                return $this->buildElasticDateQuery($field, $value, $searchOperator ?? 'between');
+
+            case 'boolean':
+            case 'bool':
+                return [
+                    'term' => [
+                        $field => filter_var($value, FILTER_VALIDATE_BOOLEAN)
+                    ]
+                ];
+
+            case 'integer':
+            case 'int':
+            case 'float':
+            case 'double':
+            case 'decimal':
+                return $this->buildElasticNumericQuery($field, $value, $searchOperator ?? '=');
+
+            default:
+                return [
+                    'term' => [
+                        $field => $value
+                    ]
+                ];
+        }
+    }
+
+    /**
+     * Build Elasticsearch query for string fields with operators
+     *
+     * @param string $field
+     * @param mixed $value
+     * @param string $operator
+     * @return array|null
+     */
+    protected function buildElasticStringQuery(string $field, mixed $value, string $operator): ?array
+    {
+        switch ($operator) {
+            case 'like':
                 return [
                     'multi_match' => [
                         'query' => $value,
@@ -257,9 +314,7 @@ trait HasElasticSearch
                     ]
                 ];
 
-            case 'array':
-            case 'json':
-                // Array contains behavior
+            case '=':
                 if (is_array($value)) {
                     return [
                         'terms' => [
@@ -273,50 +328,353 @@ trait HasElasticSearch
                     ]
                 ];
 
-            case 'date':
-            case 'datetime':
-            case 'timestamp':
-                // Convert date(s) to UTC range for Elasticsearch
-                $utcRange = $this->convertDateToElasticUtcRange($value);
+            case '!=':
+                return [
+                    'bool' => [
+                        'must_not' => [
+                            'term' => [
+                                $field => $value
+                            ]
+                        ]
+                    ]
+                ];
 
+            case 'in':
+                $values = is_array($value) ? $value : [$value];
+                return [
+                    'terms' => [
+                        $field => $values
+                    ]
+                ];
+
+            case 'not_in':
+                $values = is_array($value) ? $value : [$value];
+                return [
+                    'bool' => [
+                        'must_not' => [
+                            'terms' => [
+                                $field => $values
+                            ]
+                        ]
+                    ]
+                ];
+
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Build Elasticsearch query for numeric fields with operators
+     *
+     * @param string $field
+     * @param mixed $value
+     * @param string $operator
+     * @return array|null
+     */
+    protected function buildElasticNumericQuery(string $field, mixed $value, string $operator): ?array
+    {
+        switch ($operator) {
+            case '=':
+                if (is_array($value)) {
+                    return [
+                        'terms' => [
+                            $field => $value
+                        ]
+                    ];
+                }
+                return [
+                    'term' => [
+                        $field => $value
+                    ]
+                ];
+
+            case '!=':
+                return [
+                    'bool' => [
+                        'must_not' => [
+                            'term' => [
+                                $field => $value
+                            ]
+                        ]
+                    ]
+                ];
+
+            case '>':
+                return [
+                    'range' => [
+                        $field => [
+                            'gt' => $value
+                        ]
+                    ]
+                ];
+
+            case '<':
+                return [
+                    'range' => [
+                        $field => [
+                            'lt' => $value
+                        ]
+                    ]
+                ];
+
+            case '>=':
+                return [
+                    'range' => [
+                        $field => [
+                            'gte' => $value
+                        ]
+                    ]
+                ];
+
+            case '<=':
+                return [
+                    'range' => [
+                        $field => [
+                            'lte' => $value
+                        ]
+                    ]
+                ];
+
+            case 'between':
+                $values = is_array($value) ? $value : explode(',', $value);
+                if (count($values) >= 2) {
+                    return [
+                        'range' => [
+                            $field => [
+                                'gte' => $values[0],
+                                'lte' => $values[1]
+                            ]
+                        ]
+                    ];
+                }
+                return null;
+
+            case 'not_between':
+                $values = is_array($value) ? $value : explode(',', $value);
+                if (count($values) >= 2) {
+                    return [
+                        'bool' => [
+                            'must_not' => [
+                                'range' => [
+                                    $field => [
+                                        'gte' => $values[0],
+                                        'lte' => $values[1]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ];
+                }
+                return null;
+
+            case 'in':
+                $values = is_array($value) ? $value : explode(',', $value);
+                return [
+                    'terms' => [
+                        $field => $values
+                    ]
+                ];
+
+            case 'not_in':
+                $values = is_array($value) ? $value : explode(',', $value);
+                return [
+                    'bool' => [
+                        'must_not' => [
+                            'terms' => [
+                                $field => $values
+                            ]
+                        ]
+                    ]
+                ];
+
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Build Elasticsearch query for date fields with operators
+     *
+     * @param string $field
+     * @param mixed $value
+     * @param string $operator
+     * @return array|null
+     */
+    protected function buildElasticDateQuery(string $field, mixed $value, string $operator): ?array
+    {
+        switch ($operator) {
+            case '=':
+                $utcRange = $this->convertDateToElasticUtcRange($value);
                 if ($utcRange === null) {
                     return null;
                 }
-
                 return [
                     'range' => [
                         $field => $utcRange
                     ]
                 ];
 
-            case 'boolean':
-            case 'bool':
-                // Boolean exact match
+            case '!=':
+                $utcRange = $this->convertDateToElasticUtcRange($value);
+                if ($utcRange === null) {
+                    return null;
+                }
                 return [
-                    'term' => [
-                        $field => filter_var($value, FILTER_VALIDATE_BOOLEAN)
+                    'bool' => [
+                        'must_not' => [
+                            'range' => [
+                                $field => $utcRange
+                            ]
+                        ]
                     ]
                 ];
 
-            case 'integer':
-            case 'int':
-            case 'float':
-            case 'double':
-            case 'decimal':
-                // Numeric exact match
+            case '>':
+                $utcRange = $this->convertDateToElasticUtcRange($value);
+                if ($utcRange === null) {
+                    return null;
+                }
+                // Use 'lte' (end of day) from range for > comparison
+                $gtValue = $utcRange['lte'] ?? $utcRange['gte'];
                 return [
-                    'term' => [
-                        $field => $value
+                    'range' => [
+                        $field => [
+                            'gt' => $gtValue
+                        ]
+                    ]
+                ];
+
+            case '<':
+                $utcRange = $this->convertDateToElasticUtcRange($value);
+                if ($utcRange === null) {
+                    return null;
+                }
+                // Use 'gte' (start of day) from range for < comparison
+                $ltValue = $utcRange['gte'];
+                return [
+                    'range' => [
+                        $field => [
+                            'lt' => $ltValue
+                        ]
+                    ]
+                ];
+
+            case '>=':
+                $utcRange = $this->convertDateToElasticUtcRange($value);
+                if ($utcRange === null) {
+                    return null;
+                }
+                return [
+                    'range' => [
+                        $field => [
+                            'gte' => $utcRange['gte']
+                        ]
+                    ]
+                ];
+
+            case '<=':
+                $utcRange = $this->convertDateToElasticUtcRange($value);
+                if ($utcRange === null) {
+                    return null;
+                }
+                return [
+                    'range' => [
+                        $field => [
+                            'lte' => $utcRange['lte'] ?? $utcRange['gte']
+                        ]
+                    ]
+                ];
+
+            case 'between':
+                $utcRange = $this->convertDateToElasticUtcRange($value);
+                if ($utcRange === null) {
+                    return null;
+                }
+                return [
+                    'range' => [
+                        $field => $utcRange
+                    ]
+                ];
+
+            case 'not_between':
+                $utcRange = $this->convertDateToElasticUtcRange($value);
+                if ($utcRange === null) {
+                    return null;
+                }
+                return [
+                    'bool' => [
+                        'must_not' => [
+                            'range' => [
+                                $field => $utcRange
+                            ]
+                        ]
+                    ]
+                ];
+
+            case 'in':
+                $values = is_array($value) ? $value : [$value];
+                return [
+                    'terms' => [
+                        $field => $values
+                    ]
+                ];
+
+            case 'not_in':
+                $values = is_array($value) ? $value : [$value];
+                return [
+                    'bool' => [
+                        'must_not' => [
+                            'terms' => [
+                                $field => $values
+                            ]
+                        ]
                     ]
                 ];
 
             default:
-                // Fallback to term query
+                return null;
+        }
+    }
+
+    /**
+     * Build Elasticsearch query for array fields with operators
+     *
+     * @param string $field
+     * @param mixed $value
+     * @param string $operator
+     * @return array|null
+     */
+    protected function buildElasticArrayQuery(string $field, mixed $value, string $operator): ?array
+    {
+        switch ($operator) {
+            case 'contains':
+                if (is_array($value)) {
+                    return [
+                        'terms' => [
+                            $field => $value
+                        ]
+                    ];
+                }
                 return [
                     'term' => [
                         $field => $value
                     ]
                 ];
+
+            case 'not_contains':
+                return [
+                    'bool' => [
+                        'must_not' => [
+                            'term' => [
+                                $field => $value
+                            ]
+                        ]
+                    ]
+                ];
+
+            default:
+                return null;
         }
     }
 
@@ -666,6 +1024,43 @@ trait HasElasticSearch
 
         $cacheKey = 'elastic_circuit_breaker:' . get_class($this);
         Cache::forget($cacheKey);
+    }
+
+    /**
+     * Parse search key to extract field and operator for Elasticsearch
+     *
+     * Format: search_field_name or search_field_name_operator
+     * Example: search_name or search_name_operator where operator could be like, =, !=, etc.
+     *
+     * @param string $key
+     * @return array ['field' => string, 'operator' => string|null]
+     */
+    protected function parseElasticSearchKey(string $key): array
+    {
+        $field = substr($key, 7); // Remove 'search_' prefix
+
+        // Check if key ends with _operator pattern
+        if (preg_match('/^(.+)_operator$/', $field, $matches)) {
+            // This is an operator specification, skip it
+            return [
+                'field' => null,
+                'operator' => null
+            ];
+        }
+
+        // Check if there's a corresponding operator key
+        $operatorKey = 'search_' . $field . '_operator';
+        if (isset(request()->all()[$operatorKey])) {
+            return [
+                'field' => $field,
+                'operator' => request()->all()[$operatorKey]
+            ];
+        }
+
+        return [
+            'field' => $field,
+            'operator' => null // Will use default operator based on type
+        ];
     }
 
     /**

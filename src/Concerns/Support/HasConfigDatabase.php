@@ -198,7 +198,18 @@ trait HasConfigDatabase
             $db_driver       = $connection['driver'];
             foreach ($parameters as $key => $parameter) {
                 if ($parameter == '' || !isset($parameter)) continue;
-                $field = Str::after($key, 'search_');
+
+                // Parse field and operator from key
+                // Format: search_field_name or search_field_name[operator] or search_field_name + search_field_name_operator
+                $parsedKey = $this->parseSearchKey($key);
+                $field = $parsedKey['field'];
+                $searchOperator = $parsedKey['operator'];
+
+                // Skip operator keys (they're handled in parseSearchKey)
+                if ($field === null) {
+                    continue;
+                }
+
                 $casts = $this->getCasts();
                 $query_field = (method_exists($this, 'getPropsQuery'))
                     ? $this->getPropsQuery()[$field] ?? $field
@@ -227,22 +238,9 @@ trait HasConfigDatabase
                             }else{
                                 $query_field = DB::raw('LOWER(' . $query_field . ')');
                             }
-                            if (is_array($parameter)){
-                                foreach ($parameter as &$param) {
-                                    $param = Str::lower($param);
-                                }
-                                $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                    $query->whereIn($query_field, $parameter);
-                                }, $operator);
-                            }else{
-                                $parameter = Str::lower($parameter);
-                                $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                    $query->whereLike($query_field, "%$parameter%")
-                                        ->orWhereLike($query_field, "$parameter%")
-                                        ->orWhereLike($query_field, "%$parameter")
-                                        ->orWhere($query_field, $parameter);
-                                }, $operator);
-                            }
+
+                            // Apply operator-based filtering
+                            $this->applyStringOperator($query, $query_field, $parameter, $searchOperator, $operator);
                         break;
                         case 'array':
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
@@ -251,50 +249,10 @@ trait HasConfigDatabase
                         break;
                         case 'datetime':
                         case 'date':
-                            if (!is_array($parameter)) {
-                                if (Str::contains($parameter, ' - ')) {
-                                    $parameter = explode(' - ', $parameter);
-                                }
-                            }
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                $parameter = $this->timezoneCalculation($parameter);
-                                foreach ($parameter as $param) {
-                                    if (!is_array($param)) {
-                                        if ($this->dateChecking($param)){
-                                            $query->where($query_field, $param);
-                                        }
-                                    } else {
-                                        if (!is_string($param[0]))
-                                            $param[0] = $param[0];
-                                        if (!is_string($param[1]))
-                                            $param[1] = $param[1];
-                                        $query->whereBetween($query_field, $param);
-                                    }
-                                }
-                            }, $operator);
-                        break;
                         case 'immutable_date':
-                            if (!is_array($parameter)) {
-                                if (Str::contains($parameter, ' - ')) {
-                                    $parameter = explode(' - ', $parameter);
-                                }
-                            }
-                            if ($this->dateChecking($parameters)) {
-                                $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                    $parameters = $this->mustArray($parameter);
-                                        if (count($parameters) == 1) $parameters[1] = $parameters[0];
-                                        $query->whereBetween($query_field, $parameters);                                    
-                                }, $operator);
-                            }
-                        break;
                         case 'immutable_datetime':
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                if (is_array($parameter)) {
-                                    $query->whereBetween($query_field, $parameter);
-                                } else {
-                                    $query->where($query_field, $parameter);
-                                }
-                            }, $operator);
+                            // Apply operator-based filtering for date types
+                            $this->applyDateOperator($query, $query_field, $parameter, $searchOperator, $operator);
                         break;
                         case 'boolean':
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
@@ -304,11 +262,8 @@ trait HasConfigDatabase
                         case 'integer':
                         case 'float':
                         case 'double':
-                            if (preg_match('/^\d+$/', $parameter)) {
-                                $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                    $query->where($query_field, $parameter);
-                                }, $operator);
-                            }
+                            // Apply operator-based filtering for numeric types
+                            $this->applyNumericOperator($query, $query_field, $parameter, $searchOperator, $operator);
                         break;
                         default:
                             $query->whereNested(function ($query) use ($query_field, $parameter) {
@@ -625,6 +580,349 @@ trait HasConfigDatabase
     //         $firstKey,$secondKey,$localKey,$secondLocalKey
     //     );
     // }
+
+    /**
+     * Parse search key to extract field and operator
+     *
+     * Supports multiple formats:
+     * 1. search_field_name (uses default operator)
+     * 2. search_field_name[operator] (operator in brackets)
+     * 3. search_field_name with search_field_name_operator (separate operator parameter)
+     *
+     * @param string $key
+     * @return array ['field' => string, 'operator' => string|null]
+     */
+    protected function parseSearchKey(string $key): array
+    {
+        $field = Str::after($key, 'search_');
+
+        // Check if key ends with _operator pattern (skip these keys)
+        if (preg_match('/^(.+)_operator$/', $field, $matches)) {
+            return [
+                'field' => null,
+                'operator' => null
+            ];
+        }
+
+        // Check if operator is specified: search_field[operator]
+        if (preg_match('/^(.+)\[(.+)\]$/', $field, $matches)) {
+            return [
+                'field' => $matches[1],
+                'operator' => $matches[2]
+            ];
+        }
+
+        // Check if there's a corresponding operator key: search_field_name_operator
+        $operatorKey = 'search_' . $field . '_operator';
+        $allParams = request()->all();
+        if (isset($allParams[$operatorKey])) {
+            return [
+                'field' => $field,
+                'operator' => $allParams[$operatorKey]
+            ];
+        }
+
+        return [
+            'field' => $field,
+            'operator' => null // Will use default operator based on type
+        ];
+    }
+
+    /**
+     * Apply string operator to query
+     *
+     * @param $query
+     * @param $query_field
+     * @param $parameter
+     * @param string|null $searchOperator
+     * @param string $operator
+     */
+    protected function applyStringOperator($query, $query_field, $parameter, ?string $searchOperator, string $operator): void
+    {
+        $searchOperator = $searchOperator ?? 'like'; // Default to LIKE for strings
+
+        switch ($searchOperator) {
+            case 'like':
+                if (is_array($parameter)) {
+                    foreach ($parameter as &$param) {
+                        $param = Str::lower($param);
+                    }
+                    $query->whereNested(function ($query) use ($query_field, $parameter) {
+                        foreach ($parameter as $param) {
+                            $query->orWhereLike($query_field, "%$param%");
+                        }
+                    }, $operator);
+                } else {
+                    $parameter = Str::lower($parameter);
+                    $query->whereNested(function ($query) use ($query_field, $parameter) {
+                        $query->whereLike($query_field, "%$parameter%")
+                            ->orWhereLike($query_field, "$parameter%")
+                            ->orWhereLike($query_field, "%$parameter")
+                            ->orWhere($query_field, $parameter);
+                    }, $operator);
+                }
+                break;
+
+            case '=':
+                $parameter = is_array($parameter) ? array_map([Str::class, 'lower'], $parameter) : Str::lower($parameter);
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    if (is_array($parameter)) {
+                        $query->whereIn($query_field, $parameter);
+                    } else {
+                        $query->where($query_field, $parameter);
+                    }
+                }, $operator);
+                break;
+
+            case '!=':
+                $parameter = is_array($parameter) ? array_map([Str::class, 'lower'], $parameter) : Str::lower($parameter);
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    if (is_array($parameter)) {
+                        $query->whereNotIn($query_field, $parameter);
+                    } else {
+                        $query->where($query_field, '!=', $parameter);
+                    }
+                }, $operator);
+                break;
+
+            case 'in':
+                $parameter = is_array($parameter) ? array_map([Str::class, 'lower'], $parameter) : [Str::lower($parameter)];
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->whereIn($query_field, $parameter);
+                }, $operator);
+                break;
+
+            case 'not_in':
+                $parameter = is_array($parameter) ? array_map([Str::class, 'lower'], $parameter) : [Str::lower($parameter)];
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->whereNotIn($query_field, $parameter);
+                }, $operator);
+                break;
+        }
+    }
+
+    /**
+     * Apply numeric operator to query
+     *
+     * @param $query
+     * @param $query_field
+     * @param $parameter
+     * @param string|null $searchOperator
+     * @param string $operator
+     */
+    protected function applyNumericOperator($query, $query_field, $parameter, ?string $searchOperator, string $operator): void
+    {
+        $searchOperator = $searchOperator ?? '='; // Default to = for numeric
+
+        switch ($searchOperator) {
+            case '=':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    if (is_array($parameter)) {
+                        $query->whereIn($query_field, $parameter);
+                    } else {
+                        $query->where($query_field, '=', $parameter);
+                    }
+                }, $operator);
+                break;
+
+            case '!=':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    if (is_array($parameter)) {
+                        $query->whereNotIn($query_field, $parameter);
+                    } else {
+                        $query->where($query_field, '!=', $parameter);
+                    }
+                }, $operator);
+                break;
+
+            case '>':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->where($query_field, '>', $parameter);
+                }, $operator);
+                break;
+
+            case '<':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->where($query_field, '<', $parameter);
+                }, $operator);
+                break;
+
+            case '>=':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->where($query_field, '>=', $parameter);
+                }, $operator);
+                break;
+
+            case '<=':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->where($query_field, '<=', $parameter);
+                }, $operator);
+                break;
+
+            case 'between':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $values = is_array($parameter) ? $parameter : explode(',', $parameter);
+                    if (count($values) >= 2) {
+                        $query->whereBetween($query_field, [$values[0], $values[1]]);
+                    }
+                }, $operator);
+                break;
+
+            case 'not_between':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $values = is_array($parameter) ? $parameter : explode(',', $parameter);
+                    if (count($values) >= 2) {
+                        $query->whereNotBetween($query_field, [$values[0], $values[1]]);
+                    }
+                }, $operator);
+                break;
+
+            case 'in':
+                $parameter = is_array($parameter) ? $parameter : explode(',', $parameter);
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->whereIn($query_field, $parameter);
+                }, $operator);
+                break;
+
+            case 'not_in':
+                $parameter = is_array($parameter) ? $parameter : explode(',', $parameter);
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->whereNotIn($query_field, $parameter);
+                }, $operator);
+                break;
+        }
+    }
+
+    /**
+     * Apply date operator to query
+     *
+     * @param $query
+     * @param $query_field
+     * @param $parameter
+     * @param string|null $searchOperator
+     * @param string $operator
+     */
+    protected function applyDateOperator($query, $query_field, $parameter, ?string $searchOperator, string $operator): void
+    {
+        // Parse date range if string contains ' - '
+        if (!is_array($parameter) && Str::contains($parameter, ' - ')) {
+            $parameter = explode(' - ', $parameter);
+        }
+
+        $searchOperator = $searchOperator ?? 'between'; // Default to between for dates
+
+        switch ($searchOperator) {
+            case '=':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $parameter = $this->timezoneCalculation($parameter);
+                    foreach ($parameter as $param) {
+                        if (!is_array($param)) {
+                            if ($this->dateChecking($param)) {
+                                $query->where($query_field, $param);
+                            }
+                        } else {
+                            $query->whereBetween($query_field, $param);
+                        }
+                    }
+                }, $operator);
+                break;
+
+            case '!=':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $parameter = $this->timezoneCalculation($parameter);
+                    foreach ($parameter as $param) {
+                        if (!is_array($param)) {
+                            if ($this->dateChecking($param)) {
+                                $query->where($query_field, '!=', $param);
+                            }
+                        } else {
+                            $query->whereNotBetween($query_field, $param);
+                        }
+                    }
+                }, $operator);
+                break;
+
+            case '>':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $parameter = $this->timezoneCalculation($parameter);
+                    $param = is_array($parameter) ? $parameter[0] : $parameter;
+                    if (is_array($param)) {
+                        $param = $param[1]; // Use end of day for > comparison
+                    }
+                    $query->where($query_field, '>', $param);
+                }, $operator);
+                break;
+
+            case '<':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $parameter = $this->timezoneCalculation($parameter);
+                    $param = is_array($parameter) ? $parameter[0] : $parameter;
+                    if (is_array($param)) {
+                        $param = $param[0]; // Use start of day for < comparison
+                    }
+                    $query->where($query_field, '<', $param);
+                }, $operator);
+                break;
+
+            case '>=':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $parameter = $this->timezoneCalculation($parameter);
+                    $param = is_array($parameter) ? $parameter[0] : $parameter;
+                    if (is_array($param)) {
+                        $param = $param[0]; // Use start of day for >= comparison
+                    }
+                    $query->where($query_field, '>=', $param);
+                }, $operator);
+                break;
+
+            case '<=':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $parameter = $this->timezoneCalculation($parameter);
+                    $param = is_array($parameter) ? $parameter[0] : $parameter;
+                    if (is_array($param)) {
+                        $param = $param[1]; // Use end of day for <= comparison
+                    }
+                    $query->where($query_field, '<=', $param);
+                }, $operator);
+                break;
+
+            case 'between':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $parameter = $this->timezoneCalculation($parameter);
+                    foreach ($parameter as $param) {
+                        if (is_array($param)) {
+                            $query->whereBetween($query_field, $param);
+                        }
+                    }
+                }, $operator);
+                break;
+
+            case 'not_between':
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $parameter = $this->timezoneCalculation($parameter);
+                    foreach ($parameter as $param) {
+                        if (is_array($param)) {
+                            $query->whereNotBetween($query_field, $param);
+                        }
+                    }
+                }, $operator);
+                break;
+
+            case 'in':
+                $parameter = is_array($parameter) ? $parameter : [$parameter];
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->whereIn($query_field, $parameter);
+                }, $operator);
+                break;
+
+            case 'not_in':
+                $parameter = is_array($parameter) ? $parameter : [$parameter];
+                $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->whereNotIn($query_field, $parameter);
+                }, $operator);
+                break;
+        }
+    }
 
     public function callCustomMethod(): array
     {

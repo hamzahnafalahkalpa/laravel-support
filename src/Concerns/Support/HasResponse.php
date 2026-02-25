@@ -20,7 +20,7 @@ use ReflectionClass;
 
 trait HasResponse
 {
-    use HasArray, HasCache;
+    use HasArray, HasCache, HasFilterMetadata;
 
     protected int $__response_code;
     protected array $__response_messages = [];
@@ -43,6 +43,10 @@ trait HasResponse
     {
         $success = $this->__response_code < 400;
         if ($success) $this->renderAclResponse();
+
+        // Render filter metadata if applicable
+        if ($success) $this->renderFilterMetadata();
+
         $this->__response = array_merge([
             'data' => $this->__response_result,
             'meta' => [
@@ -53,6 +57,60 @@ trait HasResponse
             'acl' => $this->__response['acl'] ?? null
         ]);
         return $this->__response;
+    }
+
+    private function renderFilterMetadata()
+    {
+        // Check if response result is paginated or collection
+        $isPaginated = $this->__response_result instanceof LengthAwarePaginator;
+        $isCollection = $this->__response_result instanceof Collection ||
+                        $this->__response_result instanceof SupportCollection;
+
+        // Check if result is already an array (from retransform) with data key
+        $isArrayWithData = is_array($this->__response_result) && isset($this->__response_result['data']);
+
+        // Only add filter metadata for index/list responses (paginated or collection)
+        if (!$isPaginated && !$isCollection && !$isArrayWithData) {
+            return;
+        }
+
+        // Extract model from result
+        $model = $this->extractModelFromResult($this->__response_result);
+        if (!$model) {
+            return;
+        }
+
+        // Generate filter metadata
+        $filterMetadata = $this->generateFilterMetadata($model);
+
+        if (empty($filterMetadata)) {
+            return;
+        }
+
+        // For paginated data, add filter to array representation
+        if ($isPaginated) {
+            if (isset($this->__response_result)) {
+                // Store current pagination data as array
+                $currentData = $this->__response_result->toArray();
+
+                // Add filter to the pagination structure
+                $currentData['filter'] = $filterMetadata;
+
+                // Update the response result
+                $this->__response_result = $currentData;
+            }
+        }
+        // For collection data, add filter outside the collection array
+        else if ($isCollection) {
+            $this->__response_result = [
+                'data' => $this->__response_result->toArray(),
+                'filter' => $filterMetadata
+            ];
+        }
+        // For already transformed array data with 'data' key
+        else if ($isArrayWithData) {
+            $this->__response_result['filter'] = $filterMetadata;
+        }
     }
 
     private function renderAclResponse()
@@ -413,6 +471,33 @@ trait HasResponse
      */
     public function retransform(mixed $collections, callable $callback, array $options = []): mixed
     {
+        // Store the source type and model BEFORE transformation for filter metadata generation
+        [$sourceModel, $sourceType] = match (true) {
+            $collections instanceof LengthAwarePaginator => [
+                $collections->getCollection()->first(),
+                'Paginate'
+            ],
+            $collections instanceof Collection => [
+                $collections->first(),
+                'Collection'
+            ],
+            $collections instanceof SupportCollection => [
+                $collections->first(),
+                'Collection'
+            ],
+            $collections instanceof Model => [
+                $collections,
+                'Model'
+            ],
+            default => [null, null]
+        };
+
+        // Store in Response facade for later use
+        if ($sourceModel instanceof Model && $sourceType !== null) {
+            Response::setSourceModel($sourceModel);
+            Response::setSourceType($sourceType);
+        }
+
         switch (true) {
             case $collections instanceof LengthAwarePaginator:
             case $collections instanceof SupportCollection:
