@@ -323,8 +323,11 @@ trait HasElasticSearch
                     ];
                 }
                 return [
-                    'term' => [
-                        $field => $value
+                    'match' => [
+                        $field => [
+                            'query' => $value,
+                            'operator' => 'and'
+                        ]
                     ]
                 ];
 

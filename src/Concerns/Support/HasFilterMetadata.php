@@ -43,7 +43,7 @@ trait HasFilterMetadata
         // Example: if ($this->isSourceType('Paginate')) { ... }
         // Or: $sourceType = $this->getSourceType();
 
-        $casts = $model->getCasts();
+        $casts = $model->getFilterCasts();
         $filters = [];
 
         // Add search_value for universal search
@@ -64,12 +64,19 @@ trait HasFilterMetadata
                 continue;
             }
 
+            $options = $this->getFieldOptions($model, $field);
+            if (count($options) > 0){
+                $operators = [];
+            }else{
+                $operators = $this->getOperatorsByType($castType);
+            }
+
             $filterConfig = [
                 'name' => $field,
                 'label' => $this->generateFieldLabel($field),
                 'type' => $this->mapCastToFilterType($castType),
-                'options' => $this->getFieldOptions($model, $field),
-                'operators' => $this->getOperatorsByType($castType)
+                'options' => $options,
+                'operators' => $operators
             ];
 
             $filters[$field] = $filterConfig;
@@ -119,16 +126,16 @@ trait HasFilterMetadata
     protected function getFieldOptions(Model $model, string $field): array
     {
         // Check if model has getOptions method for this field
-        $methodName = 'getOptions' . ucfirst(\Illuminate\Support\Str::camel($field));
+        $methodName = 'getCustomFilterOptions' . ucfirst(\Illuminate\Support\Str::camel($field));
 
         if (method_exists($model, $methodName)) {
             $options = $model->{$methodName}();
             return is_array($options) ? $options : [];
         }
 
-        // Check if model has generic getOptions method with parameter
-        if (method_exists($model, 'getOptions')) {
-            $options = $model->getOptions($field);
+        // Check if model has generic getCustomFilterOptions method with parameter
+        if (method_exists($model, 'getCustomFilterOptions')) {
+            $options = $model->getCustomFilterOptions($field);
             return is_array($options) ? $options : [];
         }
 

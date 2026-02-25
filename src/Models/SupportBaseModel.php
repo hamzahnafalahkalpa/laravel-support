@@ -79,6 +79,17 @@ class SupportBaseModel extends AbstractModel
         return $this->current_checking;
     }
 
+    public function getFilterCasts(): array{
+        return $this->getCasts() ?? [];
+    }
+
+    public function getCustomFilterOptions(string $filter_name): array{
+        return [];
+    }
+
+    public function getCustomFilterOperators(string $filter_name): array{
+        return [];
+    }
 
     private static function clearCacheModel($query){
         $morph = Str::snake($query->getMorphClass());
