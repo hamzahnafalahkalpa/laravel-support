@@ -647,9 +647,13 @@ trait HasConfigDatabase
                     foreach ($parameter as &$param) {
                         $param = Str::lower($param);
                     }
-                    $query->whereNested(function ($query) use ($query_field, $parameter) {
+                    $query->whereNested(function ($query) use ($query_field, $parameter, $operator) {
                         foreach ($parameter as $param) {
-                            $query->orWhereLike($query_field, "%$param%");
+                            if ($operator == 'or'){
+                                $query->orWhereLike($query_field, "%$param%");
+                            }else{
+                                $query->whereLike($query_field, "%$param%");
+                            }
                         }
                     }, $operator);
                 } else {

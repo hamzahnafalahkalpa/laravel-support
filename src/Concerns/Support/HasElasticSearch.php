@@ -235,6 +235,18 @@ trait HasElasticSearch
      */
     protected function isValidDateValue(mixed $value): bool
     {
+        // Handle array for date range (e.g., ['2026-02-19', '2026-02-22'])
+        if (is_array($value)) {
+            // For date range, check if at least one element is a valid date
+            foreach ($value as $dateValue) {
+                if (is_string($dateValue) && strtotime($dateValue) !== false) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Handle single date string
         if (!is_string($value)) {
             return false;
         }
