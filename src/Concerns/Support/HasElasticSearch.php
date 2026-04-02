@@ -966,18 +966,18 @@ trait HasElasticSearch
         $query->whereIn($this->getKeyName(), $result['ids']);
 
         // Maintain ES result order using database-specific syntax
-        $driver = $query->getConnection()->getDriverName();
-        $keyName = $this->getKeyName();
+        // $driver = $query->getConnection()->getDriverName();
+        // $keyName = $this->getKeyName();
 
-        if ($driver === 'pgsql') {
-            // PostgreSQL: use array_position
-            $quotedIds = array_map(fn($id) => "'" . addslashes($id) . "'", $result['ids']);
-            $query->orderByRaw("array_position(ARRAY[" . implode(',', $quotedIds) . "]::text[], {$keyName}::text)");
-        } else {
-            // MySQL: use FIELD function
-            $quotedIds = array_map(fn($id) => "'" . addslashes($id) . "'", $result['ids']);
-            $query->orderByRaw("FIELD({$keyName}, " . implode(',', $quotedIds) . ")");
-        }
+        // if ($driver === 'pgsql') {
+        //     // PostgreSQL: use array_position
+        //     $quotedIds = array_map(fn($id) => "'" . addslashes($id) . "'", $result['ids']);
+        //     $query->orderByRaw("array_position(ARRAY[" . implode(',', $quotedIds) . "]::text[], {$keyName}::text)");
+        // } else {
+        //     // MySQL: use FIELD function
+        //     $quotedIds = array_map(fn($id) => "'" . addslashes($id) . "'", $result['ids']);
+        //     $query->orderByRaw("FIELD({$keyName}, " . implode(',', $quotedIds) . ")");
+        // }
 
         return $query;
     }
