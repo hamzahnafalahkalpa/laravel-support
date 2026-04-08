@@ -319,10 +319,39 @@ trait HasElasticSearch
         switch ($operator) {
             case 'like':
                 return [
-                    'multi_match' => [
-                        'query' => $value,
-                        'fields' => [$field],
-                        'type' => 'phrase_prefix'
+                    'bool' => [
+                        'should' => [
+                            // phrase_prefix: "Yoyo Mi" matches "Yoyo Mirani"
+                            [
+                                'match_phrase_prefix' => [
+                                    $field => [
+                                        'query' => $value,
+                                        'boost' => 3
+                                    ]
+                                ]
+                            ],
+                            // match with operator "and": all words must appear
+                            // "Asep Test" matches if both "Asep" AND "Test" exist
+                            [
+                                'match' => [
+                                    $field => [
+                                        'query' => $value,
+                                        'operator' => 'and',
+                                        'boost' => 2
+                                    ]
+                                ]
+                            ],
+                            // wildcard on keyword subfield: "*asep*" for partial match
+                            [
+                                'wildcard' => [
+                                    $field . '.keyword' => [
+                                        'value' => '*' . strtolower($value) . '*',
+                                        'case_insensitive' => true
+                                    ]
+                                ]
+                            ],
+                        ],
+                        'minimum_should_match' => 1
                     ]
                 ];
 
@@ -922,9 +951,11 @@ trait HasElasticSearch
         // Build Elasticsearch query with operator (and/or)
         $esQuery = $this->buildElasticQuery($parameters, $operator);
 
-        // Get pagination parameters
-        $perPage = (int) ($parameters['per-page'] ?? 15);
-        $page = (int) ($parameters['page'] ?? 1);
+        // Get pagination parameters from request (not from $parameters which only has search_* keys)
+        $request = request();
+        // $perPage = (int) ($request->per_page ?? $request->perPage ?? $request->limit ?? 10000);
+        $perPage = 10000;
+        $page = (int) ($request->page ?? 1);
 
         // Get sorting parameters
         $sort = [];
