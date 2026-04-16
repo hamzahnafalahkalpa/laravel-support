@@ -545,6 +545,25 @@ trait DataManagement
 
             $optionals ??= [];
             $params = array_merge($searches, $optionals);
+
+            // CRITICAL: Preserve pagination and other search parameters before replace
+            $currentParams = request()->all();
+            $preserveKeys = ['page', 'per_page', 'limit', 'perPage'];
+
+            // Preserve pagination parameters
+            foreach ($preserveKeys as $key) {
+                if (isset($currentParams[$key])) {
+                    $params[$key] = $currentParams[$key];
+                }
+            }
+
+            // Preserve existing search_* parameters (except search_value)
+            foreach ($currentParams as $key => $value) {
+                if (str_starts_with($key, 'search_') && $key !== 'search_value' && !isset($params[$key])) {
+                    $params[$key] = $value;
+                }
+            }
+
             request()->replace($params);
         } else {
             static::$param_logic ??= 'and';
