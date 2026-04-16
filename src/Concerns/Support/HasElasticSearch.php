@@ -951,11 +951,10 @@ trait HasElasticSearch
         // Build Elasticsearch query with operator (and/or)
         $esQuery = $this->buildElasticQuery($parameters, $operator);
 
-        // Get pagination parameters from request (not from $parameters which only has search_* keys)
-        $request = request();
-        // $perPage = (int) ($request->per_page ?? $request->perPage ?? $request->limit ?? 10000);
-        $perPage = 10000;
-        $page = (int) ($request->page ?? 1);
+        // STRATEGY: Fetch ALL IDs from ES (up to 10k), let Laravel handle pagination
+        // This ensures pagination works correctly across all pages
+        $perPage = 10000; // Fetch all results from ES
+        $page = 1; // Always fetch from page 1 to get all IDs
 
         // Get sorting parameters
         $sort = [];
