@@ -175,6 +175,7 @@ trait HasElasticSearch
         // Separate clauses into OR group (search_value expanded) and AND group (explicit filters)
         $orClauses = [];
         $andClauses = [];
+        $skippedFields = [];
 
         foreach ($parameters as $key => $value) {
             // Skip metadata fields
@@ -199,12 +200,14 @@ trait HasElasticSearch
 
             // Skip if empty
             if (is_null($value) || $value === '') {
+                $skippedFields[] = ['field' => $field, 'reason' => 'empty_value'];
                 continue;
             }
 
             // Skip non-string searches for date fields (e.g., searching "Udin" in dob)
             $castType = $casts[$field] ?? 'string';
             if (in_array($castType, ['date', 'datetime', 'timestamp', 'immutable_date', 'immutable_datetime']) && !$this->isValidDateValue($value)) {
+                $skippedFields[] = ['field' => $field, 'reason' => 'invalid_date_value', 'cast' => $castType, 'value' => $value];
                 continue;
             }
 
@@ -230,11 +233,28 @@ trait HasElasticSearch
                         }
                     }
                 }
+            } else {
+                $skippedFields[] = ['field' => $field, 'reason' => 'field_query_null', 'cast' => $castType];
             }
+        }
+
+        // Log skipped fields if any
+        if (!empty($skippedFields) && $hasExplicitFields) {
+            Log::channel('elasticsearch')->debug('[HYBRID MODE] Some fields skipped during query build', [
+                'model' => get_class($this),
+                'skipped_count' => count($skippedFields),
+                'skipped_fields' => $skippedFields
+            ]);
         }
 
         // If no clauses at all, return match_all
         if (empty($orClauses) && empty($andClauses)) {
+            Log::channel('elasticsearch')->info('[QUERY BUILD] No search clauses - returning match_all', [
+                'model' => get_class($this),
+                'parameters' => array_keys($parameters),
+                'hasExplicitFields' => $hasExplicitFields
+            ]);
+
             return [
                 'query' => [
                     'match_all' => new \stdClass()
@@ -249,16 +269,20 @@ trait HasElasticSearch
 
             // CRITICAL: If OR group is empty but we're in hybrid mode, this means search_value
             // didn't match any fields (all were skipped or excluded). This should return NO results!
-            // We add a match_none query to ensure no results are returned.
+            // We use match_none to ensure no results are returned.
             if (empty($orClauses)) {
-                // Return no results - search_value has no fields to search
+                Log::channel('elasticsearch')->warning('[HYBRID MODE] Empty OR clauses - returning NO results', [
+                    'model' => get_class($this),
+                    'explicit_fields' => $explicitFields,
+                    'and_clauses_count' => count($andClauses),
+                    'parameters' => array_keys($parameters),
+                    'reason' => 'search_value expanded to no valid fields (all skipped or excluded)'
+                ]);
+
+                // Return no results using match_none
                 return [
                     'query' => [
-                        'bool' => [
-                            'must_not' => [
-                                'match_all' => new \stdClass()
-                            ]
-                        ]
+                        'match_none' => new \stdClass()
                     ]
                 ];
             }
@@ -274,13 +298,29 @@ trait HasElasticSearch
             // Add explicit filters to must
             $mustClauses = array_merge($mustClauses, $andClauses);
 
-            return [
+            $finalQuery = [
                 'query' => [
                     'bool' => [
                         'must' => $mustClauses
                     ]
                 ]
             ];
+
+            Log::channel('elasticsearch')->info('[HYBRID MODE] Query built successfully', [
+                'model' => get_class($this),
+                'explicit_fields' => $explicitFields,
+                'or_clauses_count' => count($orClauses),
+                'and_clauses_count' => count($andClauses),
+                'must_clauses_count' => count($mustClauses),
+                'query_structure' => [
+                    'OR_group_fields' => count($orClauses) . ' fields',
+                    'AND_filters' => $explicitFields,
+                    'total_must_clauses' => count($mustClauses)
+                ],
+                'full_query' => json_encode($finalQuery, JSON_PRETTY_PRINT)
+            ]);
+
+            return $finalQuery;
         }
 
         // STANDARD MODE: Use operator to determine structure
@@ -947,7 +987,26 @@ trait HasElasticSearch
                 $params['body']['sort'] = $sort;
             }
 
+            Log::channel('elasticsearch')->info('[ES QUERY] Executing search', [
+                'model' => get_class($this),
+                'index' => $this->getElasticIndexName(),
+                'page' => $page,
+                'size' => $perPage,
+                'query' => json_encode($params['body'], JSON_PRETTY_PRINT)
+            ]);
+
             $response = $client->search($params);
+
+            $totalHits = $response['hits']['total']['value'] ?? 0;
+            $returnedHits = count($response['hits']['hits'] ?? []);
+
+            Log::channel('elasticsearch')->info('[ES RESPONSE] Search completed', [
+                'model' => get_class($this),
+                'index' => $this->getElasticIndexName(),
+                'total_matches' => $totalHits,
+                'returned_hits' => $returnedHits,
+                'took_ms' => $response['took'] ?? 0
+            ]);
 
             $ids = [];
             foreach ($response['hits']['hits'] as $hit) {
@@ -982,11 +1041,13 @@ trait HasElasticSearch
             // Track failure
             $this->trackCircuitBreakerFailure();
 
-            Log::warning('Elasticsearch query failed, falling back to database', [
+            Log::channel('elasticsearch')->error('[ES ERROR] Query failed - fallback to database', [
                 'error' => $e->getMessage(),
+                'error_class' => get_class($e),
                 'model' => get_class($this),
-                'query' => $esQuery,
-                'index' => $this->getElasticIndexName()
+                'index' => $this->getElasticIndexName(),
+                'query' => json_encode($esQuery, JSON_PRETTY_PRINT),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return [
@@ -1030,6 +1091,14 @@ trait HasElasticSearch
         // Build Elasticsearch query with operator (and/or)
         $esQuery = $this->buildElasticQuery($parameters, $operator);
 
+        Log::channel('elasticsearch')->info('[SCOPE] Building ES query', [
+            'model' => get_class($this),
+            'operator' => $operator,
+            'search_params' => array_keys($parameters),
+            'has_explicit_fields' => isset($parameters['__explicit_search_fields']),
+            'explicit_fields' => $parameters['__explicit_search_fields'] ?? 'none'
+        ]);
+
         // STRATEGY: Fetch ALL IDs from ES (up to 10k), let Laravel handle pagination
         // This ensures pagination works correctly across all pages
         $perPage = 10000; // Fetch all results from ES
@@ -1045,10 +1114,18 @@ trait HasElasticSearch
                     'order' => strtolower($orderType)
                 ]
             ];
-        }        
+        }
 
         // Execute Elasticsearch query
         $result = $this->executeElasticQuery($esQuery, $perPage, $page, $sort);
+
+        Log::channel('elasticsearch')->info('[SCOPE] Query execution completed', [
+            'model' => get_class($this),
+            'total_matches' => $result['total'] ?? 0,
+            'ids_retrieved' => count($result['ids'] ?? []),
+            'es_time_ms' => $result['es_time_ms'] ?? 0,
+            'has_error' => isset($result['error'])
+        ]);
 
         // Store total for pagination
         $query->macro('getElasticTotal', function () use ($result) {
@@ -1127,10 +1204,12 @@ trait HasElasticSearch
         Cache::put($cacheKey, $failures, now()->addMinutes($cooldownMinutes));
 
         if ($failures >= config('elasticsearch.circuit_breaker.failure_threshold', 5)) {
-            Log::warning('Elasticsearch circuit breaker opened', [
+            Log::channel('elasticsearch')->warning('[CIRCUIT BREAKER] Opened due to repeated failures', [
                 'model' => get_class($this),
                 'failures' => $failures,
-                'cooldown_minutes' => $cooldownMinutes
+                'threshold' => config('elasticsearch.circuit_breaker.failure_threshold', 5),
+                'cooldown_minutes' => $cooldownMinutes,
+                'action' => 'Elasticsearch queries will be disabled for this model until cooldown expires'
             ]);
         }
     }

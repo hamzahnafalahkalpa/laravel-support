@@ -500,8 +500,22 @@ trait DataManagement
         $model = $this->usingEntity();
         $fillable = $this->getEntityFillable(); // OPTIMIZATION: Cached
 
+        // Check if Elasticsearch should be used
+        $useElasticsearch = method_exists($model, 'isElasticSearchEnabled')
+            && $model->isElasticSearchEnabled()
+            && config('elasticsearch.enabled', false);
+
+        \Illuminate\Support\Facades\Log::info('[SearchDebug] generalSchemaModel: Routing query', [
+            'entity' => $this->getEntity(),
+            'use_elasticsearch' => $useElasticsearch,
+            'es_method_exists' => method_exists($model, 'isElasticSearchEnabled'),
+            'es_model_enabled' => method_exists($model, 'isElasticSearchEnabled') ? $model->isElasticSearchEnabled() : false,
+            'es_config_enabled' => config('elasticsearch.enabled', false),
+            'param_logic' => $this->getParamLogic()
+        ]);
+
         // Route to Elasticsearch if enabled on model
-        $builder = method_exists($model, 'isElasticSearchEnabled') && $model->isElasticSearchEnabled() && config('elasticsearch.enabled', false)
+        $builder = $useElasticsearch
             ? $model->withElasticSearch($this->getParamLogic())
             : $model->withParameters($this->getParamLogic());
 
@@ -565,11 +579,12 @@ trait DataManagement
             // CRITICAL: Ensure at least some fields are being searched
             // If $searches is empty, it means all fields were excluded (shouldn't happen normally)
             if (empty($searches)) {
-                \Illuminate\Support\Facades\Log::warning('setParamLogic: No fields to expand search_value to', [
+                \Illuminate\Support\Facades\Log::channel('elasticsearch')->warning('[PARAM LOGIC] No fields to expand search_value - all excluded', [
                     'search_value' => $searchValue,
                     'explicit_fields' => $explicitSearchFields,
                     'valid_casts' => $validCasts,
-                    'entity' => $this->getEntity()
+                    'entity' => $this->getEntity(),
+                    'reason' => 'All cast fields are either excluded or already explicitly searched'
                 ]);
             }
 
@@ -599,6 +614,19 @@ trait DataManagement
             if (!empty($explicitSearchFields)) {
                 $params['__explicit_search_fields'] = implode(',', $explicitSearchFields);
             }
+
+            // Comprehensive logging for debugging hybrid search
+            \Illuminate\Support\Facades\Log::channel('elasticsearch')->info('[PARAM LOGIC] search_value expansion completed', [
+                'entity' => $this->getEntity(),
+                'search_value' => $searchValue,
+                'explicit_fields' => $explicitSearchFields,
+                'expanded_fields' => array_keys($searches),
+                'expanded_count' => count($searches),
+                'total_params' => count($params),
+                'param_logic' => static::$param_logic,
+                'hybrid_mode' => !empty($explicitSearchFields) ? 'YES' : 'NO',
+                'metadata_set' => isset($params['__explicit_search_fields']) ? $params['__explicit_search_fields'] : 'none'
+            ]);
 
             request()->replace($params);
         } else {
