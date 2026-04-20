@@ -278,6 +278,14 @@ trait HasConfigDatabase
 
         // Build the query
         $builder->where(function ($query) use ($orParams, $andParams, $casts, $db_driver, $hasExplicitFields) {
+            // CRITICAL: If OR group is empty but we're in hybrid mode, this means search_value
+            // didn't match any fields. This should return NO results!
+            if ($hasExplicitFields && empty($orParams)) {
+                // Force empty result set
+                $query->whereRaw('1 = 0');
+                return;
+            }
+
             // Add OR group if exists
             if (!empty($orParams)) {
                 $query->where(function ($orQuery) use ($orParams, $casts, $db_driver) {

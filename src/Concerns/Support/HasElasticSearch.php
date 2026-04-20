@@ -247,15 +247,29 @@ trait HasElasticSearch
             // HYBRID MODE: AND(OR(...), explicit_filter1, explicit_filter2, ...)
             $mustClauses = [];
 
-            // Add OR group if exists
-            if (!empty($orClauses)) {
-                $mustClauses[] = [
-                    'bool' => [
-                        'should' => $orClauses,
-                        'minimum_should_match' => 1
+            // CRITICAL: If OR group is empty but we're in hybrid mode, this means search_value
+            // didn't match any fields (all were skipped or excluded). This should return NO results!
+            // We add a match_none query to ensure no results are returned.
+            if (empty($orClauses)) {
+                // Return no results - search_value has no fields to search
+                return [
+                    'query' => [
+                        'bool' => [
+                            'must_not' => [
+                                'match_all' => new \stdClass()
+                            ]
+                        ]
                     ]
                 ];
             }
+
+            // Add OR group (guaranteed non-empty at this point)
+            $mustClauses[] = [
+                'bool' => [
+                    'should' => $orClauses,
+                    'minimum_should_match' => 1
+                ]
+            ];
 
             // Add explicit filters to must
             $mustClauses = array_merge($mustClauses, $andClauses);

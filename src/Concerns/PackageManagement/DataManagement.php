@@ -562,6 +562,17 @@ trait DataManagement
                 }
             }
 
+            // CRITICAL: Ensure at least some fields are being searched
+            // If $searches is empty, it means all fields were excluded (shouldn't happen normally)
+            if (empty($searches)) {
+                \Illuminate\Support\Facades\Log::warning('setParamLogic: No fields to expand search_value to', [
+                    'search_value' => $searchValue,
+                    'explicit_fields' => $explicitSearchFields,
+                    'valid_casts' => $validCasts,
+                    'entity' => $this->getEntity()
+                ]);
+            }
+
             $optionals ??= [];
             $params = array_merge($searches, $optionals);
 
