@@ -153,16 +153,35 @@ trait HasElasticSearch
     /**
      * Build Elasticsearch query from search parameters
      *
+     * HYBRID LOGIC SUPPORT:
+     * When __explicit_search_fields metadata is present (from setParamLogic with search_value):
+     * - Fields NOT in explicit list → OR group (from search_value expansion)
+     * - Fields IN explicit list → AND group (explicit filters like status, created_at)
+     * - Combines both groups: AND(OR(...), explicit_filter1, explicit_filter2, ...)
+     *
      * @param array $parameters
      * @param string $operator 'and' or 'or'
      * @return array
      */
     public function buildElasticQuery(array $parameters, string $operator = 'and'): array
     {
-        $clauses = [];
         $casts = $this->getCasts();
 
+        // Check if we have explicit search fields metadata (hybrid mode)
+        $explicitFieldsStr = $parameters['__explicit_search_fields'] ?? null;
+        $explicitFields = $explicitFieldsStr ? explode(',', $explicitFieldsStr) : [];
+        $hasExplicitFields = !empty($explicitFields);
+
+        // Separate clauses into OR group (search_value expanded) and AND group (explicit filters)
+        $orClauses = [];
+        $andClauses = [];
+
         foreach ($parameters as $key => $value) {
+            // Skip metadata fields
+            if ($key === '__explicit_search_fields') {
+                continue;
+            }
+
             // Only process search_* parameters
             if (!str_starts_with($key, 'search_')) {
                 continue;
@@ -193,12 +212,29 @@ trait HasElasticSearch
             $fieldQuery = $this->buildElasticFieldQuery($field, $value, $castType, $searchOperator);
 
             if ($fieldQuery) {
-                $clauses[] = $fieldQuery;
+                // Hybrid mode: separate OR and AND clauses
+                if ($hasExplicitFields && in_array($field, $explicitFields)) {
+                    // Explicit filter → AND group
+                    $andClauses[] = $fieldQuery;
+                } else {
+                    // Search value expanded or normal → OR/AND group based on operator
+                    if ($hasExplicitFields) {
+                        // In hybrid mode, non-explicit fields go to OR group
+                        $orClauses[] = $fieldQuery;
+                    } else {
+                        // Standard mode: use operator to determine group
+                        if (strtolower($operator) === 'or') {
+                            $orClauses[] = $fieldQuery;
+                        } else {
+                            $andClauses[] = $fieldQuery;
+                        }
+                    }
+                }
             }
         }
 
-        // If no clauses, return match_all
-        if (empty($clauses)) {
+        // If no clauses at all, return match_all
+        if (empty($orClauses) && empty($andClauses)) {
             return [
                 'query' => [
                     'match_all' => new \stdClass()
@@ -206,22 +242,51 @@ trait HasElasticSearch
             ];
         }
 
-        // Use 'should' (OR) or 'must' (AND) based on operator
-        if (strtolower($operator) === 'or') {
+        // Build query based on hybrid mode or standard mode
+        if ($hasExplicitFields) {
+            // HYBRID MODE: AND(OR(...), explicit_filter1, explicit_filter2, ...)
+            $mustClauses = [];
+
+            // Add OR group if exists
+            if (!empty($orClauses)) {
+                $mustClauses[] = [
+                    'bool' => [
+                        'should' => $orClauses,
+                        'minimum_should_match' => 1
+                    ]
+                ];
+            }
+
+            // Add explicit filters to must
+            $mustClauses = array_merge($mustClauses, $andClauses);
+
             return [
                 'query' => [
                     'bool' => [
-                        'should' => $clauses,
+                        'must' => $mustClauses
+                    ]
+                ]
+            ];
+        }
+
+        // STANDARD MODE: Use operator to determine structure
+        if (strtolower($operator) === 'or') {
+            // All OR
+            return [
+                'query' => [
+                    'bool' => [
+                        'should' => $orClauses,
                         'minimum_should_match' => 1
                     ]
                 ]
             ];
         }
 
+        // All AND
         return [
             'query' => [
                 'bool' => [
-                    'must' => $clauses
+                    'must' => $andClauses
                 ]
             ]
         ];

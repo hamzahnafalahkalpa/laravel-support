@@ -185,6 +185,20 @@ trait HasConfigDatabase
         return __CLASS__;
     }
 
+    /**
+     * Scope to filter query with search parameters
+     *
+     * HYBRID LOGIC SUPPORT:
+     * When __explicit_search_fields metadata is present (from setParamLogic with search_value):
+     * - Fields NOT in explicit list → OR group (from search_value expansion)
+     * - Fields IN explicit list → AND group (explicit filters like status, created_at)
+     * - Combines both groups: WHERE (OR(...)) AND (explicit_filter1) AND (explicit_filter2)
+     *
+     * @param $builder
+     * @param string $operator 'and' or 'or'
+     * @param mixed $parameters
+     * @return mixed
+     */
     public function scopeWithParameters($builder, string $operator = 'and', mixed $parameters = null)
     {
         $parameters ??= $this->filterArray(request()->all(), function ($key) {
@@ -192,95 +206,176 @@ trait HasConfigDatabase
         }, ARRAY_FILTER_USE_KEY);
 
         if (count($parameters) == 0) return $builder;
-        $builder->where(function ($query) use ($parameters, $operator) {
-            $connection_name = $this->getConnectionName();
-            $connection      = config('database.connections.' . ($connection_name ?? config('database.default')));
-            $db_driver       = $connection['driver'];
-            foreach ($parameters as $key => $parameter) {
-                if ($parameter == '' || !isset($parameter)) continue;
 
-                // Parse field and operator from key
-                // Format: search_field_name or search_field_name[operator] or search_field_name + search_field_name_operator
-                $parsedKey = $this->parseSearchKey($key);
-                $field = $parsedKey['field'];
-                $searchOperator = $parsedKey['operator'];
+        // Check if we have explicit search fields metadata (hybrid mode)
+        $explicitFieldsStr = $parameters['__explicit_search_fields'] ?? null;
+        $explicitFields = $explicitFieldsStr ? explode(',', $explicitFieldsStr) : [];
+        $hasExplicitFields = !empty($explicitFields);
 
-                // Skip operator keys (they're handled in parseSearchKey)
-                if ($field === null) {
-                    continue;
-                }
+        // Get connection info
+        $connection_name = $this->getConnectionName();
+        $connection      = config('database.connections.' . ($connection_name ?? config('database.default')));
+        $db_driver       = $connection['driver'];
+        $casts           = $this->getCasts();
 
-                $casts = $this->getCasts();
-                $query_field = (method_exists($this, 'getPropsQuery'))
-                    ? $this->getPropsQuery()[$field] ?? $field
-                    : $field;
-                if (isset($casts[$field])) {
-                    switch ($casts[$field]) {
-                        case 'string':
-                        case 'text':
-                            if (!in_array($query_field, $this->getFillable())) {
-                                $query_field = str_replace('props->', '', $query_field);
-                                switch ($db_driver) {
-                                    case 'pgsql':
-                                        $query_fields = explode('->', $query_field);
-                                        $query_field = array_map(function($item) {
-                                            return "'".$item."'";
-                                        }, $query_fields);
-                                        $query_field = implode('->', $query_field);
-                                        $query_field = preg_replace('/->(?=[^>]*$)/', '->>', $query_field);
-                                        $query_field = DB::raw("LOWER(props->".$query_field .")");
-                                    break;
-                                    default:
-                                        $query_field = str_replace('->', '.', $query_field);
-                                        $query_field = DB::raw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(props, "$.' . $query_field . '")))');
-                                    break;
-                                }
-                            }else{
-                                $query_field = DB::raw('LOWER(' . $query_field . ')');
-                            }
+        // Process parameters and separate into OR group and AND group
+        $orParams = [];
+        $andParams = [];
 
-                            // Apply operator-based filtering
-                            $this->applyStringOperator($query, $query_field, $parameter, $searchOperator, $operator);
-                        break;
-                        case 'array':
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                $query->whereJsonContains($query_field, $parameter);
-                            }, $operator);
-                        break;
-                        case 'datetime':
-                        case 'date':
-                        case 'immutable_date':
-                        case 'immutable_datetime':
-                            // Apply operator-based filtering for date types
-                            $this->applyDateOperator($query, $query_field, $parameter, $searchOperator, $operator);
-                        break;
-                        case 'boolean':
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                $query->where($query_field, (bool)$parameter);
-                            }, $operator);
-                        break;
-                        case 'integer':
-                        case 'float':
-                        case 'double':
-                            // Apply operator-based filtering for numeric types
-                            $this->applyNumericOperator($query, $query_field, $parameter, $searchOperator, $operator);
-                        break;
-                        default:
-                            $query->whereNested(function ($query) use ($query_field, $parameter) {
-                                $query->where($query_field, $parameter);
-                            }, $operator);
-                        break;
-                    }
+        foreach ($parameters as $key => $parameter) {
+            // Skip metadata fields
+            if ($key === '__explicit_search_fields') {
+                continue;
+            }
+
+            if ($parameter == '' || !isset($parameter)) continue;
+
+            // Parse field and operator from key
+            $parsedKey = $this->parseSearchKey($key);
+            $field = $parsedKey['field'];
+            $searchOperator = $parsedKey['operator'];
+
+            // Skip operator keys (they're handled in parseSearchKey)
+            if ($field === null) {
+                continue;
+            }
+
+            // Separate into OR and AND groups
+            if ($hasExplicitFields && in_array($field, $explicitFields)) {
+                // Explicit filter → AND group
+                $andParams[$key] = [
+                    'field' => $field,
+                    'value' => $parameter,
+                    'operator' => $searchOperator
+                ];
+            } else {
+                // Search value expanded or normal → OR/AND group based on operator
+                if ($hasExplicitFields) {
+                    // In hybrid mode, non-explicit fields go to OR group
+                    $orParams[$key] = [
+                        'field' => $field,
+                        'value' => $parameter,
+                        'operator' => $searchOperator
+                    ];
                 } else {
-                    // if (in_array($query_field, $this->getFillable())) {
-                    //     $query->whereNested(function ($query) use ($query_field, $parameter) {
-                    //         $query->where($query_field, $parameter);
-                    //     }, $operator);
-                    // }
+                    // Standard mode: use operator to determine group
+                    if (strtolower($operator) === 'or') {
+                        $orParams[$key] = [
+                            'field' => $field,
+                            'value' => $parameter,
+                            'operator' => $searchOperator
+                        ];
+                    } else {
+                        $andParams[$key] = [
+                            'field' => $field,
+                            'value' => $parameter,
+                            'operator' => $searchOperator
+                        ];
+                    }
                 }
             }
+        }
+
+        // Build the query
+        $builder->where(function ($query) use ($orParams, $andParams, $casts, $db_driver, $hasExplicitFields) {
+            // Add OR group if exists
+            if (!empty($orParams)) {
+                $query->where(function ($orQuery) use ($orParams, $casts, $db_driver) {
+                    foreach ($orParams as $key => $param) {
+                        $field = $param['field'];
+                        $parameter = $param['value'];
+                        $searchOperator = $param['operator'];
+
+                        $this->applyFieldCondition($orQuery, $field, $parameter, $searchOperator, 'or', $casts, $db_driver);
+                    }
+                });
+            }
+
+            // Add AND group
+            foreach ($andParams as $key => $param) {
+                $field = $param['field'];
+                $parameter = $param['value'];
+                $searchOperator = $param['operator'];
+
+                $this->applyFieldCondition($query, $field, $parameter, $searchOperator, 'and', $casts, $db_driver);
+            }
         });
+
         return $builder;
+    }
+
+    /**
+     * Apply field condition to query based on cast type and operator
+     *
+     * @param $query
+     * @param string $field
+     * @param mixed $parameter
+     * @param string|null $searchOperator
+     * @param string $boolOperator 'and' or 'or'
+     * @param array $casts
+     * @param string $db_driver
+     */
+    protected function applyFieldCondition($query, string $field, $parameter, ?string $searchOperator, string $boolOperator, array $casts, string $db_driver): void
+    {
+        $query_field = (method_exists($this, 'getPropsQuery'))
+            ? $this->getPropsQuery()[$field] ?? $field
+            : $field;
+
+        if (isset($casts[$field])) {
+            switch ($casts[$field]) {
+                case 'string':
+                case 'text':
+                    if (!in_array($query_field, $this->getFillable())) {
+                        $query_field = str_replace('props->', '', $query_field);
+                        switch ($db_driver) {
+                            case 'pgsql':
+                                $query_fields = explode('->', $query_field);
+                                $query_field = array_map(function($item) {
+                                    return "'".$item."'";
+                                }, $query_fields);
+                                $query_field = implode('->', $query_field);
+                                $query_field = preg_replace('/->(?=[^>]*$)/', '->>', $query_field);
+                                $query_field = DB::raw("LOWER(props->".$query_field .")");
+                            break;
+                            default:
+                                $query_field = str_replace('->', '.', $query_field);
+                                $query_field = DB::raw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(props, "$.' . $query_field . '")))');
+                            break;
+                        }
+                    }else{
+                        $query_field = DB::raw('LOWER(' . $query_field . ')');
+                    }
+
+                    $this->applyStringOperator($query, $query_field, $parameter, $searchOperator, $boolOperator);
+                break;
+                case 'array':
+                    $query->whereNested(function ($query) use ($query_field, $parameter) {
+                        $query->whereJsonContains($query_field, $parameter);
+                    }, $boolOperator);
+                break;
+                case 'datetime':
+                case 'date':
+                case 'immutable_date':
+                case 'immutable_datetime':
+                    $this->applyDateOperator($query, $query_field, $parameter, $searchOperator, $boolOperator);
+                break;
+                case 'boolean':
+                    $query->whereNested(function ($query) use ($query_field, $parameter) {
+                        $query->where($query_field, (bool)$parameter);
+                    }, $boolOperator);
+                break;
+                case 'integer':
+                case 'float':
+                case 'double':
+                    $this->applyNumericOperator($query, $query_field, $parameter, $searchOperator, $boolOperator);
+                break;
+                default:
+                    $query->whereNested(function ($query) use ($query_field, $parameter) {
+                        $query->where($query_field, $parameter);
+                    }, $boolOperator);
+                break;
+            }
+        }
     }
 
     private function dateChecking(string|array $params)

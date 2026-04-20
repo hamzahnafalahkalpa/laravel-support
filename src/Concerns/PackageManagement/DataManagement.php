@@ -537,17 +537,35 @@ trait DataManagement
             $modelCasts = $this->getEntityCasts();
             $validCasts = array_diff($modelCasts, $excluded);
 
-            // Build searches array efficiently
+            // CRITICAL: Get current request params to detect explicit search filters
+            $currentParams = request()->all();
+
+            // Detect explicitly specified search_* parameters (except search_value)
+            $explicitSearchFields = [];
+            foreach ($currentParams as $key => $value) {
+                if (str_starts_with($key, 'search_') && $key !== 'search_value') {
+                    // Extract field name from search_fieldname
+                    $fieldName = substr($key, 7); // Remove 'search_' prefix
+                    // Skip operator keys
+                    if (!str_ends_with($fieldName, '_operator')) {
+                        $explicitSearchFields[] = $fieldName;
+                    }
+                }
+            }
+
+            // Build searches array efficiently, EXCLUDING explicitly searched fields
             $searches = [];
             foreach ($validCasts as $cast) {
-                $searches['search_' . $cast] = $searchValue;
+                // Skip if this field is already explicitly searched
+                if (!in_array($cast, $explicitSearchFields)) {
+                    $searches['search_' . $cast] = $searchValue;
+                }
             }
 
             $optionals ??= [];
             $params = array_merge($searches, $optionals);
 
             // CRITICAL: Preserve pagination and other search parameters before replace
-            $currentParams = request()->all();
             $preserveKeys = ['page', 'per_page', 'limit', 'perPage'];
 
             // Preserve pagination parameters
@@ -558,10 +576,17 @@ trait DataManagement
             }
 
             // Preserve existing search_* parameters (except search_value)
+            // These become the explicit AND filters
             foreach ($currentParams as $key => $value) {
-                if (str_starts_with($key, 'search_') && $key !== 'search_value' && !isset($params[$key])) {
+                if (str_starts_with($key, 'search_') && $key !== 'search_value') {
                     $params[$key] = $value;
                 }
+            }
+
+            // Store metadata about explicit search fields for Elasticsearch hybrid query
+            // This helps buildElasticQuery() distinguish between OR (search_value) and AND (explicit) filters
+            if (!empty($explicitSearchFields)) {
+                $params['__explicit_search_fields'] = implode(',', $explicitSearchFields);
             }
 
             request()->replace($params);
