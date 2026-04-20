@@ -172,6 +172,17 @@ trait HasElasticSearch
         $explicitFields = $explicitFieldsStr ? explode(',', $explicitFieldsStr) : [];
         $hasExplicitFields = !empty($explicitFields);
 
+        // Log parameters received
+        Log::channel('elasticsearch')->debug('[BUILD QUERY] Parameters received', [
+            'model' => get_class($this),
+            'parameter_keys' => array_keys($parameters),
+            'has_metadata' => isset($parameters['__explicit_search_fields']),
+            'metadata_value' => $explicitFieldsStr ?? 'null',
+            'explicit_fields_array' => $explicitFields,
+            'will_use_hybrid_mode' => $hasExplicitFields,
+            'operator' => $operator
+        ]);
+
         // Separate clauses into OR group (search_value expanded) and AND group (explicit filters)
         $orClauses = [];
         $andClauses = [];
@@ -1070,16 +1081,22 @@ trait HasElasticSearch
     {
         // Get parameters from request if not provided (same as withParameters)
         if ($parameters === null) {
+            $allParams = request()->all();
+
             // Use filterArray if available (from HasArray trait), otherwise use array_filter
             if (method_exists($this, 'filterArray')) {
-                $parameters = $this->filterArray(request()->all(), function ($key) {
+                $parameters = $this->filterArray($allParams, function ($key) {
                     return str_starts_with($key, 'search_');
                 }, ARRAY_FILTER_USE_KEY);
             } else {
-                $allParams = request()->all();
                 $parameters = array_filter($allParams, function ($key) {
                     return str_starts_with($key, 'search_');
                 }, ARRAY_FILTER_USE_KEY);
+            }
+
+            // CRITICAL: Preserve __explicit_search_fields metadata for hybrid mode
+            if (isset($allParams['__explicit_search_fields'])) {
+                $parameters['__explicit_search_fields'] = $allParams['__explicit_search_fields'];
             }
         }
 
@@ -1091,13 +1108,36 @@ trait HasElasticSearch
         // Build Elasticsearch query with operator (and/or)
         $esQuery = $this->buildElasticQuery($parameters, $operator);
 
+        // Check if hybrid mode metadata is present
+        $hasMetadata = isset($parameters['__explicit_search_fields']);
+        $explicitFieldsValue = $parameters['__explicit_search_fields'] ?? 'none';
+
         Log::channel('elasticsearch')->info('[SCOPE] Building ES query', [
             'model' => get_class($this),
             'operator' => $operator,
             'search_params' => array_keys($parameters),
-            'has_explicit_fields' => isset($parameters['__explicit_search_fields']),
-            'explicit_fields' => $parameters['__explicit_search_fields'] ?? 'none'
+            'has_explicit_fields_metadata' => $hasMetadata,
+            'explicit_fields' => $explicitFieldsValue,
+            'total_params' => count($parameters)
         ]);
+
+        // Warning if we expect hybrid mode but metadata is missing
+        if (!$hasMetadata && $operator === 'or') {
+            $nonSearchKeys = array_filter(array_keys($parameters), function($key) {
+                return !str_starts_with($key, 'search_value') &&
+                       !str_starts_with($key, 'search_') . '_operator' &&
+                       str_starts_with($key, 'search_');
+            });
+
+            if (count($nonSearchKeys) > 1) {
+                Log::channel('elasticsearch')->warning('[SCOPE] Potential hybrid mode but metadata missing', [
+                    'model' => get_class($this),
+                    'operator' => $operator,
+                    'non_search_value_params' => array_values($nonSearchKeys),
+                    'hint' => 'setParamLogic() might not have been called or metadata was lost'
+                ]);
+            }
+        }
 
         // STRATEGY: Fetch ALL IDs from ES (up to 10k), let Laravel handle pagination
         // This ensures pagination works correctly across all pages

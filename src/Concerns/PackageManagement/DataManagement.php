@@ -629,6 +629,16 @@ trait DataManagement
             ]);
 
             request()->replace($params);
+
+            // Verify metadata was set correctly
+            $verifyMetadata = request()->get('__explicit_search_fields');
+            if ($verifyMetadata !== ($params['__explicit_search_fields'] ?? null)) {
+                \Illuminate\Support\Facades\Log::channel('elasticsearch')->error('[PARAM LOGIC] Metadata not preserved after request replace!', [
+                    'expected' => $params['__explicit_search_fields'] ?? 'none',
+                    'actual' => $verifyMetadata ?? 'none',
+                    'entity' => $this->getEntity()
+                ]);
+            }
         } else {
             static::$param_logic ??= 'and';
         }
