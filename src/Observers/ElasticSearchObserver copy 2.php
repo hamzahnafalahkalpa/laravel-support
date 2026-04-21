@@ -134,88 +134,48 @@ class ElasticSearchObserver
                 'data' => $data
             ]);
 
-            // Check if sync mode is enabled (check model config first, then global config)
-            $syncMode = $model->elastic_config['sync'] ?? config('elasticsearch.auto_index.sync', false);
+            // Dispatch ElasticJob
+            $jobClass = config('elasticsearch.job_class', 'App\Jobs\ElasticJob');
 
-            $jobPayload = [
-                'type' => 'BULK',
-                'datas' => [[
-                    'index' => $indexName,
-                    'action' => 'index',
-                    'data' => [$data]
-                ]]
-            ];
+            Log::debug('[ES Observer] Job class configured', [
+                'job_class' => $jobClass,
+                'exists' => class_exists($jobClass)
+            ]);
 
-            if ($syncMode) {
-                // SYNCHRONOUS MODE: Execute immediately
-                Log::info('[ES Observer] Sync mode enabled - executing immediately', [
+            if (class_exists($jobClass)) {
+                $jobPayload = [
+                    'type' => 'BULK',
+                    'datas' => [[
+                        'index' => $indexName,
+                        'action' => 'index',
+                        'data' => [$data]
+                    ]]
+                ];
+
+                $queue = config('elasticsearch.auto_index.queue', 'elasticsearch');
+                $connection = config('elasticsearch.auto_index.connection', 'rabbitmq');
+
+                Log::info('[ES Observer] Dispatching job', [
+                    'job_class' => $jobClass,
+                    'queue' => $queue,
+                    'connection' => $connection,
+                    'payload' => $jobPayload
+                ]);
+
+                dispatch(new $jobClass($jobPayload))
+                    ->onQueue($queue)
+                    ->onConnection($connection);
+
+                Log::info('[ES Observer] Job dispatched successfully', [
                     'model' => get_class($model),
                     'id' => $model->getKey(),
                     'index' => $indexName
                 ]);
-
-                try {
-                    // Create Elasticsearch client
-                    $hosts = config('elasticsearch.hosts', 'localhost:9002');
-                    $client = \Elastic\Elasticsearch\ClientBuilder::create()
-                        ->setHosts($hosts)
-                        ->setApiKey(
-                            config('app.elasticsearch.username', config('elasticsearch.username')),
-                            config('app.elasticsearch.password', config('elasticsearch.password'))
-                        )
-                        ->build();
-
-                    // Execute sync
-                    $elasticSchema = new \Hanafalah\LaravelSupport\Schemas\Elastic();
-                    $elasticSchema->run($client, $jobPayload);
-
-                    Log::info('[ES Observer] Sync completed successfully', [
-                        'model' => get_class($model),
-                        'id' => $model->getKey(),
-                        'index' => $indexName
-                    ]);
-                } catch (\Exception $syncException) {
-                    Log::error('[ES Observer] Sync failed', [
-                        'error' => $syncException->getMessage(),
-                        'model' => get_class($model),
-                        'id' => $model->getKey()
-                    ]);
-                }
             } else {
-                // ASYNC MODE: Dispatch to queue (default behavior)
-                $jobClass = config('elasticsearch.job_class', 'App\Jobs\ElasticJob');
-
-                Log::debug('[ES Observer] Job class configured', [
-                    'job_class' => $jobClass,
-                    'exists' => class_exists($jobClass)
+                Log::warning('[ES Observer] ElasticJob class not found', [
+                    'model' => get_class($model),
+                    'configured_class' => $jobClass
                 ]);
-
-                if (class_exists($jobClass)) {
-                    $queue = config('elasticsearch.auto_index.queue', 'elasticsearch');
-                    $connection = config('elasticsearch.auto_index.connection', 'rabbitmq');
-
-                    Log::info('[ES Observer] Dispatching job', [
-                        'job_class' => $jobClass,
-                        'queue' => $queue,
-                        'connection' => $connection,
-                        'payload' => $jobPayload
-                    ]);
-
-                    dispatch(new $jobClass($jobPayload))
-                        ->onQueue($queue)
-                        ->onConnection($connection);
-
-                    Log::info('[ES Observer] Job dispatched successfully', [
-                        'model' => get_class($model),
-                        'id' => $model->getKey(),
-                        'index' => $indexName
-                    ]);
-                } else {
-                    Log::warning('[ES Observer] ElasticJob class not found', [
-                        'model' => get_class($model),
-                        'configured_class' => $jobClass
-                    ]);
-                }
             }
 
         } catch (\Exception $e) {
@@ -262,72 +222,32 @@ class ElasticSearchObserver
                 'index' => $indexName
             ]);
 
-            // Check if sync mode is enabled (check model config first, then global config)
-            $syncMode = $model->elastic_config['sync'] ?? config('elasticsearch.auto_index.sync', false);
+            // Dispatch ElasticJob for deletion
+            $jobClass = config('elasticsearch.job_class', 'App\Jobs\ElasticJob');
 
-            $jobPayload = [
-                'type' => 'DELETE',
-                'datas' => [[
-                    'index' => $indexName,
-                    'id' => $model->getKey()
-                ]]
-            ];
+            if (!class_exists($jobClass)) {
+                // Try wellmed-gateway location
+                $jobClass = '\WellmedGateway\Jobs\ElasticJob';
+            }
 
-            if ($syncMode) {
-                // SYNCHRONOUS MODE: Execute immediately
-                Log::info('[ES Observer] Sync mode enabled - deleting immediately', [
+            if (class_exists($jobClass)) {
+                $jobPayload = [
+                    'type' => 'DELETE',
+                    'datas' => [[
+                        'index' => $indexName,
+                        'id' => $model->getKey()
+                    ]]
+                ];
+
+                dispatch(new $jobClass($jobPayload))
+                    ->onQueue(config('elasticsearch.auto_index.queue', 'elasticsearch'))
+                    ->onConnection(config('elasticsearch.auto_index.connection', 'rabbitmq'));
+
+                Log::info('[ES Observer] Delete job dispatched', [
                     'model' => get_class($model),
                     'id' => $model->getKey(),
                     'index' => $indexName
                 ]);
-
-                try {
-                    // Create Elasticsearch client
-                    $hosts = config('elasticsearch.hosts', 'localhost:9002');
-                    $client = \Elastic\Elasticsearch\ClientBuilder::create()
-                        ->setHosts($hosts)
-                        ->setApiKey(
-                            config('app.elasticsearch.username', config('elasticsearch.username')),
-                            config('app.elasticsearch.password', config('elasticsearch.password'))
-                        )
-                        ->build();
-
-                    // Execute delete sync
-                    $elasticSchema = new \Hanafalah\LaravelSupport\Schemas\Elastic();
-                    $elasticSchema->run($client, $jobPayload);
-
-                    Log::info('[ES Observer] Delete sync completed successfully', [
-                        'model' => get_class($model),
-                        'id' => $model->getKey(),
-                        'index' => $indexName
-                    ]);
-                } catch (\Exception $syncException) {
-                    Log::error('[ES Observer] Delete sync failed', [
-                        'error' => $syncException->getMessage(),
-                        'model' => get_class($model),
-                        'id' => $model->getKey()
-                    ]);
-                }
-            } else {
-                // ASYNC MODE: Dispatch to queue (default behavior)
-                $jobClass = config('elasticsearch.job_class', 'App\Jobs\ElasticJob');
-
-                if (!class_exists($jobClass)) {
-                    // Try wellmed-gateway location
-                    $jobClass = '\WellmedGateway\Jobs\ElasticJob';
-                }
-
-                if (class_exists($jobClass)) {
-                    dispatch(new $jobClass($jobPayload))
-                        ->onQueue(config('elasticsearch.auto_index.queue', 'elasticsearch'))
-                        ->onConnection(config('elasticsearch.auto_index.connection', 'rabbitmq'));
-
-                    Log::info('[ES Observer] Delete job dispatched', [
-                        'model' => get_class($model),
-                        'id' => $model->getKey(),
-                        'index' => $indexName
-                    ]);
-                }
             }
 
         } catch (\Exception $e) {
